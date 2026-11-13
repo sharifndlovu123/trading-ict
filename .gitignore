@@ -31,6 +31,7 @@ references/**/*.pdf
 references/**/*.epub
 references/microstructure/books/
 references/microstructure/papers/
+references/microstructure/.index/
 # Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
 references/personal/
 
