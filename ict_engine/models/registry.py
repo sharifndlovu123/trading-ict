@@ -8,8 +8,8 @@ from types import ModuleType
 
 
 def modules() -> dict[str, ModuleType]:
-    from ict_engine.models import model_2022, model_cameron, model_mmxm, model_sb
-    return {m.MODEL: m for m in (model_2022, model_mmxm, model_sb, model_cameron)}
+    from ict_engine.models import model_2022, model_cameron, model_mmxm, model_pd_return, model_sb
+    return {m.MODEL: m for m in (model_2022, model_mmxm, model_sb, model_cameron, model_pd_return)}
 
 
 def module_for(params) -> ModuleType:

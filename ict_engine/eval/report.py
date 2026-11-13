@@ -78,6 +78,13 @@ def tally(rows):
             sum(1 for r in rows if r[5] and r[5].verdict in ok))
 
 
+def relaxed(params_cls, **changes):
+    """Params with only the changes this model has (not every model has a POI gate)."""
+    from dataclasses import fields
+    names = {f.name for f in fields(params_cls)}
+    return params_cls(**{k: v for k, v in changes.items() if k in names})
+
+
 def main(argv=None):
     import argparse
     from ict_engine.models.registry import labels, modules
@@ -86,8 +93,10 @@ def main(argv=None):
     a = ap.parse_args(argv)
     mod = modules()[a.model]
     own_labels = labels(mod)
-    variants = VARIANTS if a.model == "2022_model" else {"defaults": (mod.Params(), None),
-                                                         "no bias, no poi": (mod.Params(use_bias=False, use_poi=False), None)}
+    variants = VARIANTS if a.model == "2022_model" else {
+        "defaults": (mod.Params(), None),
+        "no bias, no poi": (relaxed(mod.Params, use_bias=False, use_poi=False), None),
+        "no bias, no poi, no cost gate": (relaxed(mod.Params, use_bias=False, use_poi=False, max_cost_r=None), None)}
     for name, (p, cap) in variants.items():
         rows = score(p, cap_scope=cap)
         own = [r for r in rows if r[0].trade.model in own_labels]

@@ -1,0 +1,139 @@
+"""PD array return (ICT's live-execution form) on a hand-built day with known answers.
+
+Tape (Tue 2024-01-09): 02:00–05:00 rally 100 → 106.5 (leaves a 1h bull FVG ≈ 102.0–104.0; 05:00 peak 106.5 =
+untaken liquidity) → hold 106 → 08:00–08:40 pullback into the 1h FVG (low ≈ 103.2) → sharp 1m reaction up
+(1m bull FVG; its near edge ≈ 103.33 is the limit) → 08:44–08:50 retrace to 103.28 fills it → rally through 106.5 by 10:00.
+"""
+
+from datetime import date
+
+import pandas as pd
+import pytest
+
+from ict_engine.concepts.bars import resample
+from ict_engine.concepts.events import fvgs
+from ict_engine.models import model_pd_return as pr
+from ict_engine.sim.run import run_day
+from tests.test_model_2022 import history, path_bars
+from tests.test_model_mmxm import mirror
+
+SYNTHETIC_PRICES = True
+DAY = date(2024, 1, 9)
+NY = "America/New_York"
+P = pr.Params(use_bias=False)          # the synthetic history doesn't define a daily bias
+
+
+def ts(hm):
+    return pd.Timestamp(f"2024-01-09 {hm}", tz=NY)
+
+
+def day_bars(fail=False):
+    pts = [("2024-01-08 18:00", 100.0), ("2024-01-09 02:00", 100.0), ("2024-01-09 05:00", 106.5),
+           ("2024-01-09 05:20", 106.0), ("2024-01-09 08:00", 106.0)]
+    if fail:   # blows through both overnight 1h FVGs (≈100.0–102.1, 102.2–104.3): closes below 100, then bounces
+        pts += [("2024-01-09 08:40", 98.6), ("2024-01-09 08:44", 99.8), ("2024-01-09 09:30", 99.2)]
+    else:
+        pts += [("2024-01-09 08:40", 103.2), ("2024-01-09 08:44", 104.4), ("2024-01-09 08:50", 103.28),
+                ("2024-01-09 10:00", 107.5)]
+    pts += [("2024-01-09 16:00", 107.0)]
+    return path_bars(pts, "2024-01-08 18:00", "2024-01-09 16:30")
+
+
+def bars(**kw):
+    return pd.concat([history(), day_bars(**kw)])
+
+
+def planned(ss, side="long"):
+    return [s for s in ss if s.plan is not None and s.side == side]
+
+
+def one_h_gap():
+    g = [x for x in pr.htf_arrays(bars(), ("1h",)) if x.direction == "bull" and x.ts.date() == DAY]
+    return max(g, key=lambda x: x.top - x.bottom)
+
+
+# --- pieces -----------------------------------------------------------------------------------
+
+def test_htf_arrays_find_the_overnight_1h_bull_fvg():
+    g = one_h_gap()
+    assert g.tf == "1h" and 101.5 < g.bottom < g.top < 104.6
+
+
+def test_return_is_the_first_touch_of_a_still_valid_array():
+    g = one_h_gap()
+    day = bars()[bars().index >= ts("00:00")]
+    hits = dict((x.ts, t) for x, t in pr.returns([g], day, ts("00:00")))
+    touch = hits[g.ts]
+    assert ts("08:20") < touch < ts("08:40") and day.loc[touch].low <= g.top
+
+
+def test_trigger_is_a_1m_fvg_in_the_reaction_and_none_when_the_array_fails_first():
+    g = one_h_gap()
+    for fail, expect in ((False, True), (True, False)):
+        day = bars(fail=fail)
+        day = day[day.index >= ts("00:00")]
+        touch = pr.returns([g], day, ts("00:00"))[0][1]
+        ltf = fvgs(resample(day, "1m"), "1m", min_size=0.002)
+        got = pr.reaction_trigger(g, touch, day, ltf, 30)
+        assert (got is not None) == expect
+        if got:
+            f, ext = got
+            assert f.direction == "bull" and ts("08:40") <= f.ts <= ts("08:45") and ext == pytest.approx(103.2, abs=0.05)
+
+
+# --- the full model -----------------------------------------------------------------------------
+
+def test_finds_the_long_from_the_1h_array_with_1m_entry_and_tight_stop():
+    ss = planned(pr.find_setups(bars(), DAY, "US100", P))
+    assert ss, [(s.tags, [str(g) for g in s.gates]) for s in pr.find_setups(bars(), DAY, "US100", P)][:5]
+    s = ss[0]
+    assert s.model == "pd_return" and s.tags["array_tf"] == "1h"
+    assert s.tags["window"] in ("ny_premarket", "ny_am_kz")
+    assert s.plan.stop == pytest.approx(103.2, abs=0.05)                      # reaction low (stop_mode reaction)
+    assert 103.2 < s.plan.entry < 104.4 and s.plan.tp1 == pytest.approx(106.5, abs=0.05)
+
+
+def test_array_stop_mode_puts_the_stop_beyond_the_array():
+    s = planned(pr.find_setups(bars(), DAY, "US100", pr.Params(use_bias=False, stop_mode="array")))[0]
+    assert s.plan.stop == pytest.approx(one_h_gap().bottom, abs=0.01)
+
+
+def test_trade_wins_and_is_one_per_window():
+    out = run_day(bars(), DAY, "US100", P)
+    traded = [s for s in out if s.traded]
+    assert len(traded) == 1 and traded[0].result.vote and traded[0].side == "long"
+
+
+def test_no_trade_when_the_array_fails():
+    """Only today's arrays (lookback 0): the history's own gaps (Monday's 95 → 112 rally) are real arrays too."""
+    today = pr.Params(use_bias=False, lookback_days=0)
+    assert planned(pr.find_setups(bars(), DAY, "US100", today))
+    assert not planned(pr.find_setups(bars(fail=True), DAY, "US100", today))
+
+
+def test_sell_model_is_the_mirror():
+    ss = planned(pr.find_setups(mirror(bars()), DAY, "US100", P), side="short")
+    assert ss and ss[0].plan.tp1 == pytest.approx(200 - 106.5, abs=0.05)
+
+
+def test_no_lookahead_plan_identical_without_future_bars():
+    full = planned(pr.find_setups(bars(), DAY, "US100", P))[0]
+    cut = bars()
+    cut = cut[cut.index <= full.decided_at]
+    b = planned(pr.find_setups(cut, DAY, "US100", P))[0]
+    assert (full.plan.entry, full.plan.stop, full.plan.tp1, full.decided_at) == \
+           (b.plan.entry, b.plan.stop, b.plan.tp1, b.decided_at)
+
+
+def test_outside_the_windows_nothing_is_traded():
+    assert not planned(pr.find_setups(bars(), DAY, "US100", pr.Params(use_bias=False, windows=("ny_pm_kz",))))
+
+
+def test_bias_gate_is_applied_by_default():
+    s = pr.find_setups(bars(), DAY, "US100")[0]
+    assert any(g.name == "bias" for g in s.gates)
+
+
+def test_registered():
+    from ict_engine.models.registry import modules
+    assert modules()["pd_return"] is pr
