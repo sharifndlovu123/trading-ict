@@ -22,7 +22,7 @@ from ict_engine.data.instruments import get
 from ict_engine.eval.basis import estimate_offset
 from ict_engine.eval.cases import load_cases
 from ict_engine.eval.similarity import compare
-from ict_engine.models.model_2022 import MODEL, Params
+from ict_engine.models.model_2022 import Params
 from ict_engine.sim.run import run_day
 
 CASES = "tests/cases/ict_live_exec.yaml"
@@ -78,16 +78,25 @@ def tally(rows):
             sum(1 for r in rows if r[5] and r[5].verdict in ok))
 
 
-def main():
-    for name, (p, cap) in VARIANTS.items():
+def main(argv=None):
+    import argparse
+    from ict_engine.models.registry import labels, modules
+    ap = argparse.ArgumentParser(prog="ict_engine.eval.report")
+    ap.add_argument("--model", default="2022_model")
+    a = ap.parse_args(argv)
+    mod = modules()[a.model]
+    own_labels = labels(mod)
+    variants = VARIANTS if a.model == "2022_model" else {"defaults": (mod.Params(), "window"),
+                                                         "no bias, no poi": (mod.Params(use_bias=False, use_poi=False), "window")}
+    for name, (p, cap) in variants.items():
         rows = score(p, cap_scope=cap)
-        own = [r for r in rows if r[0].trade.model == MODEL]
+        own = [r for r in rows if r[0].trade.model in own_labels]
         (ft, st), (fo, so) = tally(rows), tally(own)
         print(f"\n=== {name}  [{p.variant}, cap/{cap}]\n"
-              f"    own cases ({MODEL}): traded like ICT {fo}/{len(own)}, seen {so}/{len(own)}   "
+              f"    own cases ({'/'.join(own_labels)}): traded like ICT {fo}/{len(own)}, seen {so}/{len(own)}   "
               f"all cases: traded {ft}/{len(rows)}, seen {st}/{len(rows)}")
         for c, best, s, n, blocked, sb, ss in rows:
-            print(f"  {'*' if c.trade.model == MODEL else ' '}", end="")
+            print(f"  {'*' if c.trade.model in own_labels else ' '}", end="")
             if best:
                 r = s.result
                 print(f"{c.id:36} {best.verdict:9} {best.score:.2f}  engine {s.side} {s.result.filled_at:%H:%M} "

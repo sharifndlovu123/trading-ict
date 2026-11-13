@@ -1,6 +1,6 @@
 """Backtest — run a model over a date range and keep every setup as one row.
 
-    uv run python -m ict_engine.eval.backtest US100 2023-01-01 2024-06-30 [--cap window|day]
+    uv run python -m ict_engine.eval.backtest US100 2023-01-01 2024-06-30 [--cap window|day] [--model mmxm]
     → reports/backtest-US100-2023-01-01-2024-06-30.parquet   (reports/ is git-ignored)
 
 This table is what post-analysis (``ict_engine.eval.review``) reads. One row per
@@ -110,7 +110,7 @@ def counterfactuals(plan, bars_1m, close, cost) -> dict:
 
 
 def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
-        params: model_2022.Params = model_2022.Params(), cap_scope: str = "window",
+        params=model_2022.Params(), cap_scope: str = "window",
         extras: bool = True) -> pd.DataFrame:
     """``extras`` = shadow + counterfactual simulations (post-analysis); off for fast variant sweeps."""
     rows, d = [], start
@@ -153,10 +153,14 @@ def main(argv=None):
     ap.add_argument("start", type=date.fromisoformat)
     ap.add_argument("end", type=date.fromisoformat)
     ap.add_argument("--cap", choices=("window", "day"), default="window")
+    ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm")
     a = ap.parse_args(argv)
-    df = run(load_range(a.asset, a.start, a.end), a.start, a.end, a.asset, cap_scope=a.cap)
+    from ict_engine.models.registry import modules
+    params = modules()[a.model].Params()
+    df = run(load_range(a.asset, a.start, a.end), a.start, a.end, a.asset, params, cap_scope=a.cap)
     REPORTS.mkdir(exist_ok=True)
-    path = REPORTS / f"backtest-{a.asset}-{a.start}-{a.end}{'-capday' if a.cap == 'day' else ''}.parquet"
+    tag = "" if a.model == "2022_model" else f"-{a.model}"
+    path = REPORTS / f"backtest{tag}-{a.asset}-{a.start}-{a.end}{'-capday' if a.cap == 'day' else ''}.parquet"
     df.to_parquet(path)
     traded = df[df.status == "traded"]
     print(f"{path}\n{len(df)} setups, {len(traded)} trades, votes {int(traded.vote.sum())}, "

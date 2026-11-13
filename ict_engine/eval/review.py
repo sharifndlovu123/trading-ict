@@ -53,6 +53,7 @@ def prepare(df: pd.DataFrame) -> pd.DataFrame:
     df["bias_agrees"] = (df.bias == want).map({True: "with bias", False: "against/neutral"})
     df["tp1_kind"] = df.tp1_name.fillna("none").str.replace(r"^\d+m ", "", regex=True)
     df["poi_kind"] = df.poi.fillna("none").str.extract(r"^(swept \w+|\w+ FVG)", expand=False).fillna("none")
+    df["family"] = df.model.replace({"mmbm": "mmxm", "mmsm": "mmxm"})
     df["half"] = (df.day > df.day.min() + (df.day.max() - df.day.min()) / 2).map({False: "early", True: "late"})
     return df
 
@@ -179,11 +180,42 @@ def tips(df: pd.DataFrame, dims=DIMENSIONS, min_n: int = 20, z_min: float = 2.0)
     return sorted(out, key=lambda x: -abs(x["z"]))
 
 
+# --- 4. cross-model -------------------------------------------------------------
+
+def cross_model(df: pd.DataFrame, by: str = "window", min_n: int = 1) -> pd.DataFrame:
+    """One row per bucket, one column pair per model family: expectancy (n). Best model per bucket
+    is named only when its trades reach ``min_n`` — "model X is king in London" needs evidence."""
+    t = trades(df)
+    if t.empty or t.family.nunique() < 1:
+        return pd.DataFrame()
+    g = t.groupby([by, "family"]).r.agg(["mean", "count"]).reset_index()
+    rows = []
+    for key, sub in g.groupby(by):
+        rec = {"bucket": str(key)}
+        for _, r in sub.iterrows():
+            rec[f"{r.family} exp_r"] = r["mean"]
+            rec[f"{r.family} n"] = int(r["count"])
+        ok = sub[sub["count"] >= min_n]
+        rec["best"] = ok.loc[ok["mean"].idxmax(), "family"] if len(ok) else "—"
+        rows.append(rec)
+    return pd.DataFrame(rows)
+
+
 # --- report -------------------------------------------------------------------
 
 PCT = ("win", "win_lo", "win_hi")
 R_COLS = ("exp_r", "exp_se", "early_r", "late_r", "vs_traded_r")
 COUNTS = ("n", "votes", "losses", "setups")
+
+
+def _kind(c: str) -> str:
+    if c in PCT or c in CAUSES:
+        return "pct"
+    if c in R_COLS or c.endswith(" exp_r"):
+        return "r"
+    if c in COUNTS or c.endswith(" n"):
+        return "count"
+    return "text"
 
 
 def _fmt(df: pd.DataFrame) -> str:
@@ -195,11 +227,14 @@ def _fmt(df: pd.DataFrame) -> str:
         cells = []
         for c in cols:
             v = r[c]
-            if c in PCT or c in CAUSES:
-                cells.append("" if pd.isna(v) else f"{v:.0%}")
-            elif c in R_COLS:
-                cells.append("" if pd.isna(v) else f"{v:+.3f}")
-            elif c in COUNTS:
+            k = _kind(c)
+            if k != "text" and pd.isna(v):
+                cells.append("")
+            elif k == "pct":
+                cells.append(f"{v:.0%}")
+            elif k == "r":
+                cells.append(f"{v:+.3f}")
+            elif k == "count":
                 cells.append(str(int(v)))
             else:
                 cells.append(str(v))
@@ -222,6 +257,10 @@ def report(df: pd.DataFrame, title: str = "") -> str:
              _fmt(diagnose(df, None)), _fmt(diagnose(df, "window")),
              "## Gate value — what each gate blocked (shadow) vs what it let through",
              _fmt(gate_value(df))]
+    if df.family.nunique() > 1:
+        parts += ["## Cross-model — expectancy (n) per bucket; best named at n ≥ 30"]
+        for dim in ("window", "weekday", "hour"):
+            parts += [f"### By {dim}", _fmt(cross_model(df, dim, min_n=30))]
     for dim in ("window", "weekday", "hour", "side", "bias_agrees", "tp1_kind", "liquidity_kind"):
         parts += [f"## By {dim}", _fmt(buckets(df, dim))]
     return "\n\n".join(parts) + "\n"

@@ -70,3 +70,15 @@ def test_hour_buckets_print_as_plain_labels():
     text = report(table(), "t")
     section = text.split("## By hour")[1]
     assert "| 9 |" in section and "+9.000" not in section
+
+
+def test_cross_model_names_the_best_family_per_bucket():
+    from ict_engine.eval.review import cross_model
+    a = table(n_am=60, n_pm=60)                                   # 2022 model: AM +0.5R, PM 0R
+    b = table(n_am=60, n_pm=60, am_r=(-1.0,), pm_r=(2.0, -1.0)).assign(model="mmbm")   # MMxM: AM -1R, PM +0.5R
+    df = prepare(pd.concat([a, b], ignore_index=True))
+    c = cross_model(df, "window", min_n=30).set_index("bucket")
+    assert c.loc["ny_am_kz", "best"] == "2022_model" and c.loc["ny_pm_kz", "best"] == "mmxm"
+    assert c.loc["ny_pm_kz", "mmxm n"] == 60
+    assert cross_model(df, "window", min_n=1000).best.eq("—").all()
+    assert "## Cross-model" in report(pd.concat([a, b], ignore_index=True), "x")

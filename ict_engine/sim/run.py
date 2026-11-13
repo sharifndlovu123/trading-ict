@@ -18,6 +18,7 @@ import pandas as pd
 from ict_engine.concepts.context import build_context
 from ict_engine.data.instruments import COST
 from ict_engine.models import model_2022
+from ict_engine.models.registry import module_for
 from ict_engine.models.base import Gate, Result, Setup
 from ict_engine.sim.simulate import simulate
 
@@ -33,7 +34,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             ctx = build_context(bars_1m, day)
         except ValueError:
             return []
-    setups = sorted(model_2022.find_setups(bars_1m, day, asset, params, ctx), key=lambda s: s.decided_at)
+    setups = sorted(module_for(params).find_setups(bars_1m, day, asset, params, ctx), key=lambda s: s.decided_at)
     close = pd.Timestamp(datetime.combine(day, time(16)), tz=NY)
     busy_until, filled, prev = None, {}, None
     for s in setups:

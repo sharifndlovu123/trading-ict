@@ -23,6 +23,7 @@ from pathlib import Path
 import pandas as pd
 
 from ict_engine.eval.bias import wilson
+from ict_engine.models import model_mmxm
 from ict_engine.models.model_2022 import Params
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,6 +40,21 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "no London": replace(BASE, windows=NO_LONDON),
 }
 
+
+MB = model_mmxm.Params()
+MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
+    "baseline": MB,
+    "stage 2": replace(MB, stage=2),
+    "frame 1h": replace(MB, frame_tf="1h", oc_bars=3),
+    "entry 5m": replace(MB, entry_tf="5m"),
+    "tp1 cap 2R": replace(MB, tp1_cap_r=2.0),
+    "2 steps": replace(MB, min_steps=2),
+    "no poi": replace(MB, use_poi=False),
+    "no bias": replace(MB, use_bias=False),
+    "deepest FVG": replace(MB, fvg_pick="deepest"),
+    "no purge required": replace(MB, smr_purge=False),
+}
+SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS}
 
 def _job(args) -> pd.DataFrame:
     name, params, asset, start, end = args
@@ -98,11 +114,12 @@ def main(argv=None):
     ap.add_argument("end", type=date.fromisoformat)
     ap.add_argument("--assets", nargs="+", default=["US100", "US500"])
     ap.add_argument("--holdout", type=float, default=0.3)
+    ap.add_argument("--model", default="2022_model", choices=tuple(SETS))
     a = ap.parse_args(argv)
-    df = sweep(a.start, a.end, tuple(a.assets))
+    df = sweep(a.start, a.end, tuple(a.assets), SETS[a.model])
     cut = split_day(a.start, a.end, a.holdout)
-    text = render(compare(df, cut), cut, f"{'+'.join(a.assets)} {a.start} → {a.end}")
-    out = ROOT / "reports" / f"variants-{a.start}-{a.end}"
+    text = render(compare(df, cut), cut, f"{a.model} {'+'.join(a.assets)} {a.start} → {a.end}")
+    out = ROOT / "reports" / f"variants{'' if a.model == '2022_model' else '-' + a.model}-{a.start}-{a.end}"
     out.parent.mkdir(exist_ok=True)
     df.to_parquet(out.with_suffix(".parquet"))
     out.with_suffix(".md").write_text(text)

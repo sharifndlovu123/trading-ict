@@ -128,8 +128,8 @@ def test_tp1_is_the_nearest_swing_untaken_since_it_formed():
     day = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0}, index=idx)
     day.loc[t("08:10"), "high"] = 110                      # day high early
     day.loc[t("08:40"), "high"] = 104                      # later swing high, untaken since
-    day.loc[t("08:50"), "high"] = 103                      # swing high run at 09:00 → taken
-    day.loc[t("09:00"), "high"] = 103.5
+    day.loc[t("08:50"), "high"] = 103                      # swing high (confirmed 09:05), run at 09:10 → taken
+    day.loc[t("09:10"), "high"] = 103.5
     sw = [Event("swing_high", "5m", "bear", t("08:55"), t("08:40"), 104, 104),
           Event("swing_high", "5m", "bear", t("09:05"), t("08:50"), 103, 103)]
     ctx = type("C", (), {"levels": {"pdh": 120.0}})()
@@ -220,3 +220,16 @@ def test_cost_gate_blocks_stops_too_small_for_costs(monkeypatch):
     assert planned and all(s.plan is None and s.failed_gate == "risk" for s in planned)
     assert traded(find_setups(bars(), DAY, "US100", Params(max_cost_r=None)))
     assert traded(find_setups(bars(), DAY, "US100", Params(max_cost_r=0.6)))
+
+
+def test_5m_swing_is_untaken_although_its_own_1m_bars_print_the_high():
+    """Regression: the 1m bars inside the 5m swing bar reach the swing high by definition."""
+    from ict_engine.concepts.events import Event
+    from ict_engine.models.model_2022 import _targets
+    t = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz="America/New_York")
+    idx = pd.date_range(t("08:00"), t("09:30"), freq="1min")
+    day = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0}, index=idx)
+    day.loc[t("08:42"), "high"] = 104                        # inside the 08:40–08:45 5m bar
+    sw = [Event("swing_high", "5m", "bear", t("08:50"), t("08:40"), 104, 104)]   # confirmed 08:50
+    ctx = type("C", (), {"levels": {"pdh": 120.0}})()
+    assert _targets(101, True, ctx, day, t("09:30"), sw)[0] == 104

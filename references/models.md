@@ -53,6 +53,14 @@ Card fields: **Time** · **Setup** (sequence that must happen, in order) · **En
 - **Patterns:** tracked — Unicorn (ICT: the stage-2 entry), SMT divergence at the reversal, Turtle Soup at the reversal low/high.
 - **Params:** framing timeframe (H1 / H4 / D1); stage 1 vs stage 2 entry.
 - **Source:** ICT Charter Price Action Model 6 (Jan 2024); Market Maker Model PDF p. 2–7.
+- **Engine (mechanical v1, `ict_engine/models/model_mmxm.py`):**
+  1. *Original consolidation*: `oc_bars` (4) framing bars (15m) whose total range ≤ `oc_range_mult` (2.5) × the median framing-bar range. Its high is the terminus.
+  2. *Curve*: price closes below the OC, never trades back above the OC high, reaches at least one OC-width below it, and steps lower through ≥ `min_steps` (1) framing swing highs below the OC low (redistribution = internal targets).
+  3. *SMR*: the reversal low runs PDL / Asia low / PWL or trades into a valid 1h/4h bullish FVG (`poi` gate).
+  4. *Shift*: bullish MSS on the entry TF (1m) within 120 min of the low.
+  5. *Entry*: stage 1 = deepest displacement FVG in the leg off the low; stage 2 = first displacement FVG after a close back above the lowest redistribution high. Limit at the FVG proximal.
+  6. *Pricing*: entry in discount of OC high ↔ reversal low. *Stop*: beyond the reversal low. *TP1*: nearest untaken curve level ≥ 1R. *Final*: OC high.
+  Variants (`python -m ict_engine.eval.variants … --model mmxm`): stage 2, 1h framing, 5m entries, TP1 cap 2R, 2 steps, no POI, no bias.
 
 ## 4. Power of 3 Day (classic buy / sell day)
 

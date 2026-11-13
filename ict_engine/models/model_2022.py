@@ -303,8 +303,8 @@ def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts, beyond: f
     edge = max(edge, reach) if long else min(edge, reach)
 
     def untaken(price, since=None):
-        """Not traded through between ``since`` (the level's formation; day start for context
-        levels) and the decision. A swing below the day's high can still be untaken."""
+        """Not traded through between ``since`` (a swing's confirmation time — its own bar may
+        print the high; day start for context levels) and the decision. A swing below the day's high can still be untaken."""
         after = seen if since is None else seen[seen.index > since]
         if after.empty:
             return True
@@ -317,9 +317,9 @@ def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts, beyond: f
     for s in swing_pts:
         if s.ts > decided:
             continue
-        if long and s.kind == "swing_high" and s.top > edge and untaken(s.top, s.origin_ts):
+        if long and s.kind == "swing_high" and s.top > edge and untaken(s.top, s.ts):
             cands.append((s.top, f"{s.tf} swing high", False))
-        if not long and s.kind == "swing_low" and s.bottom < edge and untaken(s.bottom, s.origin_ts):
+        if not long and s.kind == "swing_low" and s.bottom < edge and untaken(s.bottom, s.ts):
             cands.append((s.bottom, f"{s.tf} swing low", False))
     if not cands:
         return None, "", None, ""
