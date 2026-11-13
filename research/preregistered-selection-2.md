@@ -30,4 +30,18 @@ The only clean confirmation left is forward data: days after 2026-11-12, live or
 - If nothing passes the filter, that is the result ("no bucket qualifies").
 
 ## Result
-(to be filled in by the run, unedited)
+## Result (run 2026-11-13, commit 5f33441 rule on 0f2bfad runs): FAIL
+
+- 26 buckets had n ≥ 40 in 2022–24. **3 kept:**
+  - Silver Bullet US30 sb_pm: +0.36R, n 72, z_cl 1.6
+  - 2022 model US100 NY AM: +0.28R, n 92, z_cl 1.9
+  - Cameron US30 NY AM: +0.16R, n 185, z_cl 1.3
+- **Test (2024-07 → 2026-11), kept pooled: −0.115 ± 0.080R (n 341, z_cl −1.4).** Unselected, all buckets:
+  −0.098 ± 0.022R (n 4683, z_cl −4.4). The selection did slightly worse than no selection.
+- Per bucket on test: 2022 model US100 NY AM +0.02 (n 106); Cameron US30 NY AM −0.17 (n 182);
+  SB US30 sb_pm −0.20 (n 53).
+- Reading: the second failure in a row. Even with measured costs, asset-level buckets and clustered z, past
+  bucket performance did not predict the next period. 2022 model US100 NY AM is the only bucket picked by both
+  selections that stayed ≥ 0 out of sample, but at +0.02R it is not an edge. Choosing *when* to trade these
+  entries does not fix them. The lever is the entries themselves: direction (39% of losses had the wrong bias)
+  and the setup logic.
