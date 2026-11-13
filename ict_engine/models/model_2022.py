@@ -57,6 +57,10 @@ class Params:
     use_poi: bool = True
     min_potential: float = 10.0          # handles from entry to final target (ICT minimum framework)
     stop_buffer: float = 0.25
+    # TP1 (earliest close), framework §0: day trade = opposite side of the day/session; 1m swings are
+    # too fine. Swings of these TFs + context levels are candidates; TP1 at least min_tp1_r from entry.
+    tp1_swing_tfs: tuple[str, ...] = ("5m",)
+    min_tp1_r: float = 1.0
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     tags: dict = field(default_factory=dict, compare=False)
 
@@ -65,6 +69,8 @@ class Params:
         off = [n for n, on in (("bias", self.use_bias), ("pricing", self.use_pricing),
                                ("poi", self.use_poi)) if not on]
         extra = ["htf20"] if self.use_htf_pricing else []
+        if (self.tp1_swing_tfs, self.min_tp1_r) != (("5m",), 1.0):
+            extra.append(f"tp1_{'+'.join(self.tp1_swing_tfs)}_{self.min_tp1_r:g}R")
         if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day", "opening_range"):
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
@@ -190,8 +196,10 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
     setup.gates.append(Gate("trigger", True, f"{p.entry_tf} displacement FVG {fvg.bottom:.2f}-{fvg.top:.2f}"))
 
     needs_arm = not (armed_now or not p.use_pricing)
-    tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts,
-                                                beyond=arm if needs_arm else None)
+    tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided,
+                                                [x for x in swing_pts if x.tf in p.tp1_swing_tfs],
+                                                beyond=arm if needs_arm else None,
+                                                min_dist=p.min_tp1_r * abs(entry - stop))
     if tp1 is None:
         setup.gates.append(Gate("target", False, "no untaken liquidity beyond entry"))
         return setup
@@ -265,11 +273,14 @@ def _poi(liquidity: Event, long: bool, htf_gaps: list[Event], day_1m) -> str | N
     return None
 
 
-def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts, beyond: float | None = None):
+def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts, beyond: float | None = None,
+             min_dist: float = 0.0):
     """TP1 = nearest untaken level past ``beyond`` (the arm level when the order must arm first —
     anything between entry and arm is taken before we can fill; else the entry)."""
     seen = day_1m[day_1m.index <= decided]
     edge = entry if beyond is None else (max(entry, beyond) if long else min(entry, beyond))
+    reach = entry + min_dist if long else entry - min_dist
+    edge = max(edge, reach) if long else min(edge, reach)
 
     def untaken(price, since=None):
         """Not traded through between ``since`` (the level's formation; day start for context

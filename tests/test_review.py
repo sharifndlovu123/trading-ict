@@ -1,0 +1,72 @@
+"""Post-analysis on hand-built backtest tables with known answers."""
+
+import numpy as np
+import pandas as pd
+
+from ict_engine.eval.review import causes, diagnose, gate_value, prepare, report, tips
+
+
+def table(n_am=120, n_pm=120, am_r=(2.0, -1.0), pm_r=(-1.0, -1.0, 2.0), seed=0):
+    """Traded rows: ny_am wins 1 in 2 (+0.5R avg); ny_pm wins 1 in 3 (0R avg)."""
+    days = pd.bdate_range("2023-01-02", periods=max(n_am, n_pm))
+    rows = []
+    for win, n, rs in (("ny_am_kz", n_am, am_r), ("ny_pm_kz", n_pm, pm_r)):
+        for i in range(n):
+            r = rs[i % len(rs)]
+            rows.append(dict(model="2022_model", variant="v", asset="US100", day=days[i], side="long",
+                             window=win, weekday=days[i].strftime("%a"), hour=9 if win == "ny_am_kz" else 14,
+                             quarter="Q1", bias="bull", outcome="bull_hit" if r > 0 else "bear_hit",
+                             status="traded", failed_gate=None, r=r, vote=r > 0, exit="tp1" if r > 0 else "stop",
+                             ambiguous=False, tp1_name="5m swing high", poi="swept pdl", liquidity="pdl",
+                             liquidity_kind="sweep", shadow_r=r, shadow_vote=r > 0,
+                             cf_flip_vote=None, cf_wide_stop_vote=False, cf_tp1_1r_vote=False))
+    return pd.DataFrame(rows)
+
+
+def test_causes_tag_each_counterfactual_and_hindsight():
+    row = pd.Series(dict(vote=False, r=-1.0, exit="stop", side="long", outcome="bear_hit", ambiguous=np.bool_(True),
+                         cf_flip_vote=np.bool_(True), cf_wide_stop_vote=None, cf_tp1_1r_vote=float("nan")))
+    assert causes(row) == ["bias_wrong", "wrong_side", "ambiguous"]
+    win = row.copy(); win["vote"], win["r"] = True, 2.0
+    assert causes(win) == []
+    plain = pd.Series(dict(vote=False, r=-1.0, exit="stop", side="long", outcome="bull_hit", ambiguous=False))
+    assert causes(plain) == ["unexplained"]
+
+
+def test_tip_found_for_stronger_window_and_not_for_noise():
+    df = prepare(table())
+    found = tips(df, dims=("window",))
+    assert {(t["bucket"], round(t["exp_r"], 2)) for t in found} >= {("ny_am_kz", 0.5)}
+    assert all(t["z"] > 0 for t in found if t["bucket"] == "ny_am_kz")
+    assert tips(prepare(table(n_am=40, n_pm=40)), dims=("window",)) == []          # z≈1.5: not enough evidence
+
+
+def test_tip_rejected_when_it_flips_between_halves():
+    df = table(am_r=(2.0, -1.0), pm_r=(-1.0, -1.0, 2.0))
+    late = df.day > df.day.min() + (df.day.max() - df.day.min()) / 2
+    df.loc[late & (df.window == "ny_am_kz"), ["r", "vote"]] = [-1.0, False]    # AM edge vanishes late
+    df.loc[late & (df.window == "ny_pm_kz"), ["r", "vote"]] = [2.0, True]
+    assert tips(prepare(df), dims=("window",)) == []
+
+
+def test_diagnose_shares_and_gate_value():
+    df = table()
+    blocked = df.iloc[:5].assign(status="blocked@bias", failed_gate="bias", r=np.nan, vote=None,
+                                 shadow_r=2.0, shadow_vote=True)
+    df = prepare(pd.concat([df, blocked], ignore_index=True))
+    d = diagnose(df, None)
+    assert d.losses.iloc[0] == (df.status == "traded").sum() - df[df.status == "traded"].vote.astype(bool).sum()
+    assert d.bias_wrong.iloc[0] == 1.0                       # every loser's day ran the other side
+    g = gate_value(df).set_index("bucket")
+    assert g.loc["blocked@bias (shadow)", "exp_r"] == 2.0 and g.loc["blocked@bias (shadow)", "vs_traded_r"] > 0
+
+
+def test_report_renders_markdown():
+    text = report(table(), "test")
+    assert text.startswith("# Review test") and "## Tips" in text and "ny_am_kz" in text
+
+
+def test_hour_buckets_print_as_plain_labels():
+    text = report(table(), "t")
+    section = text.split("## By hour")[1]
+    assert "| 9 |" in section and "+9.000" not in section

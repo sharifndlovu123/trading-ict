@@ -2,8 +2,9 @@
 
 One open order/trade at a time; after ``max_trades`` filled trades the rest of
 the setups in the same scope are logged with a failed ``cap`` gate. Scope
-"day" (ruling #1: one trade per day — the Silver Bullet default) or "window"
-(``max_trades`` per time window, so an early loser can't block a later killzone).
+"window" (default: ``max_trades`` per time window — each killzone is judged on its
+own, as the leaderboard ranks per time bucket) or "day" (ruling #1: one trade per
+day — the Silver Bullet rule).
 A newer setup cancels a pending order that has not filled by its decision time.
 """
 
@@ -24,13 +25,14 @@ COST = {"US100": 1.0, "US500": 0.5, "US30": 2.0}     # round-trip spread + slipp
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),
-            max_trades: int = 1, cap_scope: str = "day") -> list[Setup]:
+            max_trades: int = 1, cap_scope: str = "window", ctx=None) -> list[Setup]:
     if cap_scope not in ("day", "window"):
         raise ValueError(f"cap_scope must be 'day' or 'window', not {cap_scope!r}")
-    try:
-        ctx = build_context(bars_1m, day)
-    except ValueError:
-        return []
+    if ctx is None:
+        try:
+            ctx = build_context(bars_1m, day)
+        except ValueError:
+            return []
     setups = sorted(model_2022.find_setups(bars_1m, day, asset, params, ctx), key=lambda s: s.decided_at)
     close = pd.Timestamp(datetime.combine(day, time(16)), tz=NY)
     busy_until, filled, prev = None, {}, None
@@ -63,7 +65,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
 
 
 def run_range(bars_1m: pd.DataFrame, start: date, end: date, asset: str, params=model_2022.Params(),
-              max_trades: int = 1, cap_scope: str = "day") -> list[Setup]:
+              max_trades: int = 1, cap_scope: str = "window") -> list[Setup]:
     out, d = [], start
     while d <= end:
         if d.weekday() < 5:

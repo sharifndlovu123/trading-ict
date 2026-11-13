@@ -179,3 +179,21 @@ def test_tp1_must_lie_beyond_the_arm_level():
     ctx = type("C", (), {"levels": {"pdh": 120.0}})()
     assert _targets(101, True, ctx, day, t("09:30"), sw)[0] == 102
     assert _targets(101, True, ctx, day, t("09:30"), sw, beyond=103)[0] == 106
+
+
+def test_tp1_skips_levels_closer_than_the_minimum_distance():
+    from ict_engine.concepts.events import Event
+    from ict_engine.models.model_2022 import _targets
+    t = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz="America/New_York")
+    idx = pd.date_range(t("08:00"), t("09:30"), freq="1min")
+    day = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0}, index=idx)
+    sw = [Event("swing_high", "5m", "bear", t("08:30"), t("08:25"), 101.5, 101.5),
+          Event("swing_high", "5m", "bear", t("08:40"), t("08:35"), 104, 104)]
+    ctx = type("C", (), {"levels": {"pdh": 120.0}})()
+    assert _targets(101, True, ctx, day, t("09:30"), sw)[0] == 101.5
+    assert _targets(101, True, ctx, day, t("09:30"), sw, min_dist=2)[0] == 104       # 1R = 2 points
+
+
+def test_tp1_uses_only_the_configured_swing_timeframes():
+    s = traded(find_setups(bars(), DAY, "US100", Params(tp1_swing_tfs=("5m",))))
+    assert all("1m" not in x.plan.tp1_name for x in s)

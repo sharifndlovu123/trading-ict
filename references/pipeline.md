@@ -72,12 +72,20 @@ The traits block is exactly `TradeSnapshot` in `ict_engine/eval/similarity.py`, 
 - **Extras**: engine trades resembling no reference are not errors (ICT didn't take every setup) — they go to a review list.
 - **Gate value**: compare would-be setups vs trades to see what each gate filters out.
 
+## 10. Review — post-analysis (what went wrong, where it works)
+Reads the backtest table (one row per setup: gate trace, plan, real result, **shadow** result = the would-be plan simulated as if every gate passed, and **one-factor counterfactuals**: wider stop, TP1 at 1R, opposite side). Hindsight columns judge decisions afterwards and never feed a gate.
+- **Diagnosis** per losing trade: bias_wrong (day ran the other side first), wrong_side, stop_too_tight, target_too_far, ambiguous bar, time_exit, unexplained.
+- **Gate value**: blocked setups' shadow expectancy vs traded expectancy, per gate. A gate whose blocked setups beat the traded ones is filtering out winners.
+- **Tips**: buckets (window, weekday, hour, side, bias agreement, liquidity, TP1 kind, asset…) whose expectancy differs from the rest by |z| ≥ 2, n ≥ 20 on both sides, and the same sign in the early and late half of the range. Tips are hypotheses → tested as new variants, never applied automatically.
+- Later: cross-model view (same bucket, all models) so "model X is king in London" is a ranked comparison.
+
 ## Where the code lives
 | Stage | Module (planned) |
 | --- | --- |
 | 0 | `ict_engine/data/` (**built**: Dukascopy fetch → Parquet, NY-time load, quality check) |
 | 1–3 | `ict_engine/concepts/` (**built**: `bars.py` resampling, `context.py` day context + pricing + v1 bias, `clock.py`, `events.py` swings / displacement / FVG / VI / IFVG lifecycle / sweeps / BOS-MSS) |
-| 4 | `ict_engine/models/` (one state machine per model card) |
-| 5–7 | `ict_engine/sim/` |
-| 8 | `ict_engine/records/` (trade cards → DuckDB) |
-| 9 | `ict_engine/eval/` (**built**: similarity, reference cases, feed-basis anchors) |
+| 4–6 | `ict_engine/models/` (**built**: 2022 model — `base.py` Gate/TradePlan/Setup, `model_2022.py`) |
+| 7 | `ict_engine/sim/` (**built**: `simulate.py` fill/stop/TP1, `run.py` day runner, cap per window/day) |
+| 8 | `ict_engine/eval/backtest.py` (**built**: one row per setup → `reports/*.parquet`; DuckDB later) |
+| 9 | `ict_engine/eval/` (**built**: similarity, reference cases, feed-basis anchors, `report.py`, `bias.py` bias hit rate) |
+| 10 | `ict_engine/eval/review.py` (**built**: diagnosis, gate value, bucket tips) |

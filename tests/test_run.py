@@ -50,7 +50,7 @@ ROWS = [("09:01", 100, 100, 98.5, 99), ("09:02", 99, 99, 97, 97),          # fil
 def test_daily_cap_blocks_the_second_trade(monkeypatch):
     setups = [fake("09:00", "ny_am_kz", 99, 98, 101), fake("13:30", "ny_pm_kz", 96, 95, 99)]
     patched(monkeypatch, setups)
-    out = run.run_day(frame(ROWS), DAY, "US100", max_trades=1)
+    out = run.run_day(frame(ROWS), DAY, "US100", max_trades=1, cap_scope="day")
     assert out[0].result.exit_reason == "stop"
     assert out[1].result is None and out[1].gates[-1].name == "cap"
 

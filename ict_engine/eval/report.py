@@ -29,16 +29,17 @@ CASES = "tests/cases/ict_live_exec.yaml"
 OLD_WINDOWS = ("london_kz", "ny_am_kz", "ny_pm_kz")
 VARIANTS = {                                   # name -> (params, cap_scope)
     "v1 defaults (first run)": (Params(windows=OLD_WINDOWS, use_htf_pricing=True, neutral_bias="block"), "day"),
-    "current defaults": (Params(), "day"),
-    "current, cap per window": (Params(), "window"),
-    "current, + 20-day pricing": (Params(use_htf_pricing=True), "day"),
-    "current, no bias": (Params(use_bias=False), "day"),
-    "current, bias draw_htf": (Params(bias_rule="draw_htf"), "day"),
-    "current, neutral bias blocks": (Params(neutral_bias="block"), "day"),
+    "current defaults (cap per window)": (Params(), "window"),
+    "current, cap per day": (Params(), "day"),
+    "current, TP1 any swing (1m+5m, 0R)": (Params(tp1_swing_tfs=("1m", "5m"), min_tp1_r=0.0), "window"),
+    "current, + 20-day pricing": (Params(use_htf_pricing=True), "window"),
+    "current, no bias": (Params(use_bias=False), "window"),
+    "current, bias draw_htf": (Params(bias_rule="draw_htf"), "window"),
+    "current, neutral bias blocks": (Params(neutral_bias="block"), "window"),
 }
 
 
-def score(params: Params, cases=None, data_start=None, cap_scope: str = "day"):
+def score(params: Params, cases=None, data_start=None, cap_scope: str = "window"):
     cases = cases or load_cases(CASES)
     rows = []
     for c in cases:
