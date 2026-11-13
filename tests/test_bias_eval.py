@@ -6,7 +6,7 @@ import pytest
 from ict_engine.concepts.context import BIAS_RULES, build_context
 from ict_engine.data.dukascopy import DATA_DIR
 from ict_engine.eval.bias import (DayRecord, base_rate, day_outcome, label_days, report, score,
-                                  wilson)
+                                  split_records, wilson)
 
 NY = "America/New_York"
 
@@ -125,3 +125,17 @@ def test_real_data_us100_labels():
     # spot-check the eval's calls equal build_context's for a few days
     for r in recs[::7]:
         assert r.calls == {k: v[0] for k, v in build_context(bars, r.day).biases.items()}
+
+
+def test_split_records_partitions_by_regime():
+    rule = next(iter(BIAS_RULES))
+    calls = {k: "bull" for k in BIAS_RULES}
+    recs = [DayRecord(date(2022, 12, 30), "bull_hit", calls), DayRecord(date(2023, 1, 3), "bear_hit", calls),
+            DayRecord(date(2024, 1, 2), "bull_hit", calls)]
+    parts = split_records(recs, [date(2023, 1, 1)])
+    assert [lbl for lbl, _ in parts] == ["2022-12-30..2022-12-30", "2023-01-03..2024-01-02"]
+    assert [len(p) for _, p in parts] == [1, 2]
+    assert sum(len(p) for _, p in split_records(recs, [date(2023, 1, 1), date(2024, 1, 1)])) == 3
+    assert split_records(recs, []) == [("2022-12-30..2024-01-02", recs)]
+    assert score(parts[1][1], rule).correct == 1
+    assert "cover" in report(recs, "t")

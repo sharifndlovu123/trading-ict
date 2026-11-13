@@ -10,12 +10,15 @@ Mechanical version (buy model; the sell model is the mirror):
                                    highs below the OC low (redistribution — later internal targets).
     3 smart money reversal (SMR)   the curve's low (reversal low) is put in at a HTF discount array
                                    (runs PDL / Asia low / PWL, or trades into a valid 1h/4h bullish
-                                   FVG) AND purges liquidity: it runs a context level or a framing
-                                   swing low on the curve (ICT: "always a purge on liquidity").
+                                   FVG) AND purges resting liquidity: a context level, an older
+                                   untaken framing swing low, or equal lows on the curve (ICT:
+                                   "always a purge on liquidity" — the curve's own stepping lows
+                                   don't count, a curve always undercuts them).
     4 market structure shift       bullish MSS on the entry TF within ``mss_within_min`` of the low.
-    5 entry                        stage 1: first displacement FVG in the leg off the low;
-                                   stage 2: first displacement FVG after price closes back above
-                                   the lowest redistribution high ("directly across" from it).
+    5 entry                        fvg (low-risk): first displacement FVG in the leg off the low;
+                                   reacc1/reacc2: the up-close candle bodies of the lowest / next
+                                   redistribution carried across — once price closes back above the
+                                   zone, a limit sits at its top ("directly across", ICT PAM6).
     → gates   time → bias → pricing (entry in discount of OC high ↔ reversal low) → poi (SMR array)
               → trigger → target → risk (cost)
     → plan    limit at the FVG proximal; stop beyond the reversal low; TP1 = nearest untaken
@@ -57,9 +60,12 @@ class Params:
     min_steps: int = 1                   # redistribution swing highs on the curve
     low_lookback_min: int = 120          # reversal low searched this far before the MSS
     leg_bars_after_mss: int = 3
-    stage: int = 1                       # 1 | 2
+    entry: str = "fvg"                   # fvg: low-risk — first FVG after the SMR (ICT GMC Nov 2025)
+                                         # reacc1 / reacc2: re-accumulation zone carried across from the
+                                         # lowest / next redistribution's up-close candles (ICT PAM6 38:55)
     fvg_pick: str = "first"              # first (ICT: "the very 1st bullish FVG that forms") | deepest
     smr_purge: bool = True               # ICT: "smart money reversal will always be a purge on liquidity"
+    eql_tol: float = 0.5                 # equal lows: within eql_tol × OC width
     entry_level: str = "proximal"
     use_bias: bool = True
     bias_rule: str = "prev_day"
@@ -76,7 +82,7 @@ class Params:
     @property
     def variant(self) -> str:
         d = Params()
-        parts = [f"{self.frame_tf}>{self.entry_tf}", f"stage{self.stage}",
+        parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
                      "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge"):
@@ -95,6 +101,7 @@ class Curve:
     oc_low: float
     steps: tuple[float, ...]             # redistribution levels, in time order (stepping toward the low)
     step_times: tuple[pd.Timestamp, ...]  # confirmation times (the swing bar itself prints the level)
+    step_origins: tuple[pd.Timestamp, ...] = ()   # framing bar that printed each step
 
 
 def find_curve(frame: pd.DataFrame, frame_sw: list[Event], long: bool, low_ts: pd.Timestamp, low: float,
@@ -135,7 +142,8 @@ def find_curve(frame: pd.DataFrame, frame_sw: list[Event], long: bool, low_ts: p
         if len(st) < p.min_steps:
             continue
         return Curve(pd.Timestamp(known.index[s]), t_end, oc_hi, oc_lo,
-                     tuple(x.top if long else x.bottom for x in st), tuple(x.ts for x in st))
+                     tuple(x.top if long else x.bottom for x in st), tuple(x.ts for x in st),
+                     tuple(x.origin_ts for x in st))
     return None
 
 
@@ -157,21 +165,55 @@ def smr_array(ctx: DayContext, long: bool, low: float, low_ts: pd.Timestamp, cur
     return None
 
 
-def smr_purge(ctx: DayContext, frame_sw: list[Event], long: bool, low: float, low_ts: pd.Timestamp,
-              curve: Curve) -> str | None:
-    """The reversal must run liquidity (turtle soup): trade through a context level or a framing
-    swing low confirmed on the curve before the reversal."""
+def smr_purge(ctx: DayContext, frame: pd.DataFrame, frame_sw: list[Event], long: bool, low: float,
+              low_ts: pd.Timestamp, curve: Curve, p: Params) -> str | None:
+    """The reversal must run *resting* liquidity (turtle soup), not just the curve's own stepping lows
+    (a curve always undercuts those). Accepted:
+      - a context level (PDL / Asia low / PWL; mirror for highs) below the OC;
+      - an older framing swing low (formed before the OC) untaken until the final leg (which starts
+        at the last redistribution);
+      - relatively equal lows on the curve (two framing swing lows within eql_tol × OC width)."""
     for n in (SMR_LEVELS_LOW if long else SMR_LEVELS_HIGH):
         lvl = ctx.levels.get(n)
         if lvl is not None and (low < lvl if long else low > lvl) and (lvl < curve.oc_low if long else lvl > curve.oc_high):
             return f"ran {n}"
     kind = "swing_low" if long else "swing_high"
-    for x in sorted(frame_sw, key=lambda e: -e.origin_ts.value):
-        if x.kind != kind or x.ts > low_ts or x.origin_ts <= curve.oc_end:
+    known = [x for x in frame_sw if x.kind == kind and x.ts <= low_ts]
+    price = (lambda x: x.bottom) if long else (lambda x: x.top)
+    final_leg = curve.step_origins[-1] if curve.step_origins else curve.oc_end   # run into the low starts here
+    for x in sorted((x for x in known if x.origin_ts < curve.oc_start), key=lambda e: -e.origin_ts.value):
+        lvl = price(x)
+        if not (low < lvl if long else low > lvl):
             continue
-        if (low < x.bottom) if long else (low > x.top):
-            return f"ran {x.tf} swing {'low' if long else 'high'} {x.bottom if long else x.top:.2f}"
+        between = frame[(frame["close_ts"] > x.ts) & (frame.index < final_leg)]
+        held = between.empty or (between.low.min() > lvl if long else between.high.max() < lvl)
+        if held:
+            return f"ran older {x.tf} swing {'low' if long else 'high'} {lvl:.2f}"
+    on_curve = [x for x in known if x.origin_ts > curve.oc_end]
+    tol = p.eql_tol * (curve.oc_high - curve.oc_low)
+    for a in range(len(on_curve)):
+        for b in range(a + 1, len(on_curve)):
+            la, lb = price(on_curve[a]), price(on_curve[b])
+            if abs(la - lb) <= tol and (low < min(la, lb) if long else low > max(la, lb)):
+                return f"ran equal {'lows' if long else 'highs'} {min(la, lb) if long else max(la, lb):.2f}"
     return None
+
+
+def reacc_zone(frame: pd.DataFrame, curve: Curve, long: bool, which: int) -> tuple[float, float] | None:
+    """Re-accumulation zone carried across from a redistribution: bodies of its up-close candles
+    (down-close for a sell model) — the swing bar and the bar before it; the swing bar's body if
+    none. ``which`` = 1 for the redistribution nearest the reversal, 2 for the next one."""
+    if len(curve.step_origins) < which:
+        return None
+    t = curve.step_origins[-which]
+    pos = frame.index.get_loc(t)
+    bars = frame.iloc[max(0, pos - 1):pos + 1]
+    pick = bars[bars.close > bars.open] if long else bars[bars.close < bars.open]
+    if pick.empty:
+        pick = frame.iloc[pos:pos + 1]
+    lo = float(pick[["open", "close"]].min(axis=1).min())
+    hi = float(pick[["open", "close"]].max(axis=1).max())
+    return lo, hi
 
 
 # --- model ------------------------------------------------------------------------
@@ -202,7 +244,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     side = "long" if long else "short"
     setup = Setup(NAMES[0] if long else NAMES[1], p.variant, asset, "day", day, side, mss.ts, {"shift": mss},
                   pd_array="fvg", pd_array_tf=p.entry_tf)
-    setup.tags["stage"] = p.stage
+    setup.tags["entry"] = p.entry
 
     # reversal extreme before the shift
     pre = span_1m[(span_1m.index >= mss.origin_ts - pd.Timedelta(minutes=p.low_lookback_min))
@@ -222,36 +264,46 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     setup.evidence["liquidity"] = Event("sweep", "1m", "bull" if long else "bear", low_ts, low_ts, low, low,
                                         {"level": "reversal"})
 
-    # entry FVG
+    # entry ------------------------------------------------------------------------
     want = "bull" if long else "bear"
-    if p.stage == 1:
+    if p.entry == "fvg":
         leg_end = mss.origin_ts + timedelta(minutes=p.leg_bars_after_mss * _tf_minutes(p.entry_tf))
         cands = [g for g in gaps if g.direction == want and low_ts < g.origin_ts <= leg_end]
         if not cands:
-            fvg = None
-        elif p.fvg_pick == "first":
+            setup.gates.append(Gate("trigger", False, "no displacement FVG after the reversal"))
+            return setup
+        if p.fvg_pick == "first":
             fvg = min(cands, key=lambda g: g.origin_ts)
         else:
             fvg = min(cands, key=lambda g: g.bottom) if long else max(cands, key=lambda g: g.top)
+        decided = max(mss.ts, fvg.ts)
+        if not gap_lifecycle(fvg, day_1m, until=decided).valid_at(decided):
+            setup.decided_at = decided
+            setup.gates.append(Gate("trigger", False, "FVG already invalidated at decision time"))
+            return setup
+        setup.evidence["fvg"] = fvg
+        entry = {"proximal": fvg.top if long else fvg.bottom, "ce": fvg.ce,
+                 "distal": fvg.bottom if long else fvg.top}[p.entry_level]
+        trigger = f"{p.entry_tf} FVG {fvg.bottom:.2f}-{fvg.top:.2f}"
     else:
-        level = curve.steps[-1]                                   # lowest redistribution high
-        after = day_1m[day_1m.index > low_ts]
-        back = after.index[after.close > level] if long else after.index[after.close < level]
-        fvg = None
-        if len(back):
-            cands = [g for g in gaps if g.direction == want and g.origin_ts >= back[0]]
-            fvg = min(cands, key=lambda g: g.origin_ts) if cands else None
-    if fvg is None:
-        setup.gates.append(Gate("trigger", False, f"no stage-{p.stage} displacement FVG"))
-        return setup
-    decided = max(mss.ts, fvg.ts)
+        which = {"reacc1": 1, "reacc2": 2}[p.entry]
+        zone = reacc_zone(frame, curve, long, which)
+        if zone is None:
+            setup.gates.append(Gate("trigger", False, f"no redistribution #{which} to carry across"))
+            return setup
+        z_lo, z_hi = zone
+        edge = z_hi if long else z_lo
+        after = day_1m[day_1m.index >= mss.origin_ts]
+        through = after.index[after.close > z_hi] if long else after.index[after.close < z_lo]
+        if not len(through):
+            setup.gates.append(Gate("trigger", False, f"price never closed back through re-accumulation zone {z_lo:.2f}-{z_hi:.2f}"))
+            return setup
+        decided = max(mss.ts, through[0])
+        setup.pd_array = "reacc_zone"
+        setup.tags["zone"] = [z_lo, z_hi]
+        entry = edge
+        trigger = f"re-accumulation zone #{which} {z_lo:.2f}-{z_hi:.2f} carried across"
     setup.decided_at = decided
-    if not gap_lifecycle(fvg, day_1m, until=decided).valid_at(decided):
-        setup.gates.append(Gate("trigger", False, "FVG already invalidated at decision time"))
-        return setup
-    setup.evidence["fvg"] = fvg
-    entry = {"proximal": fvg.top if long else fvg.bottom, "ce": fvg.ce,
-             "distal": fvg.bottom if long else fvg.top}[p.entry_level]
     stop = low - p.stop_buffer if long else low + p.stop_buffer
     if (long and not stop < entry) or (not long and not stop > entry):
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
@@ -268,11 +320,11 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     setup.gates.append(Gate("pricing", in_zone or not p.use_pricing,
                             f"entry {entry:.2f} vs curve equilibrium {eq:.2f} ({'discount' if long else 'premium'} wanted)"))
     poi = smr_array(ctx, long, low, low_ts, curve, htf_gaps, span_1m)
-    purge = smr_purge(ctx, frame_sw, long, low, low_ts, curve) if p.smr_purge else "not required"
+    purge = smr_purge(ctx, frame, frame_sw, long, low, low_ts, curve, p) if p.smr_purge else "not required"
     setup.tags.update({"poi": poi, "purge": purge})
     ok = (poi is not None and purge is not None) or not p.use_poi
     setup.gates.append(Gate("poi", ok, f"{poi or 'reversal not at a HTF array'}; purge: {purge or 'none — no liquidity run at the low'}"))
-    setup.gates.append(Gate("trigger", True, f"stage {p.stage}: {p.entry_tf} FVG {fvg.bottom:.2f}-{fvg.top:.2f}"))
+    setup.gates.append(Gate("trigger", True, trigger))
 
     tp1, tp1_name = _tp1(entry, risk, long, curve, day_1m, decided, p)
     final = curve.oc_high if long else curve.oc_low

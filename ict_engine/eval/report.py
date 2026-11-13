@@ -39,7 +39,7 @@ VARIANTS = {                                   # name -> (params, cap_scope)
 }
 
 
-def score(params: Params, cases=None, data_start=None, cap_scope: str = "window"):
+def score(params, cases=None, data_start=None, cap_scope: str | None = None):
     cases = cases or load_cases(CASES)
     rows = []
     for c in cases:
@@ -86,13 +86,13 @@ def main(argv=None):
     a = ap.parse_args(argv)
     mod = modules()[a.model]
     own_labels = labels(mod)
-    variants = VARIANTS if a.model == "2022_model" else {"defaults": (mod.Params(), "window"),
-                                                         "no bias, no poi": (mod.Params(use_bias=False, use_poi=False), "window")}
+    variants = VARIANTS if a.model == "2022_model" else {"defaults": (mod.Params(), None),
+                                                         "no bias, no poi": (mod.Params(use_bias=False, use_poi=False), None)}
     for name, (p, cap) in variants.items():
         rows = score(p, cap_scope=cap)
         own = [r for r in rows if r[0].trade.model in own_labels]
         (ft, st), (fo, so) = tally(rows), tally(own)
-        print(f"\n=== {name}  [{p.variant}, cap/{cap}]\n"
+        print(f"\n=== {name}  [{p.variant}, cap/{cap or getattr(p, 'cap_scope', 'window')}]\n"
               f"    own cases ({'/'.join(own_labels)}): traded like ICT {fo}/{len(own)}, seen {so}/{len(own)}   "
               f"all cases: traded {ft}/{len(rows)}, seen {st}/{len(rows)}")
         for c, best, s, n, blocked, sb, ss in rows:

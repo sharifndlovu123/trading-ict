@@ -223,6 +223,7 @@ body{{margin:0;padding:16px;background:var(--bg);color:var(--text);font:14px/1.5
 table{{border-collapse:collapse;width:100%;max-width:900px}}td,th{{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}}
 small{{color:var(--muted)}}a{{color:var(--accent)}}.wrap{{overflow-x:auto}}</style></head><body>
 <h1>ICT Day Packs — 2022 model vs ICT's live executions</h1>
+<p><a href="review.html">Model review →</a> <small>what each model did well, what it got wrong, example days (build: <code>uv run python -m ict_engine.viz.review_page reports/backtest-*.parquet</code>)</small></p>
 <p><small>Each link opens one asset-day: candles, levels, windows, detected events, every setup with its gate trace, and ICT's trade mapped onto the feed. Verdict = closest engine setup (any gate state) to ICT's trade.</small></p>
 <div class="wrap"><table><tr><th>reference trade</th><th>asset</th><th>default gates</th><th>relaxed</th></tr>{''.join(trs)}</table></div></body></html>"""
     path = OUT / "index.html"

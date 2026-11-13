@@ -44,7 +44,8 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
 MB = model_mmxm.Params()
 MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "baseline": MB,
-    "stage 2": replace(MB, stage=2),
+    "re-accumulation zone 1": replace(MB, entry="reacc1"),
+    "re-accumulation zone 2": replace(MB, entry="reacc2"),
     "frame 1h": replace(MB, frame_tf="1h", oc_bars=3),
     "entry 5m": replace(MB, entry_tf="5m"),
     "tp1 cap 2R": replace(MB, tp1_cap_r=2.0),

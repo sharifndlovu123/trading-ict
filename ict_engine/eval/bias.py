@@ -15,6 +15,10 @@ left out of the hit rate.
 
 CLI:
     uv run python -m ict_engine.eval.bias US100 2023-01-01 2024-06-30
+    uv run python -m ict_engine.eval.bias US100 2022-01-03 2024-06-28 --split 2023-01-01
+
+``--split`` scores each regime separately (a rule must beat its baseline in every regime).
+Bars load from ~100 calendar days before ``start`` (when cached) so 60-day rules have history.
 """
 
 from __future__ import annotations
@@ -145,23 +149,38 @@ def report(records: list[DayRecord], title: str = "") -> str:
         f"{title}  days={len(records)}  " + "  ".join(f"{o}={c}" for o, c in counts.items()),
         f"base rate (bull_hit share) = {base:.1%}  [{lo:.1%}, {hi:.1%}]   always-bull hit rate = {base:.1%}",
         "",
-        f"{'rule':<10}{'calls':>6}{'bull/bear':>11}{'correct':>8}{'hit':>7}{'wilson95':>17}"
-        f"{'expect':>8}{'edge':>7}{'neutral':>8}{'no-out':>7}",
+        f"{'rule':<13}{'calls':>6}{'bull/bear':>11}{'correct':>8}{'hit':>7}{'wilson95':>17}"
+        f"{'expect':>8}{'edge':>7}{'neutral':>8}{'no-out':>7}{'cover':>7}",
     ]
     scores = [score(records, r) for r in BIAS_RULES]
     always = RuleScore("always_bull", calls=n, correct=k, bull_calls=n)
     for s in scores + [always]:
         lo, hi = wilson(s.correct, s.calls)
         exp = s.expected(base)
+        cover = 1 - s.neutral / len(records) if records else float("nan")
         lines.append(
-            f"{s.rule:<10}{s.calls:>6}{f'{s.bull_calls}/{s.bear_calls}':>11}{s.correct:>8}{s.hit_rate:>7.1%}"
-            f"{f'[{lo:.1%}, {hi:.1%}]':>17}{exp:>8.1%}{s.hit_rate - exp:>+7.1%}{s.neutral:>8}{s.no_outcome:>7}")
+            f"{s.rule:<13}{s.calls:>6}{f'{s.bull_calls}/{s.bear_calls}':>11}{s.correct:>8}{s.hit_rate:>7.1%}"
+            f"{f'[{lo:.1%}, {hi:.1%}]':>17}{exp:>8.1%}{s.hit_rate - exp:>+7.1%}{s.neutral:>8}{s.no_outcome:>7}{cover:>7.0%}")
     lines += ["", "hit rate by weekday (correct/calls)",
-              f"{'rule':<10}" + "".join(f"{w:>12}" for w in WEEKDAYS)]
+              f"{'rule':<13}" + "".join(f"{w:>12}" for w in WEEKDAYS)]
     for s in scores:
         cells = "".join(f"{(f'{c/t:.0%} {c}/{t}' if t else '-'):>12}" for c, t in s.by_weekday.values())
-        lines.append(f"{s.rule:<10}{cells}")
+        lines.append(f"{s.rule:<13}{cells}")
     return "\n".join(lines)
+
+
+def split_records(records: list[DayRecord], cuts: list[date]) -> list[tuple[str, list[DayRecord]]]:
+    """Partition records at each cut date: [first, c1), [c1, c2), …, [cN, last]."""
+    edges = [date.min] + sorted(cuts) + [date.max]
+    out = []
+    for lo, hi in zip(edges, edges[1:]):
+        part = [r for r in records if lo <= r.day < hi]
+        if part:
+            out.append((f"{part[0].day}..{part[-1].day}", part))
+    return out
+
+
+WARMUP_DAYS = 100   # calendar days loaded before ``start`` so 60-day rules have history
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -171,9 +190,21 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("asset")
     ap.add_argument("start", type=date.fromisoformat)
     ap.add_argument("end", type=date.fromisoformat)
+    ap.add_argument("--split", type=lambda v: [date.fromisoformat(x) for x in v.split(",")], default=[],
+                    help="comma-separated cut dates; each regime is also scored on its own")
     a = ap.parse_args(argv)
-    bars = load(a.asset, a.start, a.end)
-    print(report(label_days(bars), f"{a.asset} {a.start}..{a.end}"))
+    for warm in range(WARMUP_DAYS, -1, -10):       # as much warm-up as the cache holds
+        try:
+            bars = load(a.asset, a.start - timedelta(days=warm), a.end)
+            break
+        except FileNotFoundError:
+            if warm == 0:
+                raise
+    records = [r for r in label_days(bars) if a.start <= r.day <= a.end]
+    print(report(records, f"{a.asset} {a.start}..{a.end}"))
+    if a.split:
+        for label, part in split_records(records, a.split):
+            print("\n" + report(part, f"{a.asset} {label}"))
 
 
 if __name__ == "__main__":

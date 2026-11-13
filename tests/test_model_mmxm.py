@@ -90,10 +90,21 @@ def test_sell_model_is_the_mirror():
     assert s.plan.final_target == pytest.approx(200 - 103.12, abs=0.05)
 
 
-def test_stage_two_needs_a_displacement_fvg_back_above_the_last_step():
-    ss = find_setups(bars(), DAY, "US100", Params(stage=2))
-    assert not planned(ss)                              # straight-line rally: no displacement after 99.8
-    assert any("stage-2" in g.detail for s in ss for g in s.gates)
+def test_reaccumulation_zone_is_carried_across_from_the_lowest_redistribution():
+    """Redistribution #1 = the 07:15–07:30 area under the 99.8 step: its up-close bar (07:00–07:15,
+    99.0 → 99.51) is the zone. The 09:15→09:45 rally (0.29/min) first closes above it at 09:30."""
+    ss = [s for s in find_setups(bars(), DAY, "US100", Params(entry="reacc1")) if "zone" in s.tags]
+    assert ss
+    s = ss[0]
+    lo, hi = s.tags["zone"]
+    assert lo == pytest.approx(99.0, abs=0.05) and hi == pytest.approx(99.55, abs=0.05)
+    assert s.decided_at == pd.Timestamp("2024-01-09 09:30", tz=NY)
+    assert any(g.name == "trigger" and g.passed and "carried across" in g.detail for g in s.gates)
+
+
+def test_reacc2_uses_the_next_redistribution_up():
+    ss = [s for s in find_setups(bars(), DAY, "US100", Params(entry="reacc2")) if "zone" in s.tags]
+    assert ss and ss[0].tags["zone"][1] > 100.5                    # the 101.5 redistribution
 
 
 def test_no_lookahead_plan_identical_without_future_bars():
@@ -112,18 +123,24 @@ def test_find_curve_ignores_frame_bars_after_the_low():
     assert c is not None and c.oc_end <= low_ts and all(t < low_ts for t in c.step_times)
 
 
-def test_smr_must_purge_liquidity():
-    from ict_engine.models.model_mmxm import Curve, smr_purge
-    ctx = type("C", (), {"levels": {"pdl": 95.0}})()
-    curve = Curve(pd.Timestamp("2024-01-09 02:00", tz=NY), pd.Timestamp("2024-01-09 04:00", tz=NY), 103, 102.9, (101.5,),
-                  (pd.Timestamp("2024-01-09 05:45", tz=NY),))
-    t = pd.Timestamp("2024-01-09 08:45", tz=NY)
-    assert smr_purge(ctx, [], True, 94.5, t, curve) == "ran pdl"
-    assert smr_purge(ctx, [], True, 95.5, t, curve) is None                     # held above: no purge
+def test_smr_must_purge_resting_liquidity_not_the_curves_own_lows():
     from ict_engine.concepts.events import Event
-    sl = Event("swing_low", "15m", "bull", pd.Timestamp("2024-01-09 07:30", tz=NY),
-               pd.Timestamp("2024-01-09 07:00", tz=NY), 96.0, 96.0)
-    assert smr_purge(ctx, [sl], True, 95.5, t, curve).startswith("ran 15m swing low")
+    from ict_engine.models.model_mmxm import Curve, smr_purge
+    T = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz=NY)
+    frame = resample(bars(), "15m")
+    ctx = type("C", (), {"levels": {"pdl": 95.0}})()
+    curve = Curve(T("02:00"), T("04:00"), 103.1, 102.9, (101.5,), (T("05:45"),), (T("05:30"),))
+    p = Params()
+    assert smr_purge(ctx, frame, [], True, 94.5, T("08:45"), curve, p) == "ran pdl"
+    assert smr_purge(ctx, frame, [], True, 95.5, T("08:45"), curve, p) is None
+    sl = lambda o, px: Event("swing_low", "15m", "bull", T(o) + pd.Timedelta(minutes=30), T(o), px, px)
+    one_curve_low = [sl("06:00", 99.9)]                               # a curve's own stepping low
+    assert smr_purge(ctx, frame, one_curve_low, True, 95.5, T("08:45"), curve, p) is None
+    eql = [sl("06:00", 99.9), sl("07:00", 99.95)]                      # relatively equal lows (tol 0.1)
+    assert smr_purge(ctx, frame, eql, True, 95.5, T("08:45"), curve, p).startswith("ran equal lows")
+    older = [Event("swing_low", "15m", "bull", pd.Timestamp("2024-01-08 20:30", tz=NY),
+                   pd.Timestamp("2024-01-08 20:00", tz=NY), 96.0, 96.0)]
+    assert smr_purge(ctx, frame, older, True, 95.5, T("08:45"), curve, p).startswith("ran older")
 
 
 def test_poi_gate_reports_the_purge():

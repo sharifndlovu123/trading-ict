@@ -26,7 +26,8 @@ NY = "America/New_York"
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),
-            max_trades: int = 1, cap_scope: str = "window", ctx=None) -> list[Setup]:
+            max_trades: int = 1, cap_scope: str | None = None, ctx=None) -> list[Setup]:
+    cap_scope = cap_scope or getattr(params, "cap_scope", "window")      # a model may define its own (SB: day)
     if cap_scope not in ("day", "window"):
         raise ValueError(f"cap_scope must be 'day' or 'window', not {cap_scope!r}")
     if ctx is None:
@@ -66,7 +67,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
 
 
 def run_range(bars_1m: pd.DataFrame, start: date, end: date, asset: str, params=model_2022.Params(),
-              max_trades: int = 1, cap_scope: str = "window") -> list[Setup]:
+              max_trades: int = 1, cap_scope: str | None = None) -> list[Setup]:
     out, d = [], start
     while d <= end:
         if d.weekday() < 5:

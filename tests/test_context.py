@@ -94,7 +94,8 @@ def trend(n, start, step):
 
 
 def test_bias_rule_registry():
-    assert set(BIAS_RULES) == {"prev_day", "htf20", "draw", "draw_htf"}
+    assert set(BIAS_RULES) == {"prev_day", "htf20", "draw", "draw_htf", "dol", "dol_weekly",
+                               "prev_day_dol", "draw_dol"}
     assert BIAS_RULES["prev_day"] is daily_bias
 
 
@@ -158,3 +159,106 @@ def test_context_biases_use_completed_days_only():
     # Wed's bars (from Tue 18:00) changing does not change any call
     bars2 = week([MON, TUE, (date(2024, 1, 10), 50.0, 60.0, 55.0, 51.0)])
     assert build_context(bars2, date(2024, 1, 10)).biases == ctx.biases
+
+
+# --- draw-on-liquidity rules ----------------------------------------------------
+
+from ict_engine.concepts.context import (bias_dol, bias_dol_weekly, bias_draw_dol,  # noqa: E402
+                                         bias_prev_day_dol)
+
+FLAT = (110, 100, 105)   # equal highs/lows: no swings, no FVGs
+
+
+def test_dol_nearest_untaken_swing():
+    rows = [FLAT] * 60
+    rows[30] = (120, 100, 105)            # swing high 15 above the last close (105)
+    rows[40] = (110, 88, 95)              # swing low 17 below
+    b, why = bias_dol(dly(rows))
+    assert b == "bull" and "old high" in why
+    rows[50] = (125, 100, 105)            # trades through 120: it no longer counts; nearest high now 20
+    b, why = bias_dol(dly(rows))
+    assert b == "bear" and "old low" in why
+    assert bias_dol(dly(rows[:59]))[0] == "neutral"            # < 60 days
+    assert bias_dol(dly([FLAT] * 60)) == ("neutral", "no untaken liquidity either side")
+    # only the last 60 days count: an untaken old low 61 days back is ignored
+    old = [(110, 50, 105), (110, 40, 105), (110, 50, 105)]
+    assert bias_dol(dly(old + rows[3:] + [FLAT]))[0] == "bear"   # still the 88 low (row shifted)
+    assert bias_dol(dly(old[:2] + [FLAT] * 59 + [FLAT]))[0] == "neutral"
+
+
+def test_dol_unfilled_fvg():
+    gap = [FLAT, (104, 95, 96), (98, 92, 93)]                 # bearish FVG 98..100, CE 99
+    rows = [FLAT] * 57 + gap[1:] + [(97, 91, 94)]
+    b, why = bias_dol(dly(rows))
+    assert b == "bull" and "bearish FVG" in why               # gap bottom 98 sits 4 above the close
+    filled = rows[:-1] + [(99.5, 91, 94)]                      # the last day reaches the CE
+    assert bias_dol(dly(filled)) == ("neutral", "no untaken liquidity either side")
+    # mirror: bullish FVG below price → bear
+    up = [FLAT] * 57 + [(116, 106, 115), (120, 112, 118), (121, 113, 117)]
+    b, why = bias_dol(dly(up))
+    assert b == "bear" and "bullish FVG" in why               # gap top 112 below the close 117
+
+
+def wdly(rows):
+    """Daily bars from (date, high, low) rows, with NY close_ts like resample(..., "1d")."""
+    df = pd.DataFrame([(h, lo, (h + lo) / 2) for _, h, lo in rows], columns=["high", "low", "close"])
+    df["close_ts"] = [pd.Timestamp(datetime.combine(d, time(16, 14)), tz=NY) for d, _, _ in rows]
+    return df
+
+
+def wk(monday, high, low):
+    return [(monday + timedelta(days=i), high, low) for i in range(5)]
+
+
+W1 = wk(date(2024, 1, 8), 110, 100)
+W2 = wk(date(2024, 1, 15), 115, 105)      # ran W1's high only
+MON22 = date(2024, 1, 22)
+
+
+def test_dol_weekly():
+    assert bias_dol_weekly(wdly(W1 + W2)) == ("bull", "last week ran the prior week's high only")
+    b, why = bias_dol_weekly(wdly(W1 + W2 + [(MON22, 112, 100)]))
+    assert b == "bear" and why.startswith("this week")                     # took PWL only
+    assert bias_dol_weekly(wdly(W1 + W2 + [(MON22, 116, 108)]))[0] == "bull"
+    assert bias_dol_weekly(wdly(W1 + W2 + [(MON22, 116, 100)]))[0] == "neutral"   # both sides
+    b, why = bias_dol_weekly(wdly(W1 + W2 + [(MON22, 114, 106)]))        # inside so far → last week
+    assert b == "bull" and why.startswith("last week")
+    assert bias_dol_weekly(wdly(W1))[0] == "neutral"                       # one week of history
+    assert bias_dol_weekly(dly([FLAT] * 3))[0] == "neutral"                # no timestamps
+    inside = wk(date(2024, 1, 15), 108, 102)
+    assert bias_dol_weekly(wdly(W1 + inside)) == ("neutral", "last week was an inside week")
+
+
+def test_prev_day_dol_and_draw_dol():
+    rows = [FLAT] * 60
+    rows[30] = (120, 100, 105)
+    rows[40] = (110, 88, 95)                                  # dol = bull (high 15 above)
+    inside = dly(rows + [(109, 101, 105)])                    # prev_day neutral (inside day)
+    b, why = bias_prev_day_dol(inside)
+    assert b == "bull" and "tie-break" in why
+    took_low = dly(rows + [(108, 98, 105)])                   # prev_day / draw bear, dol bull
+    assert bias_prev_day_dol(took_low)[0] == "bear"           # prev_day wins when it calls
+    assert bias_draw_dol(took_low)[0] == "neutral"            # not aligned
+    took_high = dly(rows + [(112, 101, 105)])                 # draw bull; dol: 120 swing still nearest
+    assert bias_dol(took_high)[0] == "bull" and bias_draw_dol(took_high)[0] == "bull"
+
+
+def test_dol_rules_ignore_day_d_bars():
+    """65 sessions with swings; mutating day D's own bars (from 18:00 the evening before) changes no call."""
+    sessions, d, i = [], date(2023, 10, 2), 0
+    while len(sessions) < 66:
+        if d.weekday() < 5:
+            base = 100 + 10 * ((i // 4) % 3) + i * 0.3          # stepped, wiggling uptrend
+            sessions.append((d, base - 3, base + 4 + (i % 5), base, base + 1))
+            i += 1
+        d += timedelta(days=1)
+    day = sessions[-1][0]
+    bars = week(sessions)
+    ctx = build_context(bars, day)
+    assert set(ctx.biases) == set(BIAS_RULES)
+    assert ctx.biases["dol"][0] != "neutral" and ctx.biases["dol_weekly"][0] != "neutral"
+    cut = pd.Timestamp(datetime.combine(day - timedelta(days=1), time(18)), tz=NY)
+    for v in (1.0, 1e6):
+        bars2 = bars.copy()
+        bars2.loc[bars2.index >= cut, ["open", "high", "low", "close"]] = v
+        assert build_context(bars2, day).biases == ctx.biases

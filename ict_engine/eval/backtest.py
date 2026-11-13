@@ -110,7 +110,7 @@ def counterfactuals(plan, bars_1m, close, cost) -> dict:
 
 
 def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
-        params=model_2022.Params(), cap_scope: str = "window",
+        params=model_2022.Params(), cap_scope: str | None = None,
         extras: bool = True) -> pd.DataFrame:
     """``extras`` = shadow + counterfactual simulations (post-analysis); off for fast variant sweeps."""
     rows, d = [], start
@@ -152,7 +152,7 @@ def main(argv=None):
     ap.add_argument("asset")
     ap.add_argument("start", type=date.fromisoformat)
     ap.add_argument("end", type=date.fromisoformat)
-    ap.add_argument("--cap", choices=("window", "day"), default="window")
+    ap.add_argument("--cap", choices=("window", "day"), default=None, help="default: the model's own (SB: day)")
     ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm")
     a = ap.parse_args(argv)
     from ict_engine.models.registry import modules

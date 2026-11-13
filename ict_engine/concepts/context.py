@@ -21,6 +21,7 @@ from typing import Callable
 import pandas as pd
 
 from ict_engine.concepts.bars import resample
+from ict_engine.concepts.clock import trading_day
 from ict_engine.concepts.events import Level
 
 NY = "America/New_York"
@@ -167,11 +168,139 @@ def bias_draw_htf(daily: pd.DataFrame) -> tuple[str, str]:
     return hb, f"{why}; fallback: {hwhy}"
 
 
+def _untaken_swings(w: pd.DataFrame) -> tuple[list[float], list[float]]:
+    """Daily swing highs/lows (3-bar fractals) in ``w`` that no later bar in ``w`` has traded through
+    (old highs/lows still holding resting liquidity)."""
+    h, lo = w.high.to_numpy(float), w.low.to_numpy(float)
+    highs, lows = [], []
+    for i in range(1, len(w) - 1):
+        if h[i] > h[i - 1] and h[i] > h[i + 1] and h[i + 1:].max() < h[i]:
+            highs.append(float(h[i]))
+        if lo[i] < lo[i - 1] and lo[i] < lo[i + 1] and lo[i + 1:].min() > lo[i]:
+            lows.append(float(lo[i]))
+    return highs, lows
+
+
+def _open_fvgs(w: pd.DataFrame) -> tuple[list[float], list[float]]:
+    """Daily FVGs in ``w`` whose consequent encroachment (50%) no later bar has reached, as the
+    gap's near edge: bearish gaps → their bottom (a draw up), bullish gaps → their top (a draw down)."""
+    h, lo = w.high.to_numpy(float), w.low.to_numpy(float)
+    bear_bottoms, bull_tops = [], []
+    for i in range(2, len(w)):
+        later_h, later_l = h[i + 1:], lo[i + 1:]
+        if h[i - 2] < lo[i]:                                  # bullish FVG [h[i-2], lo[i]]
+            ce = (h[i - 2] + lo[i]) / 2
+            if not len(later_l) or later_l.min() > ce:
+                bull_tops.append(float(lo[i]))
+        if lo[i - 2] > h[i]:                                  # bearish FVG [h[i], lo[i-2]]
+            ce = (h[i] + lo[i - 2]) / 2
+            if not len(later_h) or later_h.max() < ce:
+                bear_bottoms.append(float(h[i]))
+    return bear_bottoms, bull_tops
+
+
+def bias_dol(daily: pd.DataFrame, n: int = 60) -> tuple[str, str]:
+    """HTF draw on liquidity: the side of the nearest untaken daily liquidity from the last close.
+
+    Candidates over the last ``n`` completed days (IPDA 60-day look-back): old swing highs above /
+    swing lows below not yet traded through, and unfilled daily FVGs (CE not reached; near edge used).
+    Nearest above → bull, nearest below → bear; nothing on either side → neutral. ICT: "where's the
+    next inefficiency it may be drawing to" / the nearest old high or low price is reaching for.
+    """
+    if len(daily) < n:
+        return "neutral", f"not enough history (<{n} days)"
+    w = daily.tail(n)
+    c = float(daily.close.iloc[-1])
+    sh, sl = _untaken_swings(w)
+    fa, fb = _open_fvgs(w)
+    above = [(x - c, "old high") for x in sh if x > c] + [(x - c, "bearish FVG") for x in fa if x > c]
+    below = [(c - x, "old low") for x in sl if x < c] + [(c - x, "bullish FVG") for x in fb if x < c]
+    if not above and not below:
+        return "neutral", "no untaken liquidity either side"
+    up = min(above) if above else (float("inf"), "")
+    dn = min(below) if below else (float("inf"), "")
+    if up[0] < dn[0]:
+        return "bull", f"nearest draw is {up[1]} {up[0]:.2f} above"
+    return "bear", f"nearest draw is {dn[1]} {dn[0]:.2f} below"
+
+
+def _weekly(daily: pd.DataFrame) -> tuple[pd.DataFrame, date] | None:
+    """Weekly high/low from completed daily bars (grouped by the Monday of each trading day) and
+    the last trading day. ``None`` when the bars carry no timestamps."""
+    if "close_ts" in daily:
+        ts = pd.DatetimeIndex(daily["close_ts"])
+    elif isinstance(daily.index, pd.DatetimeIndex):
+        ts = daily.index
+    else:
+        return None
+    if ts.tz is None:
+        return None
+    days = pd.to_datetime(pd.Index(trading_day(ts.tz_convert(NY))))
+    monday = days - pd.to_timedelta(days.day_of_week, unit="D")
+    g = daily.groupby(monday.to_numpy()).agg(high=("high", "max"), low=("low", "min"))
+    return g, days[-1].date()
+
+
+def bias_dol_weekly(daily: pd.DataFrame) -> tuple[str, str]:
+    """Weekly draw: the side of the previous week's range this week has run so far.
+
+    This week's completed days took PWH only → bull, PWL only → bear, both → neutral. A new week
+    (last completed day is a Friday) or a week that has taken neither side falls back to which side
+    of the week before the previous week ran. ICT: weekly range expansion is "the stage for all".
+    """
+    wk = _weekly(daily) if len(daily) else None
+    if wk is None:
+        return "neutral", "no timestamps for weekly grouping"
+    g, last = wk
+    done, cur = (g, None) if last.weekday() == 4 else (g.iloc[:-1], g.iloc[-1])
+
+    def side(new, old, what):
+        th, tl = new.high > old.high, new.low < old.low
+        if th and tl:
+            return "neutral", f"{what} took both sides of the prior week"
+        if th:
+            return "bull", f"{what} ran the prior week's high only"
+        if tl:
+            return "bear", f"{what} ran the prior week's low only"
+        return None
+
+    if cur is not None and len(done) >= 1:
+        r = side(cur, done.iloc[-1], "this week")
+        if r is not None:
+            return r
+    if len(done) < 2:
+        return "neutral", "not enough weekly history"
+    return side(done.iloc[-1], done.iloc[-2], "last week") or ("neutral", "last week was an inside week")
+
+
+def bias_prev_day_dol(daily: pd.DataFrame) -> tuple[str, str]:
+    """``prev_day``; on its neutral days (inside/outside), the HTF draw ``dol`` breaks the tie."""
+    b, why = bias_prev_day(daily)
+    if b != "neutral":
+        return b, why
+    db, dwhy = bias_dol(daily)
+    return db, f"{why}; tie-break: {dwhy}"
+
+
+def bias_draw_dol(daily: pd.DataFrame) -> tuple[str, str]:
+    """ICT's full sentence: the unrun side of yesterday's range (``draw``) *in line with* the HTF draw
+    on liquidity (``dol``). Call only when both agree, else neutral (wait for the 09:30–10:00 move)."""
+    b, why = bias_draw(daily)
+    db, dwhy = bias_dol(daily)
+    if b != "neutral" and b == db:
+        return b, f"{why}; {dwhy}"
+    return "neutral", f"draw={b}, dol={db} (not aligned)"
+
+
 BIAS_RULES: dict[str, BiasRule] = {
     "prev_day": bias_prev_day,
     "htf20": bias_htf20,
     "draw": bias_draw,
     "draw_htf": bias_draw_htf,
+    "dol": bias_dol,
+    "dol_weekly": bias_dol_weekly,
+    "prev_day_dol": bias_prev_day_dol,
+    "draw_dol": bias_draw_dol,
 }
 DEFAULT_BIAS_RULE = "prev_day"
 
