@@ -6,6 +6,8 @@ from ict_engine.eval.backtest import run
 from ict_engine.models.model_2022 import Params
 from tests.test_model_2022 import DAY, bars
 
+SYNTHETIC_PRICES = True                  # conftest: no costs on the ~100-price synthetic day
+
 
 def test_traded_row_has_result_and_matching_shadow():
     df = run(bars(), DAY, DAY, "US100")

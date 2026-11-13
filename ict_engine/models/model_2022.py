@@ -62,8 +62,9 @@ class Params:
     # too fine. Swings of these TFs + context levels are candidates; TP1 at least min_tp1_r from entry.
     tp1_swing_tfs: tuple[str, ...] = ("5m",)
     min_tp1_r: float = 1.0
-    tp1_cap_r: float | None = None       # TP1 no further than this many R (ICT's earliest close is near); None = off
-    max_cost_r: float | None = None      # reject when round-trip cost / risk exceeds this; None = off
+    # Both validated out-of-sample (2024 hold-out AND unseen 2022 bear year; reports/variants-*):
+    tp1_cap_r: float | None = 2.0        # TP1 no further than this many R (ICT's earliest close is near); None = off
+    max_cost_r: float | None = 0.1       # reject when round-trip cost / risk exceeds this; None = off
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     tags: dict = field(default_factory=dict, compare=False)
 
@@ -74,10 +75,10 @@ class Params:
         extra = ["htf20"] if self.use_htf_pricing else []
         if (self.tp1_swing_tfs, self.min_tp1_r) != (("5m",), 1.0):
             extra.append(f"tp1_{'+'.join(self.tp1_swing_tfs)}_{self.min_tp1_r:g}R")
-        if self.tp1_cap_r is not None:
-            extra.append(f"tp1cap{self.tp1_cap_r:g}R")
-        if self.max_cost_r is not None:
-            extra.append(f"cost<={self.max_cost_r:g}R")
+        if self.tp1_cap_r != 2.0:
+            extra.append(f"tp1cap{self.tp1_cap_r:g}R" if self.tp1_cap_r is not None else "tp1uncapped")
+        if self.max_cost_r != 0.1:
+            extra.append(f"cost<={self.max_cost_r:g}R" if self.max_cost_r is not None else "nocostgate")
         if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day", "opening_range"):
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)

@@ -28,15 +28,15 @@ from ict_engine.models.model_2022 import Params
 ROOT = Path(__file__).resolve().parents[2]
 BASE = Params()
 NO_LONDON = tuple(w for w in BASE.windows if w != "london_kz")
-VARIANTS: dict[str, Params] = {
+VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 cap 2R, cost gate 0.1R)
     "baseline": BASE,
+    "first defaults (TP1 uncapped, no cost gate)": replace(BASE, tp1_cap_r=None, max_cost_r=None),
+    "tp1 uncapped": replace(BASE, tp1_cap_r=None),
     "tp1 cap 1.5R": replace(BASE, tp1_cap_r=1.5),
-    "tp1 cap 2R": replace(BASE, tp1_cap_r=2.0),
     "tp1 cap 3R": replace(BASE, tp1_cap_r=3.0),
-    "cost <= 0.1R": replace(BASE, max_cost_r=0.1),
+    "no cost gate": replace(BASE, max_cost_r=None),
     "cost <= 0.2R": replace(BASE, max_cost_r=0.2),
     "no London": replace(BASE, windows=NO_LONDON),
-    "tp1 cap 2R + cost <= 0.1R + no London": replace(BASE, tp1_cap_r=2.0, max_cost_r=0.1, windows=NO_LONDON),
 }
 
 

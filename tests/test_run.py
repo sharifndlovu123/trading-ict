@@ -9,6 +9,8 @@ from ict_engine.models.base import Setup, TradePlan
 from ict_engine.sim import run
 from tests.test_model_2022 import DAY as MODEL_DAY, bars
 
+SYNTHETIC_PRICES = True                  # conftest: no costs on the ~100-price synthetic day
+
 DAY = date(2024, 1, 9)
 NY = "America/New_York"
 

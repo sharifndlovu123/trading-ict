@@ -16,6 +16,8 @@ import pytest
 from ict_engine.models.model_2022 import Params, find_setups
 from ict_engine.sim.run import run_day
 
+SYNTHETIC_PRICES = True                  # conftest: no costs on the ~100-price synthetic day
+
 NY = "America/New_York"
 DAY = date(2024, 1, 9)
 
@@ -54,7 +56,7 @@ def setup_day():
         ("2024-01-09 08:46", 95.0),
         ("2024-01-09 08:47", 97.0),            # one displacement candle closes above 96.6 → MSS
         ("2024-01-09 08:48", 97.4),
-        ("2024-01-09 09:05", 100.5),           # leg high
+        ("2024-01-09 09:05", 99.2),            # leg high: arms the order (97.48), stays below a 2R TP1
         ("2024-01-09 09:15", 95.3),            # retrace into the displacement FVG
         ("2024-01-09 09:45", 113.0),           # rally through PDH 112
         ("2024-01-09 16:00", 112.0),
@@ -210,8 +212,11 @@ def test_tp1_cap_brings_the_earliest_close_nearer():
         assert p.tp1_name == f"cap {cap:g}R" and p.final_target == base.final_target
 
 
-def test_cost_gate_blocks_stops_too_small_for_costs():
-    ss = find_setups(bars(), DAY, "US100", Params(max_cost_r=1e-6))
+def test_cost_gate_blocks_stops_too_small_for_costs(monkeypatch):
+    from ict_engine.data.instruments import COST
+    monkeypatch.setitem(COST, "US100", 1.0)                       # 1 point vs a ~1.75-point stop = 0.57R
+    ss = find_setups(bars(), DAY, "US100", Params(max_cost_r=0.1))
     planned = [s for s in ss if s.would_plan is not None]
     assert planned and all(s.plan is None and s.failed_gate == "risk" for s in planned)
     assert traded(find_setups(bars(), DAY, "US100", Params(max_cost_r=None)))
+    assert traded(find_setups(bars(), DAY, "US100", Params(max_cost_r=0.6)))

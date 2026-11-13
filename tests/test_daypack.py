@@ -10,6 +10,8 @@ from ict_engine.models.model_2022 import Params
 from ict_engine.viz.daypack import build_daypack, wall, write_html
 from tests.test_model_2022 import DAY, bars
 
+SYNTHETIC_PRICES = True                  # conftest: no costs on the ~100-price synthetic day
+
 NY = "America/New_York"
 
 
