@@ -52,7 +52,7 @@ SMR_LEVELS_HIGH = ("pdh", "asia_high", "pwh")
 @dataclass(frozen=True)
 class Params:
     frame_tf: str = "15m"                # bellwether / framing chart (MMxM PDF p. 4)
-    entry_tf: str = "1m"
+    entry_tf: str = "5m"                 # best OOS in two hold-outs (+0.21R, +0.11R vs 1m; z 1.1/1.4)
     windows: tuple[str, ...] = ("london_kz", "ny_premarket", "ny_am_kz", "macro_0950", "macro_1050", "ny_pm_kz")
     oc_bars: int = 4                     # original consolidation length in framing bars (15m → 1h)
     oc_range_mult: float = 2.5           # OC range ≤ mult × median framing-bar range
@@ -68,7 +68,8 @@ class Params:
     eql_tol: float = 0.5                 # equal lows: within eql_tol × OC width
     entry_level: str = "proximal"
     use_bias: bool = True
-    bias_rule: str = "prev_day"
+    # prev_day_dol: best bias rule in all 3 models OOS (variant sweep 2026-11-13, 4 assets; z < 2 — best so far)
+    bias_rule: str = "prev_day_dol"
     neutral_bias: str = "opening_range"
     use_pricing: bool = True
     use_poi: bool = True
@@ -77,6 +78,7 @@ class Params:
     tp1_cap_r: float | None = None
     max_cost_r: float | None = 0.1
     poi_tfs: tuple[str, ...] = ("1h", "4h")
+    invalidate_tf: str | None = None     # exit on a close of this TF beyond the entry area's far edge
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -85,7 +87,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)
@@ -285,6 +287,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         entry = {"proximal": fvg.top if long else fvg.bottom, "ce": fvg.ce,
                  "distal": fvg.bottom if long else fvg.top}[p.entry_level]
         trigger = f"{p.entry_tf} FVG {fvg.bottom:.2f}-{fvg.top:.2f}"
+        far_edge = fvg.bottom if long else fvg.top
     else:
         which = {"reacc1": 1, "reacc2": 2}[p.entry]
         zone = reacc_zone(frame, curve, long, which)
@@ -302,6 +305,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         setup.pd_array = "reacc_zone"
         setup.tags["zone"] = [z_lo, z_hi]
         entry = edge
+        far_edge = z_lo if long else z_hi
         trigger = f"re-accumulation zone #{which} {z_lo:.2f}-{z_hi:.2f} carried across"
     setup.decided_at = decided
     stop = low - p.stop_buffer if long else low + p.stop_buffer
@@ -338,7 +342,8 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
 
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name,
-                                 "oc high" if long else "oc low")
+                                 "oc high" if long else "oc low",
+                                 invalid_level=far_edge, invalid_tf=p.invalidate_tf)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     return setup

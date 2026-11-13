@@ -15,7 +15,18 @@ import pytest
 
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.events import swings
-from ict_engine.models.model_mmxm import Params, find_curve, find_setups
+from ict_engine.models import model_mmxm
+from ict_engine.models.model_mmxm import find_curve
+
+
+# The hand-built MMBM tape below is a 1m-entry scenario (its displacement FVG exists on 1m only);
+# the model's default entry_tf is 5m since the 2026-11-13 sweep, so these tests pin 1m explicitly.
+def Params(**kw):
+    return model_mmxm.Params(**{"entry_tf": "1m", **kw})
+
+
+def find_setups(bars_1m, day, asset, params=None):
+    return model_mmxm.find_setups(bars_1m, day, asset, params or Params())
 from ict_engine.sim.run import run_day
 from tests.test_model_2022 import history, path_bars
 

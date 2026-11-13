@@ -55,12 +55,14 @@ class Params:
     stop_buffer: float = 0.25
     leg_lookback_min: int = 30           # displacement leg start searched this far before the FVG
     use_bias: bool = True
-    bias_rule: str = "prev_day"
+    # prev_day_dol: best bias rule in all 3 models OOS (variant sweep 2026-11-13, 4 assets; z < 2 — best so far)
+    bias_rule: str = "prev_day_dol"
     neutral_bias: str = "opening_range"
     use_pricing: bool = True
     use_poi: bool = True                 # CLAUDE.md: a FVG outside a POI never opens a trade
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     cap_scope: str = "day"               # one Silver Bullet trade per day (ruling §1)
+    invalidate_tf: str | None = None     # exit on a close of this TF beyond the FVG's far edge; None = off
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -72,7 +74,7 @@ class Params:
         d = Params()
         parts = ["sb", self.entry_level]
         for name in ("late_window", "strict_fvg_in_hour", "min_framework_ticks", "framework_adr_frac", "min_tp1_r",
-                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope"):
+                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)
@@ -202,7 +204,8 @@ def _evaluate(fvg: Event, wname, start, end, ctx, day, asset, p: Params, day_1m,
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     final = far if (far - tp1_px) * (1 if long else -1) >= 0 else tp1_px
-    setup.would_plan = TradePlan(side, decided, end, entry, stop, tp1_px, final, tp1_name, draw[1])
+    setup.would_plan = TradePlan(side, decided, end, entry, stop, tp1_px, final, tp1_name, draw[1],
+                                 invalid_level=fvg.bottom if long else fvg.top, invalid_tf=p.invalidate_tf)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     return setup

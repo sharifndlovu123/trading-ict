@@ -159,7 +159,8 @@ def test_opening_range_bias_is_unknown_before_10_and_never_reads_later_bars():
 
 def test_neutral_day_waits_for_the_opening_range():
     from ict_engine.models.model_2022 import bias_gate
-    ctx = type("C", (), {"bias": "neutral", "bias_reason": "inside day"})()
+    ctx = type("C", (), {"bias": "neutral", "bias_reason": "inside day",
+                         "biases": {"prev_day_dol": ("neutral", "inside day")}})()
     df, t = _orb_bars(100, 103)
     assert not bias_gate(ctx, True, t("09:40"), df, Params()).passed            # too early
     assert bias_gate(ctx, True, t("10:05"), df, Params()).passed                 # with the opening move
@@ -233,3 +234,10 @@ def test_5m_swing_is_untaken_although_its_own_1m_bars_print_the_high():
     sw = [Event("swing_high", "5m", "bear", t("08:50"), t("08:40"), 104, 104)]   # confirmed 08:50
     ctx = type("C", (), {"levels": {"pdh": 120.0}})()
     assert _targets(101, True, ctx, day, t("09:30"), sw)[0] == 104
+
+
+def test_invalidation_is_off_by_default_and_labelled_when_on():
+    from dataclasses import replace
+    from ict_engine.models.model_2022 import Params
+    assert Params().invalidate_tf is None and "inval" not in Params().variant
+    assert replace(Params(), invalidate_tf="5m").variant.endswith("-inval5m")

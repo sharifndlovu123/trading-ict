@@ -48,6 +48,7 @@ CAUSE_TEXT = {
     "target_too_far": "TP1 at 1R would have been hit before the stop",
     "ambiguous": "stop and TP1 inside one 1m bar (counted as a loss)",
     "time_exit": "closed at 16:00 without stop or TP1",
+    "invalidated": "exited early: a higher-TF candle closed through the retest area",
     "unexplained": "none of the above — the setup simply failed",
 }
 E = html.escape

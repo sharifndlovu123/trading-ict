@@ -23,13 +23,13 @@ from pathlib import Path
 import pandas as pd
 
 from ict_engine.eval.bias import wilson
-from ict_engine.models import model_mmxm
+from ict_engine.models import model_mmxm, model_sb
 from ict_engine.models.model_2022 import Params
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = Params()
 NO_LONDON = tuple(w for w in BASE.windows if w != "london_kz")
-VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 cap 2R, cost gate 0.1R)
+VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 cap 2R, cost gate 0.1R, bias prev_day_dol)
     "baseline": BASE,
     "first defaults (TP1 uncapped, no cost gate)": replace(BASE, tp1_cap_r=None, max_cost_r=None),
     "tp1 uncapped": replace(BASE, tp1_cap_r=None),
@@ -38,6 +38,10 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "no cost gate": replace(BASE, max_cost_r=None),
     "cost <= 0.2R": replace(BASE, max_cost_r=0.2),
     "no London": replace(BASE, windows=NO_LONDON),
+    "bias prev_day (old default)": replace(BASE, bias_rule="prev_day"),
+    "bias draw_dol (strict)": replace(BASE, bias_rule="draw_dol"),
+    "exit on 5m close through FVG": replace(BASE, invalidate_tf="5m"),
+    "exit on 15m close through FVG": replace(BASE, invalidate_tf="15m"),
 }
 
 
@@ -47,15 +51,34 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "re-accumulation zone 1": replace(MB, entry="reacc1"),
     "re-accumulation zone 2": replace(MB, entry="reacc2"),
     "frame 1h": replace(MB, frame_tf="1h", oc_bars=3),
-    "entry 5m": replace(MB, entry_tf="5m"),
+    "entry 1m (old default)": replace(MB, entry_tf="1m"),
     "tp1 cap 2R": replace(MB, tp1_cap_r=2.0),
     "2 steps": replace(MB, min_steps=2),
     "no poi": replace(MB, use_poi=False),
     "no bias": replace(MB, use_bias=False),
     "deepest FVG": replace(MB, fvg_pick="deepest"),
     "no purge required": replace(MB, smr_purge=False),
+    "bias prev_day (old default)": replace(MB, bias_rule="prev_day"),
+    "bias draw_dol (strict)": replace(MB, bias_rule="draw_dol"),
+    "exit on 5m close through FVG": replace(MB, invalidate_tf="5m"),
+    "exit on 15m close through FVG": replace(MB, invalidate_tf="15m"),
 }
-SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS}
+SB = model_sb.Params()
+SB_VARIANTS: dict[str, model_sb.Params] = {
+    "baseline": SB,
+    "+ 15:00-16:00 window": replace(SB, late_window=True),
+    "FVG must form in the hour": replace(SB, strict_fvg_in_hour=True),
+    "entry at CE": replace(SB, entry_level="ce"),
+    "no poi": replace(SB, use_poi=False),
+    "no bias": replace(SB, use_bias=False),
+    "tp1 cap 2R": replace(SB, tp1_cap_r=2.0),
+    "one trade per window": replace(SB, cap_scope="window"),
+    "bias prev_day (old default)": replace(SB, bias_rule="prev_day"),
+    "bias draw_dol (strict)": replace(SB, bias_rule="draw_dol"),
+    "exit on 5m close through FVG": replace(SB, invalidate_tf="5m"),
+    "exit on 15m close through FVG": replace(SB, invalidate_tf="15m"),
+}
+SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS}
 
 def _job(args) -> pd.DataFrame:
     name, params, asset, start, end = args

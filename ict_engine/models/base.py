@@ -38,6 +38,10 @@ class TradePlan:
     final_name: str = ""
     arm: float | None = None     # order is live only after price trades here (entry then sits in
                                  # discount/premium of the finished leg); None = live at once
+    # Invalidation: the retest area must hold. A finished ``invalid_tf`` candle closing beyond
+    # ``invalid_level`` (the area's far edge) ends the idea → exit at the next bar's open.
+    invalid_level: float | None = None
+    invalid_tf: str | None = None    # e.g. "5m", "15m"; None = hold to stop/TP1 (no invalidation)
 
     @property
     def risk(self) -> float:
@@ -52,7 +56,7 @@ class TradePlan:
 class Result:
     filled_at: pd.Timestamp | None = None
     exit_at: pd.Timestamp | None = None
-    exit_reason: str = "not_filled"   # not_filled, missed (TP1 before fill), cancelled, stop, tp1, time_exit
+    exit_reason: str = "not_filled"   # not_filled, missed (TP1 before fill), cancelled, stop, tp1, invalidated, time_exit
     r: float = 0.0                    # R of the all-out-at-TP1 variant, after costs
     vote: bool = False                # TP1 reached before the stop
     ambiguous: bool = False           # stop and TP1 inside one 1m bar (counted as stop)

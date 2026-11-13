@@ -49,7 +49,8 @@ class Params:
     fvg_pick: str = "deepest"            # deepest (lowest for buys) | nearest (closest to the MSS)
     entry_level: str = "proximal"        # proximal | ce | distal
     use_bias: bool = True
-    bias_rule: str = "prev_day"          # name in context.BIAS_RULES (ctx.biases); prev_day = ctx.bias
+    # prev_day_dol: best bias rule in all 3 models OOS (variant sweep 2026-11-13, 4 assets; z < 2 — best so far)
+    bias_rule: str = "prev_day_dol"
     neutral_bias: str = "opening_range"  # neutral day: block | opening_range (ICT: wait for the 09:30–10:00 move)
     use_pricing: bool = True
     # 20/40/60-day ranges are ICT's swing/daily-setup ranges (Charter PA Model 6); intraday he
@@ -66,6 +67,8 @@ class Params:
     tp1_cap_r: float | None = 2.0        # TP1 no further than this many R (ICT's earliest close is near); None = off
     max_cost_r: float | None = 0.1       # reject when round-trip cost / risk exceeds this; None = off
     poi_tfs: tuple[str, ...] = ("1h", "4h")
+    # exit when a candle of this TF closes beyond the entry FVG's far edge (the retest failed); None = off
+    invalidate_tf: str | None = None
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -79,8 +82,10 @@ class Params:
             extra.append(f"tp1cap{self.tp1_cap_r:g}R" if self.tp1_cap_r is not None else "tp1uncapped")
         if self.max_cost_r != 0.1:
             extra.append(f"cost<={self.max_cost_r:g}R" if self.max_cost_r is not None else "nocostgate")
-        if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day", "opening_range"):
+        if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day_dol", "opening_range"):
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
+        if self.invalidate_tf:
+            extra.append(f"inval{self.invalidate_tf}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
         return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)
@@ -229,7 +234,8 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
 
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
-                                 arm=arm if needs_arm else None)
+                                 arm=arm if needs_arm else None,
+                                 invalid_level=fvg.bottom if long else fvg.top, invalid_tf=p.invalidate_tf)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     setup.tags["window"] = w.name if w else None

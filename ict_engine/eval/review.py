@@ -13,6 +13,7 @@ Reads backtest tables (``ict_engine.eval.backtest``). Three parts:
        target_too_far  TP1 at 1R would have been hit before the stop
        ambiguous       stop and TP1 inside one 1m bar (counted as a loss)
        time_exit       closed at 16:00 without stop or TP1
+       invalidated     exited early: a higher-TF candle closed through the retest area
        unexplained     none of the above — the setup simply failed
    A loss can have several causes; all are counted.
 2. **Gate value**: for every gate, how the setups it blocked would have done
@@ -39,7 +40,7 @@ import pandas as pd
 from ict_engine.eval.bias import wilson
 
 ROOT = Path(__file__).resolve().parents[2]
-CAUSES = ("bias_wrong", "wrong_side", "stop_too_tight", "target_too_far", "ambiguous", "time_exit", "unexplained")
+CAUSES = ("bias_wrong", "wrong_side", "stop_too_tight", "target_too_far", "ambiguous", "time_exit", "invalidated", "unexplained")
 DIMENSIONS = ("window", "weekday", "hour", "side", "quarter", "bias_agrees", "liquidity_kind", "liquidity",
               "tp1_kind", "poi_kind", "asset")
 
@@ -76,6 +77,8 @@ def causes(row) -> list[str]:
     out = []
     if row.exit == "time_exit":
         out.append("time_exit")
+    if row.exit == "invalidated":
+        out.append("invalidated")
     if row.side == "long" and row.outcome == "bear_hit" or row.side == "short" and row.outcome == "bull_hit":
         out.append("bias_wrong")
     if _true(row.get("cf_flip_vote")):

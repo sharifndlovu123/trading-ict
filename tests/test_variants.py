@@ -4,7 +4,7 @@ from datetime import date
 
 import pandas as pd
 
-from ict_engine.eval.variants import VARIANTS, compare, render, split_day
+from ict_engine.eval.variants import SETS, VARIANTS, compare, render, split_day
 
 
 def trades(name, early_r, late_r, n=50):
@@ -33,7 +33,9 @@ def test_oos_delta_judges_the_late_part_only():
     assert "| better |" in render(c.reset_index(), cut, "t")
 
 
-def test_variant_set_has_baseline_and_distinct_labels():
-    assert "baseline" in VARIANTS
-    labels = [p.variant for p in VARIANTS.values()]
-    assert len(set(labels)) == len(labels)
+def test_every_variant_set_has_baseline_and_distinct_labels():
+    assert SETS["2022_model"] is VARIANTS
+    for name, variants in SETS.items():
+        assert "baseline" in variants, name
+        labels = [p.variant for p in variants.values()]
+        assert len(set(labels)) == len(labels), name

@@ -9,6 +9,9 @@ Rules (pipeline.md §7):
     - the fill bar itself may also hit the stop (counted); it can't also hit TP1 unless the
       bar trades through both — then the stop is assumed first and the trade is flagged ambiguous
     - after the fill: stop and TP1 in the same bar → stop first, ambiguous=True
+    - invalidation (plan.invalid_tf set): after the fill, when a ``invalid_tf`` candle finishes with
+      its close beyond ``invalid_level`` (the retest area did not hold), exit at the next 1m bar's
+      open ("invalidated"). Stop/TP1 inside that last bar come first. Only finished candles count.
     - time exit at ``time_exit`` (day style: 16:00 NY) at that bar's open
     - costs: ``cost`` price units per round trip, charged in R
     - runner variant: half off at TP1, stop to entry, rest to final target / stop / time exit
@@ -62,8 +65,15 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
     res.filled_at = after.index[fill_i]
     worst = 0.0
     tp1_at = None
+    tf_min = _tf_minutes(plan.invalid_tf) if plan.invalid_tf and plan.invalid_level is not None else None
+    exit_next = False
     for j in range(fill_i, len(after)):
         ts, row = after.index[j], after.iloc[j]
+        if exit_next:                                   # the HTF close beyond the area was known at this open
+            px = float(row.open)
+            worst = min(worst, plan.r_at(px))
+            res.exit_at, res.exit_reason, res.r = ts, "invalidated", plan.r_at(px) - cost_r
+            break
         worst = min(worst, plan.r_at(row.low if long else row.high))
         stop_now = hit_stop(row)
         tp_now = hit(row, plan.tp1) and (j > fill_i or _fill_bar_reaches_tp(row, plan, long))
@@ -76,6 +86,8 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
             res.exit_at, res.exit_reason, res.vote = ts, "tp1", True
             res.r = plan.r_at(plan.tp1) - cost_r
             break
+        if tf_min and _bucket_ends(after.index, j, tf_min):
+            exit_next = row.close < plan.invalid_level if long else row.close > plan.invalid_level
     else:
         last = bars[bars.index >= time_exit]
         px = float(last.open.iloc[0]) if not last.empty else float(after.close.iloc[-1])
@@ -85,6 +97,22 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
     res.mae_r = worst
     res.runner_r, res.final_reached = _runner(plan, after, tp1_at, time_exit, bars, cost_r, res)
     return res
+
+
+def _tf_minutes(tf: str) -> int:
+    n, unit = int(tf[:-1]), tf[-1]
+    return n * {"m": 1, "h": 60}[unit]
+
+
+def _bucket_ends(idx: pd.DatetimeIndex, j: int, tf_min: int) -> bool:
+    """Bar j is the last 1m bar of its ``tf_min`` candle (buckets aligned to NY midnight): either
+    the next minute starts a new bucket, or the next bar we have lies in another bucket (data gap)."""
+    def bucket(ts):
+        return (ts.hour * 60 + ts.minute) // tf_min
+    ts = idx[j]
+    if (ts.hour * 60 + ts.minute + 1) % tf_min == 0:
+        return True
+    return j + 1 < len(idx) and (bucket(idx[j + 1]) != bucket(ts) or idx[j + 1].date() != ts.date())
 
 
 def _fill_bar_reaches_tp(row, plan: TradePlan, long: bool) -> bool:

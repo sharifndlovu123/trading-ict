@@ -82,3 +82,11 @@ def test_cross_model_names_the_best_family_per_bucket():
     assert c.loc["ny_pm_kz", "mmxm n"] == 60
     assert cross_model(df, "window", min_n=1000).best.eq("—").all()
     assert "## Cross-model" in report(pd.concat([a, b], ignore_index=True), "x")
+
+
+def test_invalidated_exit_is_its_own_cause():
+    import pandas as pd
+    from ict_engine.eval.review import causes
+    row = pd.Series({"vote": False, "r": -0.4, "exit": "invalidated", "side": "long", "outcome": "bull_hit",
+                     "ambiguous": False})
+    assert causes(row) == ["invalidated"]
