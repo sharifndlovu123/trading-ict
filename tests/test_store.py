@@ -76,3 +76,22 @@ def test_leaderboard_per_bucket_with_min_n(root):
     assert gold.n == 4 and gold.exp_r == pytest.approx(1.25) and gold.win == pytest.approx(0.75)
     assert lb.iloc[0].asset == "XAUUSD"                                  # sorted best first
     assert store.leaderboard(store.load(root=root), by=["asset"], min_n=5).empty
+
+
+def test_leaderboard_clustered_se_widens_when_same_day_trades_move_together():
+    """Trades on the same day share the day's tape, so they are not independent. se_cl (clustered by day)
+    must equal the naive se when every day has one trade, and be wider when same-day results are copies."""
+    import math
+    import pandas as pd
+    from ict_engine.eval.store import clustered_se, leaderboard
+    r = pd.Series([1.0, -1.0, 2.0, -1.0])
+    one_per_day = pd.Series(pd.to_datetime(["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"]))
+    assert clustered_se(r, one_per_day) == pytest.approx(r.std(ddof=1) / math.sqrt(4))
+    # hand check, 2 days × 2 identical trades: mean 0.5, residual sums 2×0.5 and 2×(−0.5)... use (1,1) and (−1,−1)
+    r2 = pd.Series([1.0, 1.0, -1.0, -1.0])
+    two_days = pd.Series(pd.to_datetime(["2024-01-02", "2024-01-02", "2024-01-03", "2024-01-03"]))
+    # S_g = 2, −2 → var = G/(G−1) · ΣS²/n² = 2 · 8/16 = 1 → se 1.0 (naive: 1.1547/2 = 0.577)
+    assert clustered_se(r2, two_days) == pytest.approx(1.0)
+    df = pd.DataFrame({"status": "traded", "r": r2, "vote": r2 > 0, "day": two_days, "family": "x"})
+    row = leaderboard(df, ["family"], min_n=1).iloc[0]
+    assert row.se_cl == pytest.approx(1.0) and row.se_cl > row.se and row.z_cl == pytest.approx(0.0)

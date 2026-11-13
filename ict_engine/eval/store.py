@@ -121,9 +121,26 @@ def runs(root: Path = STORE) -> pd.DataFrame:
     return info.join(t.groupby("run_id").r.agg(trades="size", exp_r="mean")).reset_index()
 
 
+def clustered_se(r: pd.Series, day: pd.Series) -> float:
+    """Standard error of the mean R, clustered by trading day.
+
+    Trades on the same day share one tape (same bias call, same news, same trend), so they are not
+    independent and the naive se = s/√n overstates confidence (orderflow.md §3: autocorrelation-robust
+    statistics). With residual sums S_g per day and G days: var = G/(G−1) · Σ S_g² / n².
+    Equals the naive se when every day has one trade."""
+    r = pd.Series(r).reset_index(drop=True).astype(float)
+    g = pd.Series(pd.to_datetime(day)).dt.normalize().reset_index(drop=True)
+    n, groups = len(r), g.nunique()
+    if n < 2 or groups < 2:
+        return float("nan")
+    s = (r - r.mean()).groupby(g).sum()
+    return math.sqrt(groups / (groups - 1) * float((s ** 2).sum()) / n ** 2)
+
+
 def leaderboard(df: pd.DataFrame, by: list[str], min_n: int = 30) -> pd.DataFrame:
     """Expectancy ± se, win rate with Wilson range and n per bucket of traded setups, best first.
-    The ``early_r``/``late_r`` halves (by date, per bucket) show whether a bucket is stable."""
+    ``se_cl``/``z_cl``: se and z clustered by trading day (use these for decisions; ``se`` assumes independent
+    trades). The ``early_r``/``late_r`` halves (by date, per bucket) show whether a bucket is stable."""
     t = df[df.status == "traded"]
     rows = []
     for key, g in t.groupby(by):
@@ -136,6 +153,8 @@ def leaderboard(df: pd.DataFrame, by: list[str], min_n: int = 30) -> pd.DataFram
         rows.append({**dict(zip(by, key if isinstance(key, tuple) else (key,))), "n": n, "win": k / n,
                      "win_lo": lo, "win_hi": hi, "exp_r": g.r.mean(),
                      "se": g.r.std(ddof=1) / math.sqrt(n) if n > 1 else float("nan"),
+                     "se_cl": (se_cl := clustered_se(g.r, g.day)),
+                     "z_cl": g.r.mean() / se_cl if se_cl and se_cl == se_cl and se_cl > 0 else float("nan"),
                      "early_r": g[g.day <= mid].r.mean(), "late_r": g[g.day > mid].r.mean()})
     out = pd.DataFrame(rows)
     return out.sort_values("exp_r", ascending=False).reset_index(drop=True) if len(out) else out
