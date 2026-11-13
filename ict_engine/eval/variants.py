@@ -23,7 +23,7 @@ from pathlib import Path
 import pandas as pd
 
 from ict_engine.eval.bias import wilson
-from ict_engine.models import model_cameron, model_mmxm, model_sb
+from ict_engine.models import model_cameron, model_mmxm, model_pd_return, model_sb
 from ict_engine.models.model_2022 import Params
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -108,7 +108,23 @@ CAMERON_VARIANTS: dict[str, model_cameron.Params] = {
     "partial 80% + runner at breakeven": replace(CB, partial_frac=0.8),
     "partial 75% + runner trail (lock half)": replace(CB, partial_frac=0.75, runner_stop="lock_half"),
 }
-SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS}
+PR = model_pd_return.Params()
+# Windows are ICT's documented ones only (clock.py). ICT's 2023-11-28 trade at 11:11 lies just after macro_1050;
+# no window is invented from that single case.
+PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
+    "baseline": PR,
+    "no bias": replace(PR, use_bias=False),
+    "+ macros (to 11:10)": replace(PR, windows=PR.windows + ("macro_0950", "macro_1050")),
+    "macros only": replace(PR, windows=("macro_0950", "macro_1050")),
+    "stop beyond array": replace(PR, stop_mode="array"),
+    "entry at CE": replace(PR, entry_level="ce"),
+    "arrays 1h+4h only": replace(PR, htf_tfs=("1h", "4h")),
+    "lookback 2 days": replace(PR, lookback_days=2),
+    "tp1 cap 2R": replace(PR, tp1_cap_r=2.0),
+    "no cost gate": replace(PR, max_cost_r=None),
+}
+SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
+        "pd_return": PD_RETURN_VARIANTS}
 
 def _job(args) -> pd.DataFrame:
     name, params, asset, start, end = args
@@ -169,11 +185,17 @@ def main(argv=None):
     ap.add_argument("--assets", nargs="+", default=["US100", "US500"])
     ap.add_argument("--holdout", type=float, default=0.3)
     ap.add_argument("--model", default="2022_model", choices=tuple(SETS))
+    ap.add_argument("--workers", type=int, default=8, help="process cap (CPU heat: 16 cores hit 96 °C)")
+    ap.add_argument("--cost", choices=("cfd", "futures"), default=None, help="cost basis (sets ICT_COST_BASIS)")
     a = ap.parse_args(argv)
-    df = sweep(a.start, a.end, tuple(a.assets), SETS[a.model])
+    if a.cost:
+        import os
+        os.environ["ICT_COST_BASIS"] = a.cost
+    df = sweep(a.start, a.end, tuple(a.assets), SETS[a.model], workers=a.workers)
     cut = split_day(a.start, a.end, a.holdout)
     text = render(compare(df, cut), cut, f"{a.model} {'+'.join(a.assets)} {a.start} → {a.end}")
-    out = ROOT / "reports" / f"variants{'' if a.model == '2022_model' else '-' + a.model}-{a.start}-{a.end}"
+    out = ROOT / "reports" / (f"variants{'' if a.model == '2022_model' else '-' + a.model}-{a.start}-{a.end}"
+                              f"{'-futures' if a.cost == 'futures' else ''}")
     out.parent.mkdir(exist_ok=True)
     df.to_parquet(out.with_suffix(".parquet"))
     out.with_suffix(".md").write_text(text)

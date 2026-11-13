@@ -39,3 +39,13 @@ def test_every_variant_set_has_baseline_and_distinct_labels():
         assert "baseline" in variants, name
         labels = [p.variant for p in variants.values()]
         assert len(set(labels)) == len(labels), name
+
+
+def test_pd_return_variant_set_has_a_default_baseline_and_documented_windows_only():
+    from ict_engine.concepts.clock import WINDOWS
+    from ict_engine.eval.variants import SETS
+    from ict_engine.models import model_pd_return as pr
+    s = SETS["pd_return"]
+    assert s["baseline"] == pr.Params()
+    names = {w.name for w in WINDOWS}
+    assert all(set(p.windows) <= names for p in s.values())
