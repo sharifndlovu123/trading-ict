@@ -45,7 +45,7 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
             return res
         if not armed:
             if hit(row, plan.tp1):
-                res.exit_reason = "missed"
+                res.exit_at, res.exit_reason = ts, "missed"      # order cancelled; slot is free again
                 return res
             if hit(row, plan.arm):
                 armed = True
@@ -54,7 +54,7 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
             fill_i = i
             break
         if hit(row, plan.tp1):
-            res.exit_reason = "missed"
+            res.exit_at, res.exit_reason = ts, "missed"
             return res
     if fill_i is None:
         return res

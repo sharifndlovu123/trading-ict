@@ -80,3 +80,10 @@ def test_midnight_open():
     idx = pd.date_range("2024-01-08 23:58", periods=4, freq="1min", tz=NY)
     bars = pd.DataFrame({"open": [1, 2, 3, 4]}, index=idx)
     assert midnight_open(bars).to_dict() == {date(2024, 1, 9): 3}
+
+
+def test_ny_premarket_window_for_futures():
+    from datetime import time
+    from ict_engine.concepts.clock import WINDOWS
+    w = next(w for w in WINDOWS if w.name == "ny_premarket")
+    assert w.contains(time(7, 0)) and w.contains(time(9, 29)) and not w.contains(time(9, 30))

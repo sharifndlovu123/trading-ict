@@ -37,6 +37,10 @@ Bias is a **strategy** (a filter, never a trade). Trading with bias is the defau
 
 - **Alignment:** M + W + D agree → *aligned*. ICT: when monthly, weekly and daily are bullish, intraday charts (4H and below) retrace into discount to buy — that retracement is where models fire.
 - **Rule:** a model trades only in the **daily bias** direction by default. Monthly/weekly alignment is recorded on every trade (aligned / mixed / against) and reported.
+- **Daily bias rules** (`ict_engine/concepts/context.py`, `BIAS_RULES`; every rule is on `DayContext.biases`, `ctx.bias` = the default):
+  - `prev_day` — yesterday HH+HL → bull, LH+LL → bear, else neutral (current default). `htf20` — last close above/below the 20-day range equilibrium.
+  - `draw` — the side of yesterday's range that was run (high only → bull, low only → bear); inside day neutral; outside day neutral unless it closed against an HTF-aligned trend (down close in a bullish `htf20` → bull, mirror; ICT, Essentials To Trading The Daily Bias, 13 Dec 2017). `draw_htf` — `draw`, neutral falls back to `htf20`.
+  - Choose the default by evidence, not by agreement with reference trades: `uv run python -m ict_engine.eval.bias US100 2023-01-01 2024-06-30` scores each rule's hit rate (PDH vs PDL reached first, 18:00→16:00) against the base rate and an always-bull baseline.
 - **Source:** ICT 2016 Mentorship Month 4 (Order Blocks, Reinforcing Liquidity); 2017 Mentorship Month 6 (Ideal Swing Conditions); Charter Price Action Model 11; "Keys To Daily Bias" (2020); 2022 Mentorship Ep. 18.
 
 ## 2. Timeframes — each one has a job

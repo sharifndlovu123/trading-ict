@@ -193,7 +193,7 @@ def write_html(pack: dict, path: Path) -> Path:
     return path
 
 
-RELAXED = Params(use_htf_pricing=False, use_bias=False, windows=("ny_am_kz", "ny_pm_kz", "macro_0950", "macro_1050"))
+RELAXED = Params(use_bias=False, use_poi=False)                 # detection view: only time + trigger + target gates
 
 
 def export(asset: str, day: date, relaxed: bool) -> tuple[Path, dict]:
@@ -234,7 +234,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="ict_engine.viz.daypack")
     ap.add_argument("asset", nargs="?")
     ap.add_argument("day", nargs="?", type=date.fromisoformat)
-    ap.add_argument("--relaxed", action="store_true", help="drop HTF-pricing and bias gates; NY windows + macros")
+    ap.add_argument("--relaxed", action="store_true", help="drop bias and POI gates")
     ap.add_argument("--references", action="store_true", help="export every reference-trade day + out/index.html")
     a = ap.parse_args(argv)
     if a.references:

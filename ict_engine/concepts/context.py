@@ -7,7 +7,8 @@ NY of ``day``), so nothing from the session itself leaks in. Intraday levels
 Contents:
     levels      PDH/PDL, PWH/PWL, Asia high/low, midnight open, NDOG, NWOG
     ranges      20/40/60-trading-day high/low (HTF dealing ranges, framework §3)
-    bias        daily bias (v1 heuristic, framework §1) with its reason
+    bias        daily bias (default rule, framework §1) with its reason
+    biases      every named bias rule in ``BIAS_RULES`` → (bias, reason)
     liquidity   Level objects for sweep detection
 """
 
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
+from typing import Callable
 
 import pandas as pd
 
@@ -79,18 +81,26 @@ class DayContext:
     bias_reason: str
     gaps: tuple[Gap, ...] = ()
     liquidity: tuple[Level, ...] = field(default=(), compare=False)
+    biases: dict[str, tuple[str, str]] = field(default_factory=dict, compare=False)
 
     def pricing(self, price: float, lookback: int = 20) -> Pricing:
         lo, hi = self.ranges[lookback]
         return pricing(price, lo, hi)
 
 
-def daily_bias(daily: pd.DataFrame) -> tuple[str, str]:
+# --- daily bias rules (a strategy: scored by hit rate in eval/bias.py, never trades) ---
+# Each rule takes COMPLETED daily bars (resample(..., "1d"), oldest first) and returns
+# (bias, reason) with bias in bull | bear | neutral.
+
+BiasRule = Callable[[pd.DataFrame], tuple[str, str]]
+
+
+def bias_prev_day(daily: pd.DataFrame) -> tuple[str, str]:
     """v1 heuristic (framework §1): compare the last two completed trading days.
 
     bear: yesterday took the prior day's low and made a lower high (sell-side being taken)
     bull: yesterday took the prior day's high and made a higher low
-    else neutral. To be refined (draw on liquidity, HTF PD arrays) and measured with/without.
+    else neutral.
     """
     if len(daily) < 2:
         return "neutral", "not enough history"
@@ -104,6 +114,80 @@ def daily_bias(daily: pd.DataFrame) -> tuple[str, str]:
     return "neutral", "inside day"
 
 
+daily_bias = bias_prev_day   # backwards-compatible name
+
+
+def bias_htf20(daily: pd.DataFrame, n: int = 20) -> tuple[str, str]:
+    """HTF dealing range: last close above the equilibrium of the last ``n`` completed days → bull,
+    else bear (framework §3: buy in discount of a bullish range, i.e. bias follows where price sits)."""
+    if len(daily) < n:
+        return "neutral", f"not enough history (<{n} days)"
+    w = daily.tail(n)
+    eq = (float(w.high.max()) + float(w.low.min())) / 2
+    close = float(daily.close.iloc[-1])
+    if close > eq:
+        return "bull", f"close above {n}-day equilibrium"
+    return "bear", f"close at/below {n}-day equilibrium"
+
+
+def bias_draw(daily: pd.DataFrame) -> tuple[str, str]:
+    """ICT's daily bias: the side of the previous day's range not yet run, in line with the HTF draw.
+
+    Previous day took only the prior day's high → bull (draw continues higher); only the low → bear;
+    inside day → neutral; outside day → neutral (indecision), except an outside day closing in its
+    lower half while the HTF range is bullish → bull ("an outside day with a down close... typically
+    bullish... if we're in a bullish market" — ICT, Essentials To Trading The Daily Bias,
+    13 Dec 2017), and the mirror (upper-half close in a bearish HTF range → bear).
+    """
+    if len(daily) < 2:
+        return "neutral", "not enough history"
+    d2, d1 = daily.iloc[-2], daily.iloc[-1]
+    took_high, took_low = d1.high > d2.high, d1.low < d2.low
+    if took_high and not took_low:
+        return "bull", "previous day ran the prior high only"
+    if took_low and not took_high:
+        return "bear", "previous day ran the prior low only"
+    if not took_high and not took_low:
+        return "neutral", "inside day"
+    htf, _ = bias_htf20(daily)
+    mid = (float(d1.high) + float(d1.low)) / 2
+    if float(d1.close) < mid and htf == "bull":
+        return "bull", "outside day closing in its lower half, HTF bullish"
+    if float(d1.close) > mid and htf == "bear":
+        return "bear", "outside day closing in its upper half, HTF bearish"
+    return "neutral", "outside day (both sides taken)"
+
+
+def bias_draw_htf(daily: pd.DataFrame) -> tuple[str, str]:
+    """``draw``; when it is neutral, fall back to ``htf20``."""
+    b, why = bias_draw(daily)
+    if b != "neutral":
+        return b, why
+    hb, hwhy = bias_htf20(daily)
+    return hb, f"{why}; fallback: {hwhy}"
+
+
+BIAS_RULES: dict[str, BiasRule] = {
+    "prev_day": bias_prev_day,
+    "htf20": bias_htf20,
+    "draw": bias_draw,
+    "draw_htf": bias_draw_htf,
+}
+DEFAULT_BIAS_RULE = "prev_day"
+
+
+def completed_daily(daily: pd.DataFrame, day: date, as_of: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Daily bars (from ``resample(..., "1d")``) that were complete before ``day``'s context:
+    closed before 17:00 NY the evening before ``day`` (and before ``as_of``)."""
+    as_of = as_of or _ts(day, time(0))
+    cut = min(_ts(day - timedelta(days=1), time(17)), as_of)
+    return daily[daily["close_ts"] < cut]
+
+
+def all_biases(daily: pd.DataFrame) -> dict[str, tuple[str, str]]:
+    return {name: rule(daily) for name, rule in BIAS_RULES.items()}
+
+
 def build_context(bars_1m: pd.DataFrame, day: date, as_of: pd.Timestamp | None = None) -> DayContext:
     as_of = as_of or _ts(day, time(0))
     past = bars_1m[bars_1m.index < as_of]
@@ -111,7 +195,7 @@ def build_context(bars_1m: pd.DataFrame, day: date, as_of: pd.Timestamp | None =
         raise ValueError(f"no bars before {as_of}")
 
     daily = resample(past, "1d")
-    daily = daily[daily["close_ts"] < _ts(day - timedelta(days=1), time(17))]   # completed days only
+    daily = completed_daily(daily, day, as_of)   # completed days only
     if daily.empty:
         raise ValueError(f"no completed trading day before {day}")
     weekly = resample(past, "1w")
@@ -148,8 +232,9 @@ def build_context(bars_1m: pd.DataFrame, day: date, as_of: pd.Timestamp | None =
         w = daily.tail(n)
         ranges[n] = (float(w.low.min()), float(w.high.max()))
 
-    bias, reason = daily_bias(daily)
+    biases = all_biases(daily)
+    bias, reason = biases[DEFAULT_BIAS_RULE]
 
     sides = {"pdh": "high", "pwh": "high", "asia_high": "high", "pdl": "low", "pwl": "low", "asia_low": "low"}
     liquidity = tuple(Level(name, lv[name], side, as_of) for name, side in sides.items() if name in lv)
-    return DayContext(day, as_of, lv, ranges, bias, reason, tuple(gaps), liquidity)
+    return DayContext(day, as_of, lv, ranges, bias, reason, tuple(gaps), liquidity, biases)

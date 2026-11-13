@@ -40,14 +40,20 @@ EXTERNAL_LOW = ("asia_low", "pdl", "pwl")
 @dataclass(frozen=True)
 class Params:
     entry_tf: str = "1m"
-    windows: tuple[str, ...] = ("london_kz", "ny_am_kz", "ny_pm_kz")
+    # ICT runs the 2022 model 07:00–09:00 ("NY Open Kill Zone") and enters in the macros
+    # (ictindex: 2023 MMxM; Oct 28 2024; 9:50/10:50 macros) — see ictindex-rulings.
+    windows: tuple[str, ...] = ("london_kz", "ny_premarket", "ny_am_kz", "macro_0950", "macro_1050", "ny_pm_kz")
     sweep_lookback_min: int = 90         # liquidity must be taken within this many minutes before the MSS
     leg_bars_after_mss: int = 3          # FVG may finish forming up to N bars after the MSS candle
     fvg_pick: str = "deepest"            # deepest (lowest for buys) | nearest (closest to the MSS)
     entry_level: str = "proximal"        # proximal | ce | distal
     use_bias: bool = True
+    bias_rule: str = "prev_day"          # name in context.BIAS_RULES (ctx.biases); prev_day = ctx.bias
+    neutral_bias: str = "opening_range"  # neutral day: block | opening_range (ICT: wait for the 09:30–10:00 move)
     use_pricing: bool = True
-    use_htf_pricing: bool = True         # framework §3: discount of BOTH ranges
+    # 20/40/60-day ranges are ICT's swing/daily-setup ranges (Charter PA Model 6); intraday he
+    # measures the most recent large move (Lecture #4, 8 Aug 2024) = our leg/arm check. Off for day trades.
+    use_htf_pricing: bool = False
     use_poi: bool = True
     min_potential: float = 10.0          # handles from entry to final target (ICT minimum framework)
     stop_buffer: float = 0.25
@@ -57,10 +63,13 @@ class Params:
     @property
     def variant(self) -> str:
         off = [n for n, on in (("bias", self.use_bias), ("pricing", self.use_pricing),
-                               ("htf", self.use_htf_pricing), ("poi", self.use_poi)) if not on]
+                               ("poi", self.use_poi)) if not on]
+        extra = ["htf20"] if self.use_htf_pricing else []
+        if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day", "opening_range"):
+            extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
-        return base + ("-no_" + "_".join(off) if off else "")
+        return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)
 
 
 def _ts(d: date, t: time) -> pd.Timestamp:
@@ -156,8 +165,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
     w = _window_at(decided, p.windows)
     setup.gates.append(Gate("time", w is not None, w.name if w else f"{decided:%H:%M} outside {p.windows}"))
 
-    want_bias = "bull" if long else "bear"
-    setup.gates.append(Gate("bias", (ctx.bias == want_bias) or not p.use_bias, f"daily bias {ctx.bias}"))
+    setup.gates.append(bias_gate(ctx, long, decided, day_1m, p))
 
     # Intraday pricing is judged on the FINISHED leg: the entry must be in discount (premium) of
     # extreme → leg high. That needs the leg to reach the arm level 2·entry − extreme; the order
@@ -181,7 +189,9 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
 
     setup.gates.append(Gate("trigger", True, f"{p.entry_tf} displacement FVG {fvg.bottom:.2f}-{fvg.top:.2f}"))
 
-    tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts)
+    needs_arm = not (armed_now or not p.use_pricing)
+    tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts,
+                                                beyond=arm if needs_arm else None)
     if tp1 is None:
         setup.gates.append(Gate("target", False, "no untaken liquidity beyond entry"))
         return setup
@@ -191,11 +201,43 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
 
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
-                                 arm=None if (armed_now or not p.use_pricing) else arm)
+                                 arm=arm if needs_arm else None)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     setup.tags["window"] = w.name if w else None
     return setup
+
+
+OPEN_RANGE = (time(9, 30), time(10, 0))
+
+
+def opening_range_bias(day_1m: pd.DataFrame, decided: pd.Timestamp) -> str | None:
+    """Direction of the 09:30–10:00 move (10:00 close vs 09:30 open), or None before 10:00 —
+    ICT on unclear days: "wait that first 30 minutes and see what they do" (Twitter Space 11 Jan 2023)."""
+    d = decided.date()
+    t0, t1 = _ts(d, OPEN_RANGE[0]), _ts(d, OPEN_RANGE[1])
+    if decided < t1:
+        return None
+    rng = day_1m[(day_1m.index >= t0) & (day_1m.index < t1)]
+    if rng.empty:
+        return None
+    return "bull" if rng.close.iloc[-1] > rng.open.iloc[0] else "bear"
+
+
+def bias_gate(ctx: DayContext, long: bool, decided: pd.Timestamp, day_1m: pd.DataFrame, p: Params) -> Gate:
+    want = "bull" if long else "bear"
+    if p.bias_rule == "prev_day":
+        bias, why = ctx.bias, ctx.bias_reason
+    else:
+        bias, why = getattr(ctx, "biases", {})[p.bias_rule]
+    if not p.use_bias:
+        return Gate("bias", True, f"off (daily {bias})")
+    if bias != "neutral" or p.neutral_bias == "block":
+        return Gate("bias", bias == want, f"daily bias {bias} [{p.bias_rule}]: {why}")
+    orb = opening_range_bias(day_1m, decided)
+    if orb is None:
+        return Gate("bias", False, f"daily bias neutral [{p.bias_rule}]; waiting for the 09:30–10:00 move")
+    return Gate("bias", orb == want, f"daily bias neutral [{p.bias_rule}]; opening range {orb}")
 
 
 def _side_of(e: Event) -> str:
@@ -223,23 +265,30 @@ def _poi(liquidity: Event, long: bool, htf_gaps: list[Event], day_1m) -> str | N
     return None
 
 
-def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts):
+def _targets(entry, long, ctx: DayContext, day_1m, decided, swing_pts, beyond: float | None = None):
+    """TP1 = nearest untaken level past ``beyond`` (the arm level when the order must arm first —
+    anything between entry and arm is taken before we can fill; else the entry)."""
     seen = day_1m[day_1m.index <= decided]
-    hi_so_far, lo_so_far = float(seen.high.max()), float(seen.low.min())
+    edge = entry if beyond is None else (max(entry, beyond) if long else min(entry, beyond))
 
-    def untaken(price):
-        return price > hi_so_far if long else price < lo_so_far
+    def untaken(price, since=None):
+        """Not traded through between ``since`` (the level's formation; day start for context
+        levels) and the decision. A swing below the day's high can still be untaken."""
+        after = seen if since is None else seen[seen.index > since]
+        if after.empty:
+            return True
+        return price > float(after.high.max()) if long else price < float(after.low.min())
 
     cands = []
     for name in (EXTERNAL_HIGH if long else EXTERNAL_LOW):
-        if name in ctx.levels and untaken(ctx.levels[name]) and (ctx.levels[name] > entry if long else ctx.levels[name] < entry):
+        if name in ctx.levels and untaken(ctx.levels[name]) and (ctx.levels[name] > edge if long else ctx.levels[name] < edge):
             cands.append((ctx.levels[name], name, True))
     for s in swing_pts:
         if s.ts > decided:
             continue
-        if long and s.kind == "swing_high" and s.top > entry and untaken(s.top):
+        if long and s.kind == "swing_high" and s.top > edge and untaken(s.top, s.origin_ts):
             cands.append((s.top, f"{s.tf} swing high", False))
-        if not long and s.kind == "swing_low" and s.bottom < entry and untaken(s.bottom):
+        if not long and s.kind == "swing_low" and s.bottom < edge and untaken(s.bottom, s.origin_ts):
             cands.append((s.bottom, f"{s.tf} swing low", False))
     if not cands:
         return None, "", None, ""

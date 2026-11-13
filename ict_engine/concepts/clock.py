@@ -56,6 +56,8 @@ WINDOWS: tuple[Window, ...] = (
     _w("london_kz", "killzone", "02:00", "05:00", ("futures", "fx"), source="2022 slide / ICT Bible p.9"),
     _w("ny_am_kz", "killzone", "08:30", "11:00", ("futures",), source="2022 slide; ruling #4"),
     _w("ny_pm_kz", "killzone", "13:30", "16:00", ("futures",), source="2022 slide / ICT Bible p.9"),
+    _w("ny_premarket", "killzone", "07:00", "09:30", ("futures",),
+       source="ICT 2023 MMxM (2022 model 7–9 'NY Open Kill Zone'); Oct 28 2024; Jan 2026 — see ictindex-rulings"),
     # killzones — FX, dollar index, metals (ICT Bible p.9)
     _w("asia_kz", "killzone", "20:00", "00:00", ("fx",), source="ICT Bible p.9"),
     _w("ny_kz", "killzone", "07:00", "10:00", ("fx",), source="ICT Bible p.9; ruling #4"),

@@ -114,3 +114,68 @@ def test_no_lookahead_plan_is_identical_with_future_bars_removed():
     s2 = traded(find_setups(cut, DAY, "US100"))[0]
     assert (s2.plan.entry, s2.plan.stop) == (s.plan.entry, s.plan.stop)
     assert s2.decided_at == s.decided_at
+
+
+def test_tp1_is_the_nearest_swing_untaken_since_it_formed():
+    """A swing high below the day's high still counts once it formed after that high and nothing traded
+    through it since — only levels traded through *after they formed* are taken."""
+    from ict_engine.concepts.events import Event
+    from ict_engine.models.model_2022 import _targets
+    t = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz="America/New_York")
+    idx = pd.date_range(t("08:00"), t("09:30"), freq="1min")
+    day = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0}, index=idx)
+    day.loc[t("08:10"), "high"] = 110                      # day high early
+    day.loc[t("08:40"), "high"] = 104                      # later swing high, untaken since
+    day.loc[t("08:50"), "high"] = 103                      # swing high run at 09:00 → taken
+    day.loc[t("09:00"), "high"] = 103.5
+    sw = [Event("swing_high", "5m", "bear", t("08:55"), t("08:40"), 104, 104),
+          Event("swing_high", "5m", "bear", t("09:05"), t("08:50"), 103, 103)]
+    ctx = type("C", (), {"levels": {"pdh": 120.0}})()
+    tp1, name, final, fname = _targets(101, True, ctx, day, t("09:30"), sw)
+    assert (tp1, name) == (104, "5m swing high")
+    assert (final, fname) == (120.0, "pdh")
+
+
+def _orb_bars(open_, close_):
+    t = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz="America/New_York")
+    idx = pd.date_range(t("09:00"), t("10:30"), freq="1min")
+    df = pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0}, index=idx)
+    df.loc[t("09:30"), "open"] = open_
+    df.loc[t("09:59"), "close"] = close_
+    return df, t
+
+
+def test_opening_range_bias_is_unknown_before_10_and_never_reads_later_bars():
+    from ict_engine.models.model_2022 import opening_range_bias
+    df, t = _orb_bars(100, 103)
+    assert opening_range_bias(df, t("09:45")) is None
+    assert opening_range_bias(df, t("10:00")) == "bull"
+    df.loc[t("10:15"), "close"] = 50                                # later bars don't matter
+    assert opening_range_bias(df, t("10:20")) == "bull"
+    assert opening_range_bias(_orb_bars(100, 97)[0], t("10:05")) == "bear"
+
+
+def test_neutral_day_waits_for_the_opening_range():
+    from ict_engine.models.model_2022 import bias_gate
+    ctx = type("C", (), {"bias": "neutral", "bias_reason": "inside day"})()
+    df, t = _orb_bars(100, 103)
+    assert not bias_gate(ctx, True, t("09:40"), df, Params()).passed            # too early
+    assert bias_gate(ctx, True, t("10:05"), df, Params()).passed                 # with the opening move
+    assert not bias_gate(ctx, False, t("10:05"), df, Params()).passed
+    assert not bias_gate(ctx, True, t("10:05"), df, Params(neutral_bias="block")).passed
+    assert bias_gate(ctx, False, t("10:05"), df, Params(use_bias=False)).passed
+
+
+def test_tp1_must_lie_beyond_the_arm_level():
+    """The order only goes live after price trades to the arm level, so any target between entry
+    and arm is taken before we could be filled — TP1 must be beyond the arm."""
+    from ict_engine.concepts.events import Event
+    from ict_engine.models.model_2022 import _targets
+    t = lambda hm: pd.Timestamp(f"2024-01-09 {hm}", tz="America/New_York")
+    idx = pd.date_range(t("08:00"), t("09:30"), freq="1min")
+    day = pd.DataFrame({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0}, index=idx)
+    sw = [Event("swing_high", "1m", "bear", t("08:30"), t("08:29"), 102, 102),
+          Event("swing_high", "5m", "bear", t("08:40"), t("08:30"), 106, 106)]
+    ctx = type("C", (), {"levels": {"pdh": 120.0}})()
+    assert _targets(101, True, ctx, day, t("09:30"), sw)[0] == 102
+    assert _targets(101, True, ctx, day, t("09:30"), sw, beyond=103)[0] == 106

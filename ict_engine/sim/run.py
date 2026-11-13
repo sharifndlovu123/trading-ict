@@ -1,8 +1,10 @@
 """Run a model over days — stages 4→8 glued together.
 
 One open order/trade at a time; after ``max_trades`` filled trades the rest of
-the day's setups are logged with a failed ``cap`` gate (ruling #1: one trade
-per day by default).
+the setups in the same scope are logged with a failed ``cap`` gate. Scope
+"day" (ruling #1: one trade per day — the Silver Bullet default) or "window"
+(``max_trades`` per time window, so an early loser can't block a later killzone).
+A newer setup cancels a pending order that has not filled by its decision time.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ import pandas as pd
 
 from ict_engine.concepts.context import build_context
 from ict_engine.models import model_2022
-from ict_engine.models.base import Gate, Setup
+from ict_engine.models.base import Gate, Result, Setup
 from ict_engine.sim.simulate import simulate
 
 NY = "America/New_York"
@@ -22,37 +24,49 @@ COST = {"US100": 1.0, "US500": 0.5, "US30": 2.0}     # round-trip spread + slipp
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),
-            max_trades: int = 1) -> list[Setup]:
+            max_trades: int = 1, cap_scope: str = "day") -> list[Setup]:
+    if cap_scope not in ("day", "window"):
+        raise ValueError(f"cap_scope must be 'day' or 'window', not {cap_scope!r}")
     try:
         ctx = build_context(bars_1m, day)
     except ValueError:
         return []
     setups = sorted(model_2022.find_setups(bars_1m, day, asset, params, ctx), key=lambda s: s.decided_at)
     close = pd.Timestamp(datetime.combine(day, time(16)), tz=NY)
-    busy_until, filled = None, 0
+    busy_until, filled, prev = None, {}, None
     for s in setups:
         if s.plan is None:
             continue
-        if filled >= max_trades:
-            s.gates.append(Gate("cap", False, f"daily cap {max_trades} reached"))
+        scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
+        # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).
+        if prev is not None and s.decided_at < busy_until and (
+                prev.result.filled_at is None or prev.result.filled_at > s.decided_at):
+            if prev.result.filled_at is not None:
+                filled[prev_scope] -= 1
+            prev.result = Result(exit_at=s.decided_at, exit_reason="cancelled")
+            busy_until = None
+        if filled.get(scope, 0) >= max_trades:
+            label = "daily cap" if scope == "day" else f"{scope} cap"
+            s.gates.append(Gate("cap", False, f"{label} {max_trades} reached"))
             s.plan = None
             continue
         if busy_until is not None and s.decided_at < busy_until:
-            s.gates.append(Gate("cap", False, "previous order/trade still active"))
+            s.gates.append(Gate("cap", False, "previous trade still open"))
             s.plan = None
             continue
         s.result = simulate(s.plan, bars_1m, close, cost=COST.get(asset, 0.0))
         busy_until = s.result.exit_at or s.plan.expires_at
+        prev, prev_scope = s, scope
         if s.result.filled_at is not None:
-            filled += 1
+            filled[scope] = filled.get(scope, 0) + 1
     return setups
 
 
 def run_range(bars_1m: pd.DataFrame, start: date, end: date, asset: str, params=model_2022.Params(),
-              max_trades: int = 1) -> list[Setup]:
+              max_trades: int = 1, cap_scope: str = "day") -> list[Setup]:
     out, d = [], start
     while d <= end:
         if d.weekday() < 5:
-            out.extend(run_day(bars_1m, d, asset, params, max_trades))
+            out.extend(run_day(bars_1m, d, asset, params, max_trades, cap_scope))
         d += timedelta(days=1)
     return out

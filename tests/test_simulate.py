@@ -99,3 +99,9 @@ def test_tp1_before_arming_is_missed():
     plan = TradePlan("long", t(0), t(30), entry=100, stop=98, tp1=101.5, final_target=108, arm=102)
     b = bars([(101, 101, 101, 101), (101, 101.8, 100.5, 101.7)])
     assert simulate(plan, b, CLOSE).exit_reason == "missed"
+
+
+def test_missed_order_is_cancelled_when_tp1_trades_so_the_slot_frees():
+    b = bars([(101, 101, 101, 101), (101, 104.5, 101, 104)])
+    r = simulate(PLAN, b, CLOSE)
+    assert r.exit_reason == "missed" and r.exit_at == t(1) and r.filled_at is None
