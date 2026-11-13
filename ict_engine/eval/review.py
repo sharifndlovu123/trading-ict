@@ -66,8 +66,8 @@ def trades(df: pd.DataFrame) -> pd.DataFrame:
 # --- 1. diagnosis -------------------------------------------------------------
 
 def _true(v) -> bool:
-    """True only for a real True (column values may be numpy bools, None or NaN)."""
-    return v is not None and not (isinstance(v, float) and math.isnan(v)) and bool(v)
+    """True only for a real True (column values may be numpy bools, None, NaN or pd.NA from the store)."""
+    return v is not None and v is not pd.NA and not (isinstance(v, float) and math.isnan(v)) and bool(v)
 
 
 def causes(row) -> list[str]:

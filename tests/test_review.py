@@ -90,3 +90,12 @@ def test_invalidated_exit_is_its_own_cause():
     row = pd.Series({"vote": False, "r": -0.4, "exit": "invalidated", "side": "long", "outcome": "bull_hit",
                      "ambiguous": False})
     assert causes(row) == ["invalidated"]
+
+
+def test_true_handles_store_nullable_booleans():
+    """The trade store keeps votes as pandas nullable booleans: pd.NA must read as 'not true', not crash."""
+    import pandas as pd
+    from ict_engine.eval.review import _true
+    s = pd.Series([True, False, None], dtype="boolean")
+    assert [_true(v) for v in s] == [True, False, False]
+    assert _true(pd.NA) is False and _true(float("nan")) is False and _true(None) is False

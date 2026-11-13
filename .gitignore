@@ -27,6 +27,10 @@ viewer/dist/
 # --- Not for a public repo ----------------------------------------------------
 # Third-party copyrighted ICT study material (PDFs) — keep locally only.
 references/*.pdf
+references/**/*.pdf
+references/**/*.epub
+references/microstructure/books/
+references/microstructure/papers/
 # Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
 references/personal/
 
