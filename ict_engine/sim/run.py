@@ -28,6 +28,14 @@ from ict_engine.sim.simulate import simulate
 NY = "America/New_York"
 
 
+def manage(plan, params):
+    """Attach the model's trade management (partial at TP1, runner stop) to a frozen plan."""
+    if plan is None:
+        return None
+    return replace(plan, partial_frac=getattr(params, "partial_frac", 0.5),
+                   runner_stop=getattr(params, "runner_stop", "entry"))
+
+
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),
             max_trades: int = 1, cap_scope: str | None = None, ctx=None) -> list[Setup]:
     cap_scope = cap_scope or getattr(params, "cap_scope", "window")      # a model may define its own (SB: day)
@@ -67,6 +75,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.gates.append(Gate("cap", False, "previous trade still open"))
             s.plan = None
             continue
+        s.plan = manage(s.plan, params)
         s.result = simulate(s.plan, bars_1m, close, cost=COST.get(asset, 0.0))
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope

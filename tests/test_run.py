@@ -90,3 +90,12 @@ def test_filled_trade_is_not_cancelled_by_a_newer_setup(monkeypatch):
     rows = [("09:01", 100, 100, 98.8, 99.2), ("09:40", 99.2, 101.5, 99, 101.2)]
     out = run.run_day(frame(rows), DAY, "US100")
     assert out[0].result.vote and out[1].gates[-1].name == "cap"
+
+
+def test_runner_applies_the_models_partial_settings(monkeypatch):
+    from dataclasses import replace
+    setups = [fake("09:00", "ny_am_kz", 99, 98, 101)]
+    patched(monkeypatch, setups)
+    p = replace(model_2022.Params(), partial_frac=0.8, runner_stop="lock_half")
+    out = run.run_day(frame(ROWS), DAY, "US100", p)
+    assert out[0].plan.partial_frac == 0.8 and out[0].plan.runner_stop == "lock_half"

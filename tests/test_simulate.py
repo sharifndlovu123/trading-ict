@@ -160,3 +160,39 @@ def test_short_invalidation_mirrors():
     rows = [(99, 99, 99, 99), (99, 100.2, 99, 99.8)] + [(c, c, c, c) for c in (100.5, 101.0, 101.4, 101.2)]
     r = simulate(plan, bars(rows), CLOSE)
     assert r.exit_reason == "invalidated" and r.exit_at == t(5) and r.r == pytest.approx(-0.6)
+
+
+# --- partials: close part at TP1, let the rest run ------------------------------------------
+# entry 100, stop 98 (risk 2), TP1 104 (+2R), final 108 (+4R)
+
+def _after_tp1(rest):
+    rows = [(101, 101, 101, 101), (101, 101, 99.8, 100.2), (102, 104.2, 102, 104)]
+    return bars(rows + rest)
+
+
+def test_default_partial_is_half_at_tp1_with_stop_to_entry():
+    r = simulate(PLAN, _after_tp1([(104, 108.5, 104, 108)]), CLOSE)
+    assert r.vote and r.runner_r == pytest.approx(0.5 * 2 + 0.5 * 4) and r.final_reached
+
+
+def test_80_percent_partial_banks_more_when_the_runner_is_stopped_at_entry():
+    plan = TradePlan("long", t(0), t(30), 100, 98, 104, 108, partial_frac=0.8)
+    r = simulate(plan, _after_tp1([(103, 103, 99.5, 100)]), CLOSE)            # back to entry
+    assert r.runner_r == pytest.approx(0.8 * 2 + 0.2 * 0) and r.final_reached is False
+
+
+def test_runner_lock_half_trails_the_stop_between_entry_and_tp1():
+    plan = TradePlan("long", t(0), t(30), 100, 98, 104, 108, partial_frac=0.75, runner_stop="lock_half")
+    r = simulate(plan, _after_tp1([(103, 103, 101.5, 102)]), CLOSE)            # trail at 102 hit
+    assert r.runner_r == pytest.approx(0.75 * 2 + 0.25 * 1)
+
+
+def test_runner_keeping_the_original_stop_can_lose_on_the_rest():
+    plan = TradePlan("long", t(0), t(30), 100, 98, 104, 108, runner_stop="original")
+    r = simulate(plan, _after_tp1([(101, 101, 99.5, 100), (99, 99, 97.5, 98)]), CLOSE)
+    assert r.runner_r == pytest.approx(0.5 * 2 + 0.5 * -1)
+
+
+def test_unknown_runner_stop_is_rejected():
+    with pytest.raises(ValueError):
+        simulate(TradePlan("long", t(0), t(30), 100, 98, 104, 108, runner_stop="maybe"), _after_tp1([]), CLOSE)

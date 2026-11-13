@@ -45,6 +45,9 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "news blackout 30m before / 15m after": replace(BASE, news_blackout=(30, 15)),
     "FOMC day: only after the statement": replace(BASE, fomc_day="after_statement"),
     "skip FOMC days": replace(BASE, fomc_day="skip"),
+    "partial 80% + runner at breakeven": replace(BASE, partial_frac=0.8),
+    "partial 75% + runner trail (lock half)": replace(BASE, partial_frac=0.75, runner_stop="lock_half"),
+    "partial 50% + runner trail (lock half)": replace(BASE, runner_stop="lock_half"),
 }
 
 
@@ -68,6 +71,9 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "news blackout 30m before / 15m after": replace(MB, news_blackout=(30, 15)),
     "FOMC day: only after the statement": replace(MB, fomc_day="after_statement"),
     "skip FOMC days": replace(MB, fomc_day="skip"),
+    "partial 80% + runner at breakeven": replace(MB, partial_frac=0.8),
+    "partial 75% + runner trail (lock half)": replace(MB, partial_frac=0.75, runner_stop="lock_half"),
+    "partial 50% + runner trail (lock half)": replace(MB, runner_stop="lock_half"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
@@ -86,6 +92,9 @@ SB_VARIANTS: dict[str, model_sb.Params] = {
     "news blackout 30m before / 15m after": replace(SB, news_blackout=(30, 15)),
     "FOMC day: only after the statement": replace(SB, fomc_day="after_statement"),
     "skip FOMC days": replace(SB, fomc_day="skip"),
+    "partial 80% + runner at breakeven": replace(SB, partial_frac=0.8),
+    "partial 75% + runner trail (lock half)": replace(SB, partial_frac=0.75, runner_stop="lock_half"),
+    "partial 50% + runner trail (lock half)": replace(SB, runner_stop="lock_half"),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS}
 

@@ -14,7 +14,9 @@ Rules (pipeline.md §7):
       open ("invalidated"). Stop/TP1 inside that last bar come first. Only finished candles count.
     - time exit at ``time_exit`` (day style: 16:00 NY) at that bar's open
     - costs: ``cost`` price units per round trip, charged in R
-    - runner variant: half off at TP1, stop to entry, rest to final target / stop / time exit
+    - runner variant: ``partial_frac`` off at TP1, the rest to final target / runner stop / time exit
+      (runner stop: entry | lock_half = halfway entry→TP1 | original); a bar touching both the
+      runner stop and the final target counts the stop first
 """
 
 from __future__ import annotations
@@ -121,19 +123,27 @@ def _fill_bar_reaches_tp(row, plan: TradePlan, long: bool) -> bool:
     return False
 
 
+RUNNER_STOPS = ("entry", "lock_half", "original")
+
+
 def _runner(plan, after, tp1_at, time_exit, bars, cost_r, res):
+    if plan.runner_stop not in RUNNER_STOPS:
+        raise ValueError(f"runner_stop must be one of {RUNNER_STOPS}, not {plan.runner_stop!r}")
     if tp1_at is None:
         return (res.r if res.exit_reason != "tp1" else None), None
     long = plan.side == "long"
-    half_tp1 = 0.5 * plan.r_at(plan.tp1)
+    f = plan.partial_frac
+    banked = f * plan.r_at(plan.tp1)
+    stop_px = {"entry": plan.entry, "original": plan.stop,
+               "lock_half": plan.entry + (plan.tp1 - plan.entry) / 2}[plan.runner_stop]
     for j in range(tp1_at + 1, len(after)):
         row = after.iloc[j]
-        back_to_entry = row.low <= plan.entry if long else row.high >= plan.entry
+        stopped = row.low <= stop_px if long else row.high >= stop_px
         reach_final = row.high >= plan.final_target if long else row.low <= plan.final_target
-        if back_to_entry:                       # conservative: stop (at entry) first
-            return half_tp1 - cost_r, False
+        if stopped:                             # conservative: runner stop first
+            return banked + (1 - f) * plan.r_at(stop_px) - cost_r, False
         if reach_final:
-            return half_tp1 + 0.5 * plan.r_at(plan.final_target) - cost_r, True
+            return banked + (1 - f) * plan.r_at(plan.final_target) - cost_r, True
     last = bars[bars.index >= time_exit]
     px = float(last.open.iloc[0]) if not last.empty else float(after.close.iloc[-1])
-    return half_tp1 + 0.5 * plan.r_at(px) - cost_r, False
+    return banked + (1 - f) * plan.r_at(px) - cost_r, False

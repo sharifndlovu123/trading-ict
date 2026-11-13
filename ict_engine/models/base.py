@@ -42,6 +42,10 @@ class TradePlan:
     # ``invalid_level`` (the area's far edge) ends the idea → exit at the next bar's open.
     invalid_level: float | None = None
     invalid_tf: str | None = None    # e.g. "5m", "15m"; None = hold to stop/TP1 (no invalidation)
+    # Partials (runner_r): close ``partial_frac`` at TP1; the rest runs to the final target with its
+    # stop at "entry" (breakeven), "lock_half" (halfway entry→TP1) or "original" (initial stop).
+    partial_frac: float = 0.5
+    runner_stop: str = "entry"
 
     @property
     def risk(self) -> float:
@@ -61,7 +65,7 @@ class Result:
     vote: bool = False                # TP1 reached before the stop
     ambiguous: bool = False           # stop and TP1 inside one 1m bar (counted as stop)
     final_reached: bool | None = None # runner: final target before stop (after TP1)
-    runner_r: float | None = None     # 50% at TP1 + 50% runner, stop to entry after TP1
+    runner_r: float | None = None     # partial_frac at TP1 + the rest as a runner (plan.runner_stop)
     mae_r: float | None = None        # worst excursion before exit (R)
 
 

@@ -73,6 +73,8 @@ class Params:
     # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
     news_blackout: tuple[int, int] | None = None
     fomc_day: str = "trade"
+    partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
+    runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -94,6 +96,8 @@ class Params:
             extra.append(f"newsblackout{self.news_blackout[0]}-{self.news_blackout[1]}")
         if self.fomc_day != "trade":
             extra.append(f"fomc_{self.fomc_day}")
+        if (self.partial_frac, self.runner_stop) != (0.5, "entry"):
+            extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
         return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)
