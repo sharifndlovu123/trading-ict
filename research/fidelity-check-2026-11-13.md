@@ -54,3 +54,24 @@ whether the engine **finds** his trades, not its win rate.
   1. **Cost gate relative to the reward:** cost ≤ 10% of the distance to TP1, instead of 10% of risk.
   2. **Stop variant:** stop at the CE of the sweep wick or of the FVG (ICT's placement), instead of beyond the
      swept extreme.
+
+## CFD vs futures costs (run 2026-11-14, commit 5996937, `--cost futures`)
+Futures costs let 1.5–3× more trades through, and the extra (tighter-stop) trades lose:
+
+| Model | 2022–24 CFD | 2022–24 futures | Unseen CFD | Unseen futures |
+|---|---|---|---|---|
+| 2022 model | +0.036 (n 427) | −0.058 (n 1257, z_cl −1.4) | −0.057 | −0.122 (z_cl −3.5) |
+| Cameron | +0.004 (1018) | −0.099 (2134, −2.9) | −0.108 | −0.069 |
+| MMxM | −0.068 (475) | −0.064 (886) | −0.052 | −0.028 |
+| Silver Bullet | −0.045 (1226) | +0.001 (1839) | −0.135 | −0.102 |
+
+**2022–24, futures, all models, by cost as a share of risk.** Gross ≈ 0 in every bucket:
+- cost < 0.03R: gross −0.020R (n 1687)
+- 0.03–0.06R: +0.016R (n 1947)
+- 0.06–0.10R: −0.007R (n 2482)
+
+**Reading:** the instrument is not the fix. The coded entries have no edge before costs at any stop size;
+cheaper costs only reveal more trades that also have none. The CFD cost gate had been screening out the worst
+tight-stop entries by accident. The "cost relative to the reward" gate is therefore dropped: with gross ≈ 0
+there is nothing for it to protect. The lever is the **entry logic itself**: whether these setups match what ICT
+trades, and the PD array return model (half of ICT's live examples) that the engine doesn't have.
