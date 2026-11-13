@@ -45,3 +45,31 @@ Scratch scripts: `direction_diag.py`, `stophunt_diag.py` (session scratchpad; re
 - **Cost in R:** larger structures (wider risk) shrink the spread's share. Only 2022–24 data can be used to
   pick them.
 - **Forward test:** freeze the rules and log every setup from 2026-11-13 on. It is the only clean test left.
+
+## Addendum 2026-11-14: which bias rule matches ICT, and does it matter?
+**ICT's 14 live executions vs each bias rule** (does the rule agree with his direction?):
+
+| Rule | agrees | against | neutral |
+|---|---|---|---|
+| prev_day_dol (default) | 5 | 8 | 1 |
+| htf20 (close vs 20-day range equilibrium) | 12 | 2 | 0 |
+| dol_weekly | 7 | 7 | 0 |
+
+13 of the 14 trades are longs in the Nov 2023–Jan 2024 rally, so htf20 agreeing is mostly a trend base rate, not
+proof that it is his rule. It does say his trades follow the **HTF range**, while our daily rule often points the
+other way.
+
+**Does the rule matter?** Counterfactual on 2022–24: setups that pass every gate except bias, simulated without
+the per-window cap (`shadow_r`), split by which rule they agree with (scratch script; CFD = 0f2bfad, futures =
+5996937). Exp R per trade:
+
+| Slice | CFD (n, z_cl) | Futures (n, z_cl) |
+|---|---|---|
+| prev_day_dol aligned | −0.037 (2362, −1.1) | −0.030 (4475, −1.2) |
+| htf20 aligned | −0.020 (2751, −0.6) | −0.044 (5468, −1.8) |
+| htf20 only (prev_day_dol against) | +0.013 (1309, +0.3) | −0.032 (2742, −0.8) |
+| neither | −0.050 (1336, −1.0) | −0.033 (2993, −1.0) |
+
+**Reading:** every slice is ≈0 within noise, on both bases. Swapping the bias rule can't create an edge. The
+coded entries have no direction-dependent edge either way, which repeats the main finding: the entry signal is
+the problem, not the filter. No default change (selection rule: only out-of-sample improvements become defaults).
