@@ -245,3 +245,55 @@ exchange book). There are **no exchange trades**, so nothing that needs a trade 
   half-hour spread buckets.
 - **Expect tiny fit**: R² ≈ 0.01 is normal; a large effect is a leakage alarm.
 - **Treat VPIN as contested.** A hypothesis, never a default.
+
+## 11. What the books say about our findings (2026-11-14, engine notes)
+Paraphrased from the local library (`references/microstructure/`, read with the `microstructure-library` skill).
+Page numbers are PDF pages.
+
+**1. Stops add momentum. They don't hand the other side a free reversal.**
+- *Harris §4.5.2 (pp.92-93):* stop orders are market orders that wake up when price is already moving. They
+  ask for liquidity at the worst moment, so they speed the move up: they "add momentum".
+- *Harris ch.11 §11.2 (pp.264-267):* people who trade ahead of predictable flow ("sentiment-oriented technical
+  traders", "order anticipators") make money only by getting out before value traders push price back. The edge
+  is in the **timing of the exit**, not in the sweep itself.
+- *Our data:* after a stop-out, price reaches 3R in either direction about half the time
+  (`research/direction-diagnosis-2026-11-13.md`). This fits: the sweep is a burst of liquidity demand with no
+  reliable sign afterwards.
+
+**2. Impact from a burst of orders fades, but slowly enough that price stays a random walk.**
+- *Bouchaud ch.13 (propagator model), eq. 13.7–13.10, pp.270-277:*
+  - The mid-price is a sum over past trades:
+    m_t = m_{t0} + Σ_{n<t} G(t−n) ε_n + Σ ξ_n, where ε = ±1 is the trade sign and G(ℓ) is the propagator.
+  - Trade signs have long memory: C(ℓ) ~ ℓ^(−γ), with γ < 1.
+  - If G(ℓ) ~ ℓ^(−β), returns are uncorrelated (efficient) only when **β = β_c = (1−γ)/2**, the "fine
+    balance" (§13.2.3, p.257 of the book, PDF p.276).
+  - Read: impact is semi-permanent. It neither stays nor snaps back on a fixed clock. Liquidity providers absorb
+    the predictable part of the flow.
+- *For us:* a sweep-then-reverse pattern can only have an edge if it shows the fine balance being broken (a
+  real imbalance, a news shock). The price pattern alone isn't evidence of that. Testing it needs signed trades,
+  i.e. CME futures data (§10). Dukascopy quotes can't show it.
+
+**3. With no forecast, no stop/target pair creates an edge.**
+- *López de Prado ch.13 (optimal trading rules by synthetic data), §13.4–13.6, pp.196-221:*
+  - He models a trade's P&L as an Ornstein–Uhlenbeck process:
+    P_t = (1−φ)·E0[P_T] + φ·P_{t−1} + σ·ε_t, with half-life τ: φ = 2^(−1/τ).
+  - He then grid-searches profit-take × stop-loss pairs.
+  - With a zero forecast (E0 = 0), most pairs give a Sharpe of about zero. Only a fast-reverting process (small
+    τ) rewards "small profit-take, wide stop", which is the market maker's business.
+  - Stop and target settings change the *shape* of returns. They can't create a mean.
+  - He also warns that calibrating them on historical paths is a classic overfitting route.
+- *Our data matches:* partials (`partial_frac`/`runner_stop`), stop variants and the cost-relative-to-reward gate
+  all left the gross mean at about 0, in every cost bucket. Lever = the **entry signal** (the forecast E0), not
+  exits.
+
+**4. Selection and a burned test set.**
+- *López de Prado ch.11–12 (pp.178-195):* every variant you try is a trial. Hold-out results viewed more than once
+  are no longer out-of-sample.
+- *For us:* that's why 2024-07→2026-11-12 is burned and a clean confirmation needs forward data. Use clustered
+  standard errors (`store.clustered_se`), and count trials when judging z.
+
+**What this means for the plan**
+1. Spend effort on entries that carry a forecast (the PD array return model, time-of-day / macro windows), not on
+   stop or target tuning.
+2. Any stop-hunt / sweep-reversal claim needs signed order flow, so log it as a futures-data item.
+3. Forward-test log from 2026-11-13: frozen rules, no tuning on it.
