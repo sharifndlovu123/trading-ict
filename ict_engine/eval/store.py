@@ -60,6 +60,8 @@ def normalise(df: pd.DataFrame) -> pd.DataFrame:
             df[c] = pd.to_numeric(df[c], errors="coerce").astype(float)
     df["day"] = pd.to_datetime(df.day)
     df["family"] = df.model.replace(FAMILY)
+    if "cost_basis" not in df:
+        df["cost_basis"] = "cfd"                       # runs before 2026-11-13 were all CFD-costed
     return df
 
 
@@ -77,7 +79,8 @@ def _check(df: pd.DataFrame):
 def run_id(df: pd.DataFrame, start, end, commit: str, extras: bool) -> str:
     fam = df.model.replace(FAMILY).iloc[0]
     variants = "|".join(sorted(df.variant.unique()))
-    key = f"{fam}|{df.asset.iloc[0]}|{start}|{end}|{variants}|{commit}|{extras}"
+    basis = df.cost_basis.iloc[0] if "cost_basis" in df else "cfd"
+    key = f"{fam}|{df.asset.iloc[0]}|{start}|{end}|{variants}|{commit}|{extras}" + ("" if basis == "cfd" else f"|{basis}")
     return f"{fam}-{df.asset.iloc[0]}-{start}-{end}-{hashlib.sha1(key.encode()).hexdigest()[:8]}"
 
 
@@ -185,6 +188,7 @@ def main(argv=None):
     b.add_argument("--asset")
     b.add_argument("--family")
     b.add_argument("--commit", help="only runs made at this commit (don't mix rule versions)")
+    b.add_argument("--cost", choices=("cfd", "futures"), help="only runs on this cost basis")
     b.add_argument("--start")
     b.add_argument("--end")
     args = ap.parse_args(argv)
@@ -201,7 +205,8 @@ def main(argv=None):
     elif args.cmd == "runs":
         print(runs().to_string(index=False))
     else:
-        filt = {k: v for k, v in (("asset", args.asset), ("family", args.family), ("commit", args.commit)) if v}
+        filt = {k: v for k, v in (("asset", args.asset), ("family", args.family), ("commit", args.commit),
+                                  ("cost_basis", args.cost)) if v}
         df = load(**filt)
         if args.start:
             df = df[df.day >= pd.Timestamp(args.start)]

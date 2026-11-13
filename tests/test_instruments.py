@@ -29,3 +29,25 @@ def test_measured_spread_is_used_when_a_time_is_given(monkeypatch):
     monkeypatch.setattr(spreads, "book", lambda: spreads.SpreadBook({"US100": table}))
     assert cost_at("US100", 20000, t) == 3.45                                  # measured
     assert cost_at("US100", 20000, t + pd.Timedelta(hours=7)) == cost_at("US100", 20000)   # no data → bps
+
+
+def test_futures_cost_basis_is_one_tick_plus_commission(monkeypatch):
+    """ICT trades futures: under the futures basis a round trip costs 1 tick + commission, in index points,
+    whatever the time of day (no CFD session spread)."""
+    import pandas as pd
+    from ict_engine.data import instruments as ins
+    monkeypatch.setenv("ICT_COST_BASIS", "futures")
+    ts = pd.Timestamp("2024-01-09 07:10", tz="America/New_York")
+    assert ins.cost_at("US100", 16000.0, ts) == pytest.approx(0.25 + 4.5 / 20)
+    assert ins.cost_at("US500", 4500.0, ts) == pytest.approx(0.25 + 4.5 / 50)
+    assert ins.cost_at("XAUUSD", 2000.0) == pytest.approx(0.10 + 4.5 / 100)
+    assert ins.cost_basis() == "futures"
+
+
+def test_cost_basis_defaults_to_cfd_and_rejects_unknown(monkeypatch):
+    from ict_engine.data import instruments as ins
+    monkeypatch.delenv("ICT_COST_BASIS", raising=False)
+    assert ins.cost_basis() == "cfd"
+    monkeypatch.setenv("ICT_COST_BASIS", "spot")
+    with pytest.raises(ValueError):
+        ins.cost_basis()

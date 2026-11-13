@@ -12,5 +12,6 @@ def _synthetic_prices_have_no_costs(request, monkeypatch):
     1–2 point stops and trip the cost gate, which is not what those tests are about."""
     if getattr(request.module, "SYNTHETIC_PRICES", False):
         monkeypatch.setitem(COST_BPS, "US100", 0.0)
+        monkeypatch.delenv("ICT_COST_BASIS", raising=False)                          # CFD basis, never futures
         from ict_engine.data import spreads
         monkeypatch.setattr(spreads, "book", lambda: spreads.SpreadBook({}))      # no measured spreads either

@@ -166,13 +166,21 @@ def main(argv=None):
     ap.add_argument("end", type=date.fromisoformat)
     ap.add_argument("--cap", choices=("window", "day"), default=None, help="default: the model's own (SB: day)")
     ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm | silver_bullet | cameron")
+    ap.add_argument("--cost", choices=("cfd", "futures"), default=None,
+                    help="cost basis (default: env ICT_COST_BASIS, else cfd = measured Dukascopy spreads)")
     a = ap.parse_args(argv)
+    import os
+    if a.cost:
+        os.environ["ICT_COST_BASIS"] = a.cost
+    from ict_engine.data.instruments import cost_basis
+    basis = cost_basis()
     from ict_engine.models.registry import modules
     params = modules()[a.model].Params()
     df = run(load_range(a.asset, a.start, a.end), a.start, a.end, a.asset, params, cap_scope=a.cap)
+    df["cost_basis"] = basis
     REPORTS.mkdir(exist_ok=True)
     tag = "" if a.model == "2022_model" else f"-{a.model}"
-    path = REPORTS / f"backtest{tag}-{a.asset}-{a.start}-{a.end}{'-capday' if a.cap == 'day' else ''}.parquet"
+    path = REPORTS / f"backtest{tag}-{a.asset}-{a.start}-{a.end}{'-capday' if a.cap == 'day' else ''}{'-futures' if basis == 'futures' else ''}.parquet"
     df.to_parquet(path)
     traded = df[df.status == "traded"]
     print(f"{path}\n{len(df)} setups, {len(traded)} trades, votes {int(traded.vote.sum())}, "

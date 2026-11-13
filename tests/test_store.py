@@ -95,3 +95,17 @@ def test_leaderboard_clustered_se_widens_when_same_day_trades_move_together():
     df = pd.DataFrame({"status": "traded", "r": r2, "vote": r2 > 0, "day": two_days, "family": "x"})
     row = leaderboard(df, ["family"], min_n=1).iloc[0]
     assert row.se_cl == pytest.approx(1.0) and row.se_cl > row.se and row.z_cl == pytest.approx(0.0)
+
+
+def test_cost_basis_separates_runs(root):
+    """A futures-costed run of the same model/asset/period/commit is a different run, not a duplicate."""
+    import pandas as pd
+    from ict_engine.eval import store as st
+    base = pd.DataFrame({c: ["x"] for c in st.REQUIRED}).assign(model="2022_model", asset="US100", status="traded",
+                                                                  r=0.5, vote=True, day="2024-01-02")
+    a = st.add_run(base, "2024-01-01", "2024-01-31", commit="abc", root=root)
+    b = st.add_run(base.assign(cost_basis="futures"), "2024-01-01", "2024-01-31", commit="abc", root=root)
+    assert a != b
+    got = st.load(root=root, cost_basis="futures")
+    assert set(got.run_id) == {b}
+    assert set(st.load(root=root, cost_basis="cfd").run_id) >= {a}
