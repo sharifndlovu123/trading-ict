@@ -101,6 +101,17 @@ Three variants of one model: price returns to a PD array and reacts.
 - **Patterns:** tracked — Unicorn (breaker + FVG), Turtle Soup.
 - **Params:** require FVG above (bull OB) / below (bear OB); require OB near dealing-range 50%.
 - **Source:** ICT Bible p. 16–26.
+- **Live-execution form (built: `ict_engine/models/model_pd_return.py`, 2026-11-14).** All 6 of ICT's live
+  PD-array-return trades (`tests/cases/ict_live_exec.yaml`) used FVG-family arrays (BISI / FVG / IFVG / VI on
+  15m–4h), not OB / breaker / mitigation blocks. "HTF PD arrays draw price; LTF PD arrays give the timing"
+  (framework.md §5). Mechanics:
+  1. A 15m/1h/4h FVG is still valid (§9).
+  2. Price returns to it inside a window.
+  3. A 1m FVG forms in the reaction; buy limit at its near edge.
+  4. Stop at the reaction extreme (variant: beyond the array).
+  5. TP1 = nearest untaken liquidity ≥ 1R.
+  6. One trade per window.
+  The OB / breaker / mitigation variants above are still to build.
 
 ---
 
