@@ -16,12 +16,12 @@ from datetime import date, datetime, time, timedelta
 import pandas as pd
 
 from ict_engine.concepts.context import build_context
+from ict_engine.data.instruments import COST
 from ict_engine.models import model_2022
 from ict_engine.models.base import Gate, Result, Setup
 from ict_engine.sim.simulate import simulate
 
 NY = "America/New_York"
-COST = {"US100": 1.0, "US500": 0.5, "US30": 2.0}     # round-trip spread + slippage, price units (v1 guess)
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),

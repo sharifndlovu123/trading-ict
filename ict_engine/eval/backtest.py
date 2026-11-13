@@ -34,7 +34,8 @@ from ict_engine.concepts.context import build_context
 from ict_engine.eval.bias import day_outcome
 from ict_engine.models import model_2022
 from ict_engine.models.base import Setup
-from ict_engine.sim.run import COST, run_day
+from ict_engine.data.instruments import COST
+from ict_engine.sim.run import run_day
 from ict_engine.sim.simulate import simulate
 
 NY = "America/New_York"
@@ -109,7 +110,9 @@ def counterfactuals(plan, bars_1m, close, cost) -> dict:
 
 
 def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
-        params: model_2022.Params = model_2022.Params(), cap_scope: str = "window") -> pd.DataFrame:
+        params: model_2022.Params = model_2022.Params(), cap_scope: str = "window",
+        extras: bool = True) -> pd.DataFrame:
+    """``extras`` = shadow + counterfactual simulations (post-analysis); off for fast variant sweeps."""
     rows, d = [], start
     cost = COST.get(asset, 0.0)
     while d <= end:
@@ -123,15 +126,16 @@ def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
                 outcome = day_outcome(bars_1m, d, ctx.levels["pdh"], ctx.levels["pdl"])
                 close = pd.Timestamp(datetime.combine(d, time(16)), tz=NY)
                 for s in setups:
-                    shadow = simulate(s.would_plan, bars_1m, close, cost=cost) if s.would_plan else None
+                    shadow = simulate(s.would_plan, bars_1m, close, cost=cost) if s.would_plan and extras else None
                     row = setup_row(s, ctx, outcome, params.bias_rule, shadow)
-                    row.update(counterfactuals(s.would_plan, bars_1m, close, cost))
+                    if extras:
+                        row.update(counterfactuals(s.would_plan, bars_1m, close, cost))
                     rows.append(row)
         d += timedelta(days=1)
     return pd.DataFrame(rows)
 
 
-def _load(asset: str, start: date, end: date) -> pd.DataFrame:
+def load_range(asset: str, start: date, end: date) -> pd.DataFrame:
     from ict_engine.data.dukascopy import load
     first = start - timedelta(days=70)                      # warm-up for 20/40/60-day ranges
     while True:
@@ -150,7 +154,7 @@ def main(argv=None):
     ap.add_argument("end", type=date.fromisoformat)
     ap.add_argument("--cap", choices=("window", "day"), default="window")
     a = ap.parse_args(argv)
-    df = run(_load(a.asset, a.start, a.end), a.start, a.end, a.asset, cap_scope=a.cap)
+    df = run(load_range(a.asset, a.start, a.end), a.start, a.end, a.asset, cap_scope=a.cap)
     REPORTS.mkdir(exist_ok=True)
     path = REPORTS / f"backtest-{a.asset}-{a.start}-{a.end}{'-capday' if a.cap == 'day' else ''}.parquet"
     df.to_parquet(path)

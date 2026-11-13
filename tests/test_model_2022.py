@@ -197,3 +197,21 @@ def test_tp1_skips_levels_closer_than_the_minimum_distance():
 def test_tp1_uses_only_the_configured_swing_timeframes():
     s = traded(find_setups(bars(), DAY, "US100", Params(tp1_swing_tfs=("5m",))))
     assert all("1m" not in x.plan.tp1_name for x in s)
+
+
+def test_tp1_cap_brings_the_earliest_close_nearer():
+    base = traded(find_setups(bars(), DAY, "US100"))[0].plan
+    far_r = abs(base.tp1 - base.entry) / base.risk
+    cap = max(1.0, far_r / 2)
+    capped = find_setups(bars(), DAY, "US100", Params(tp1_cap_r=cap))
+    p = [s for s in capped if s.decided_at == traded(find_setups(bars(), DAY, "US100"))[0].decided_at][0].would_plan
+    assert abs(p.tp1 - p.entry) / p.risk <= cap + 1e-9
+    if far_r > cap:
+        assert p.tp1_name == f"cap {cap:g}R" and p.final_target == base.final_target
+
+
+def test_cost_gate_blocks_stops_too_small_for_costs():
+    ss = find_setups(bars(), DAY, "US100", Params(max_cost_r=1e-6))
+    planned = [s for s in ss if s.would_plan is not None]
+    assert planned and all(s.plan is None and s.failed_gate == "risk" for s in planned)
+    assert traded(find_setups(bars(), DAY, "US100", Params(max_cost_r=None)))

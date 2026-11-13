@@ -24,6 +24,7 @@ import pandas as pd
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.clock import WINDOWS, Window
 from ict_engine.concepts.context import DayContext, build_context, pricing
+from ict_engine.data.instruments import COST
 from ict_engine.concepts.events import (
     Event, fvgs, gap_lifecycle, structure, sweeps, swing_levels, swings,
 )
@@ -61,6 +62,8 @@ class Params:
     # too fine. Swings of these TFs + context levels are candidates; TP1 at least min_tp1_r from entry.
     tp1_swing_tfs: tuple[str, ...] = ("5m",)
     min_tp1_r: float = 1.0
+    tp1_cap_r: float | None = None       # TP1 no further than this many R (ICT's earliest close is near); None = off
+    max_cost_r: float | None = None      # reject when round-trip cost / risk exceeds this; None = off
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     tags: dict = field(default_factory=dict, compare=False)
 
@@ -71,6 +74,10 @@ class Params:
         extra = ["htf20"] if self.use_htf_pricing else []
         if (self.tp1_swing_tfs, self.min_tp1_r) != (("5m",), 1.0):
             extra.append(f"tp1_{'+'.join(self.tp1_swing_tfs)}_{self.min_tp1_r:g}R")
+        if self.tp1_cap_r is not None:
+            extra.append(f"tp1cap{self.tp1_cap_r:g}R")
+        if self.max_cost_r is not None:
+            extra.append(f"cost<={self.max_cost_r:g}R")
         if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day", "opening_range"):
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
@@ -203,9 +210,21 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
     if tp1 is None:
         setup.gates.append(Gate("target", False, "no untaken liquidity beyond entry"))
         return setup
+    risk = abs(entry - stop)
+    if p.tp1_cap_r is not None and abs(tp1 - entry) > p.tp1_cap_r * risk:
+        capped = entry + p.tp1_cap_r * risk if long else entry - p.tp1_cap_r * risk
+        if needs_arm and (capped <= arm if long else capped >= arm):
+            setup.gates.append(Gate("target", False, f"TP1 cap {p.tp1_cap_r:g}R {capped:.2f} not beyond arm {arm:.2f}"))
+            return setup
+        tp1, tp1_name = capped, f"cap {p.tp1_cap_r:g}R"
     potential = abs(final - entry)
     setup.gates.append(Gate("target", potential >= p.min_potential and abs(entry - stop) > 0,
                             f"TP1 {tp1_name} {tp1:.2f}, final {final_name} {final:.2f}, potential {potential:.1f}"))
+
+    if p.max_cost_r is not None:
+        cost_r = COST.get(asset, 0.0) / risk if risk else float("inf")
+        setup.gates.append(Gate("risk", cost_r <= p.max_cost_r,
+                                f"cost {COST.get(asset, 0.0):g} = {cost_r:.2f}R of a {risk:.2f} stop (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
