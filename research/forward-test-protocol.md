@@ -30,9 +30,13 @@ ended). Overlapping chunks would count the same trades twice. Query with `--star
 ## Decision rule (fixed now)
 - **First look:** when every candidate has n ≥ 100 trades **or** on 2027-05-14 (6 months), whichever comes first.
   Before then, only counts are checked (that the pipeline runs), never R.
-- **Pass:** mean R > 0 with clustered z (`z_cl`) ≥ 2.0, after a Bonferroni-style allowance for the
-  **8 candidates** (one-sided z ≥ 2.7 for "any one of them"; ≥ 2.0 only for a candidate named in advance as the
-  primary). **Primary candidate:** none yet. On 2022–24 no candidate earns that status (all |z_cl| < 2).
+- **Both instruments are judged** (Sharif, 2026-11-14: he may trade futures and CFDs). Every candidate is scored
+  separately on each cost basis. A pass on a basis means "tradeable on that instrument". The futures and CFD runs
+  can pick different trades (the cost gate), so they count as separate tests.
+- **Pass:** net mean R > 0 with clustered z (`z_cl`) ≥ **3.0** on that basis. This is a Bonferroni-style
+  allowance for **8 candidates × 2 bases = 16 tests** (one-sided, 5% family-wise ≈ z 2.96). A candidate that
+  passes on both bases is the strongest result. **Primary candidate:** none (on 2022–24 all |z_cl| < 2), so no
+  lower bar applies.
 - **Fail:** anything else. A failing candidate is not re-tuned on forward data.
 - Report gross and net (cost basis cfd and futures) for every candidate, including the losers.
 
