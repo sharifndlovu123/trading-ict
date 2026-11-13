@@ -9,6 +9,9 @@ setup, traded or not, with:
     identity     model, variant, asset, style, day, side
     time         decided_at, weekday, hour, window, month, quarter
     context      daily bias + rule, hindsight day outcome (PDH or PDL first)
+    news         scheduled releases at decision time: bucket (before/after a high-impact
+                 release, news day, none), nearest high-impact event and signed minutes to it,
+                 all high-impact events of the day (ict_engine/news; schedule = known in advance)
     gates        status, failed gate + detail, all gates as "name:0/1"
     plan         entry/stop/tp1/final, risk, arm, POI, liquidity level, FVG size
     result       real result (if the runner placed it): exit, R, vote, MAE
@@ -34,6 +37,7 @@ from ict_engine.concepts.context import build_context
 from ict_engine.eval.bias import day_outcome
 from ict_engine.models import model_2022
 from ict_engine.models.base import Setup
+from ict_engine.news import calendar as news_cal
 from ict_engine.data.instruments import COST
 from ict_engine.sim.run import run_day
 from ict_engine.sim.simulate import simulate
@@ -73,6 +77,7 @@ def setup_row(s: Setup, ctx, outcome: str, bias_rule: str, shadow) -> dict:
         "decided_at": t, "weekday": t.strftime("%a"), "hour": t.hour,
         "window": s.tags.get("window") or "none", "month": t.strftime("%Y-%m"), "quarter": f"Q{(t.month - 1) // 3 + 1}",
         "bias": bias, "bias_rule": bias_rule, "outcome": outcome,
+        **news_cols(t),
         "status": _status(s), "failed_gate": fail.name if fail else None, "failed_detail": fail.detail if fail else None,
         "gates": " ".join(f"{g.name}:{int(g.passed)}" for g in s.gates),
         "entry": p.entry if p else None, "stop": p.stop if p else None, "tp1": p.tp1 if p else None,
@@ -86,6 +91,13 @@ def setup_row(s: Setup, ctx, outcome: str, bias_rule: str, shadow) -> dict:
     row.update(_result_cols("", s.result if s.result is not None and s.plan is not None else None))
     row.update(_result_cols("shadow_", shadow))
     return row
+
+
+def news_cols(t: pd.Timestamp) -> dict:
+    ev, mins = news_cal.nearest(t, "high")
+    today = sorted({e.name for e in news_cal.events_on(t.date(), "high")})
+    return {"news": news_cal.news_bucket(t), "news_event": ev.name if ev else "none",
+            "news_mins": mins, "news_today": "+".join(today) or "none"}
 
 
 def counterfactuals(plan, bars_1m, close, cost) -> dict:

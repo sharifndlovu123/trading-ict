@@ -69,6 +69,10 @@ class Params:
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     # exit when a candle of this TF closes beyond the entry FVG's far edge (the retest failed); None = off
     invalidate_tf: str | None = None
+    # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
+    # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
+    news_blackout: tuple[int, int] | None = None
+    fomc_day: str = "trade"
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -86,6 +90,10 @@ class Params:
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
+        if self.news_blackout:
+            extra.append(f"newsblackout{self.news_blackout[0]}-{self.news_blackout[1]}")
+        if self.fomc_day != "trade":
+            extra.append(f"fomc_{self.fomc_day}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
         return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)

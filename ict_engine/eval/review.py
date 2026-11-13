@@ -42,7 +42,7 @@ from ict_engine.eval.bias import wilson
 ROOT = Path(__file__).resolve().parents[2]
 CAUSES = ("bias_wrong", "wrong_side", "stop_too_tight", "target_too_far", "ambiguous", "time_exit", "invalidated", "unexplained")
 DIMENSIONS = ("window", "weekday", "hour", "side", "quarter", "bias_agrees", "liquidity_kind", "liquidity",
-              "tp1_kind", "poi_kind", "asset")
+              "tp1_kind", "poi_kind", "asset", "news", "news_event")
 
 
 # --- preparation --------------------------------------------------------------

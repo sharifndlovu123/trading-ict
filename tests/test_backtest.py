@@ -30,7 +30,7 @@ def test_columns_for_post_analysis_exist():
     df = run(bars(), DAY, DAY, "US100")
     need = {"model", "variant", "asset", "day", "side", "decided_at", "weekday", "hour", "window", "month",
             "bias", "outcome", "status", "failed_gate", "gates", "risk", "tp1_r", "r", "vote", "mae_r",
-            "shadow_r", "shadow_vote", "liquidity", "poi"}
+            "shadow_r", "shadow_vote", "liquidity", "poi", "news", "news_event", "news_mins", "news_today"}
     assert need <= set(df.columns)
 
 
@@ -55,3 +55,13 @@ def test_counterfactuals_change_one_factor():
     assert cf["cf_tp1_1r_vote"] is False                    # stop hit before 102
     assert cf["cf_flip_vote"] is False                      # short 100 stop 102 → stopped at 104.5
     assert counterfactuals(None, b, t(60), 0.0) == {}
+
+
+def test_news_columns_come_from_the_calendar():
+    from datetime import date
+    import pandas as pd
+    from ict_engine.eval.backtest import news_cols
+    t = pd.Timestamp("2024-02-13 08:15", tz="America/New_York")          # hot CPI day, 15 min before
+    c = news_cols(t)
+    assert c["news"] == "before release (≤30m)" and c["news_event"] == "CPI" and c["news_mins"] == 15
+    assert news_cols(pd.Timestamp("2024-01-09 10:00", tz="America/New_York"))["news_today"] == "none"

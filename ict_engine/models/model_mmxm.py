@@ -79,6 +79,10 @@ class Params:
     max_cost_r: float | None = 0.1
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     invalidate_tf: str | None = None     # exit on a close of this TF beyond the entry area's far edge
+    # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
+    # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
+    news_blackout: tuple[int, int] | None = None
+    fomc_day: str = "trade"
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -87,7 +91,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

@@ -6,6 +6,8 @@ the setups in the same scope are logged with a failed ``cap`` gate. Scope
 own, as the leaderboard ranks per time bucket) or "day" (ruling #1: one trade per
 day — the Silver Bullet rule).
 A newer setup cancels a pending order that has not filled by its decision time.
+Scheduled news (``params.news_blackout`` / ``params.fomc_day``, off by default) blocks a setup
+with a failed ``news`` gate before it is placed — one rule for every model.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import pandas as pd
 from ict_engine.concepts.context import build_context
 from ict_engine.data.instruments import COST
 from ict_engine.models import model_2022
+from ict_engine.news import calendar as news_cal
 from ict_engine.models.registry import module_for
 from ict_engine.models.base import Gate, Result, Setup
 from ict_engine.sim.simulate import simulate
@@ -40,6 +43,12 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
     busy_until, filled, prev = None, {}, None
     for s in setups:
         if s.plan is None:
+            continue
+        why = news_cal.news_block(s.decided_at, getattr(params, "news_blackout", None),
+                                  getattr(params, "fomc_day", "trade"))
+        if why:
+            s.gates.append(Gate("news", False, why))
+            s.plan = None
             continue
         scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
         # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).

@@ -63,6 +63,10 @@ class Params:
     poi_tfs: tuple[str, ...] = ("1h", "4h")
     cap_scope: str = "day"               # one Silver Bullet trade per day (ruling §1)
     invalidate_tf: str | None = None     # exit on a close of this TF beyond the FVG's far edge; None = off
+    # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
+    # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
+    news_blackout: tuple[int, int] | None = None
+    fomc_day: str = "trade"
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -74,7 +78,7 @@ class Params:
         d = Params()
         parts = ["sb", self.entry_level]
         for name in ("late_window", "strict_fvg_in_hour", "min_framework_ticks", "framework_adr_frac", "min_tp1_r",
-                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf"):
+                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf", "news_blackout", "fomc_day"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

@@ -42,6 +42,9 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "bias draw_dol (strict)": replace(BASE, bias_rule="draw_dol"),
     "exit on 5m close through FVG": replace(BASE, invalidate_tf="5m"),
     "exit on 15m close through FVG": replace(BASE, invalidate_tf="15m"),
+    "news blackout 30m before / 15m after": replace(BASE, news_blackout=(30, 15)),
+    "FOMC day: only after the statement": replace(BASE, fomc_day="after_statement"),
+    "skip FOMC days": replace(BASE, fomc_day="skip"),
 }
 
 
@@ -62,6 +65,9 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "bias draw_dol (strict)": replace(MB, bias_rule="draw_dol"),
     "exit on 5m close through FVG": replace(MB, invalidate_tf="5m"),
     "exit on 15m close through FVG": replace(MB, invalidate_tf="15m"),
+    "news blackout 30m before / 15m after": replace(MB, news_blackout=(30, 15)),
+    "FOMC day: only after the statement": replace(MB, fomc_day="after_statement"),
+    "skip FOMC days": replace(MB, fomc_day="skip"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
@@ -77,6 +83,9 @@ SB_VARIANTS: dict[str, model_sb.Params] = {
     "bias draw_dol (strict)": replace(SB, bias_rule="draw_dol"),
     "exit on 5m close through FVG": replace(SB, invalidate_tf="5m"),
     "exit on 15m close through FVG": replace(SB, invalidate_tf="15m"),
+    "news blackout 30m before / 15m after": replace(SB, news_blackout=(30, 15)),
+    "FOMC day: only after the statement": replace(SB, fomc_day="after_statement"),
+    "skip FOMC days": replace(SB, fomc_day="skip"),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS}
 

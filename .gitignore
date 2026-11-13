@@ -43,3 +43,6 @@ references/personal/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Economic calendar (public release dates, small; needed by tests)
+!ict_engine/news/us_calendar.csv
