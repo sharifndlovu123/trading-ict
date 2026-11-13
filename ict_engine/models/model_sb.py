@@ -206,7 +206,7 @@ def _evaluate(fvg: Event, wname, start, end, ctx, day, asset, p: Params, day_1m,
         tp1_px, tp1_name = entry + (1 if long else -1) * p.tp1_cap_r * risk, f"cap {p.tp1_cap_r:g}R"
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1_px:.2f}; draw offers {offered:.2f} ≥ {frame_min:.2f}"))
     if p.max_cost_r is not None:
-        cost_r = cost_at(asset, entry) / risk
+        cost_r = cost_at(asset, entry, decided) / risk
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     final = far if (far - tp1_px) * (1 if long else -1) >= 0 else tp1_px

@@ -76,7 +76,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.plan = None
             continue
         s.plan = manage(s.plan, params)
-        s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry))
+        s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry, s.plan.placed_at))
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope
         if s.result.filled_at is not None:

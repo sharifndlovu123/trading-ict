@@ -137,7 +137,7 @@ def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
                 outcome = day_outcome(bars_1m, d, ctx.levels["pdh"], ctx.levels["pdl"])
                 close = pd.Timestamp(datetime.combine(d, time(16)), tz=NY)
                 for s in setups:
-                    cost = cost_at(asset, s.would_plan.entry) if s.would_plan else 0.0
+                    cost = cost_at(asset, s.would_plan.entry, s.would_plan.placed_at) if s.would_plan else 0.0
                     shadow = simulate(manage(s.would_plan, params), bars_1m, close, cost=cost) if s.would_plan and extras else None
                     row = setup_row(s, ctx, outcome, params.bias_rule, shadow)
                     if extras:

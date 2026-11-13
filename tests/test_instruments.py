@@ -19,3 +19,13 @@ def test_v1_costs_kept_at_2023_price_levels():
 
 def test_unknown_asset_costs_nothing():
     assert cost_at("EURUSD", 1.1) == 0.0
+
+
+def test_measured_spread_is_used_when_a_time_is_given(monkeypatch):
+    import pandas as pd
+    from ict_engine.data import spreads
+    t = pd.Timestamp("2025-03-04 03:10", tz="America/New_York")
+    table = pd.DataFrame({"date": [t.date()], "hour": [3.0], "expected": [3.45]})
+    monkeypatch.setattr(spreads, "book", lambda: spreads.SpreadBook({"US100": table}))
+    assert cost_at("US100", 20000, t) == 3.45                                  # measured
+    assert cost_at("US100", 20000, t + pd.Timedelta(hours=7)) == cost_at("US100", 20000)   # no data → bps

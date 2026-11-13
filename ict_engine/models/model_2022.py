@@ -240,9 +240,9 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
                             f"TP1 {tp1_name} {tp1:.2f}, final {final_name} {final:.2f}, potential {potential:.1f}"))
 
     if p.max_cost_r is not None:
-        cost_r = cost_at(asset, entry) / risk if risk else float("inf")
+        cost_r = cost_at(asset, entry, decided) / risk if risk else float("inf")
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r,
-                                f"cost {cost_at(asset, entry):.2f} = {cost_r:.2f}R of a {risk:.2f} stop (max {p.max_cost_r:g}R)"))
+                                f"cost {cost_at(asset, entry, decided):.2f} = {cost_r:.2f}R of a {risk:.2f} stop (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,

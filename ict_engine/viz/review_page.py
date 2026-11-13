@@ -1,6 +1,7 @@
 """Review page — what each model did well, what it got wrong, with links to example days.
 
     uv run python -m ict_engine.viz.review_page reports/backtest-*.parquet   # → out/review.html
+    uv run python -m ict_engine.viz.review_page --store --commit <sha>         # from the trade store
 
 One self-contained HTML page (viewer/review.html template, no build step, no chart
 library) built from backtest tables (``ict_engine.eval.backtest``) with the
@@ -14,6 +15,8 @@ post-analysis in ``ict_engine.eval.review``:
 4. gate value per family
 5. cross-model tables by window / weekday / hour (best named only at n ≥ 30)
 6. bucket tables per family with an inline expectancy bar
+7. two periods: model × window in 2022–24 (selection) vs 2024-07+ (unseen) — what holds up
+8. research log: the pre-registered tests and their results (research/*.md)
 
 All page text is HTML-escaped; the data is also embedded as JSON (NaN → null).
 """
@@ -40,7 +43,10 @@ MAX_EXPORTS = 40
 CROSS_MIN_N = 30
 BUCKET_DIMS = ("window", "weekday", "hour", "side")
 CROSS_DIMS = ("window", "weekday", "hour")
-FAMILY_LABEL = {"2022_model": "2022 model", "mmxm": "MMxM (MMBM + MMSM)"}
+FAMILY_LABEL = {"2022_model": "2022 model", "mmxm": "MMxM (MMBM + MMSM)", "silver_bullet": "Silver Bullet",
+                "cameron": "Cameron's Model"}
+SPLIT = pd.Timestamp("2024-06-28")        # last day of the selection period; later = unseen
+RESEARCH = ROOT / "research"
 CAUSE_TEXT = {
     "bias_wrong": "the day ran the opposite side (PDH/PDL) first",
     "wrong_side": "the mirrored trade at the same entry would have won",
@@ -181,7 +187,30 @@ def build(df: pd.DataFrame, ex: dict | None = None) -> dict:
         data["buckets"][fam] = {dim: rv.buckets(d, dim) for dim in BUCKET_DIMS if dim in d}
     for dim in CROSS_DIMS:
         data["cross"][dim] = rv.cross_model(df, dim, min_n=CROSS_MIN_N)
+    data["periods"] = periods(t)
+    data["research"] = research_log()
     return clean(data)
+
+
+def periods(t: pd.DataFrame, min_n: int = CROSS_MIN_N) -> list[dict]:
+    """Model × window (plus an 'all' row per model) in the selection period vs the unseen period."""
+    if t.empty or t.day.min() > SPLIT or t.day.max() <= SPLIT:
+        return []
+    rows = []
+    for fam in _families(t):
+        f = t[t.family == fam]
+        for win, g in [("all", f)] + sorted(f.groupby("window"), key=lambda kv: kv[0]):
+            a, b = g[g.day <= SPLIT], g[g.day > SPLIT]
+            ra = {"n": len(a), "exp_r": float(a.r.mean()) if len(a) else None}
+            rb = {"n": len(b), "exp_r": float(b.r.mean()) if len(b) else None}
+            holds = (ra["n"] >= min_n and rb["n"] >= min_n and ra["exp_r"] > 0 and rb["exp_r"] > 0)
+            rows.append({"family": fam, "window": win, "sel": ra, "unseen": rb, "holds": holds})
+    return rows
+
+
+def research_log(root: Path | None = None) -> list[dict]:
+    root = root or RESEARCH
+    return [{"name": f.stem, "text": f.read_text()} for f in sorted(Path(root).glob("*.md"))] if Path(root).exists() else []
 
 
 # --- html ---------------------------------------------------------------------
@@ -354,14 +383,43 @@ def _buckets(d: dict) -> str:
     return "".join(parts)
 
 
+def _periods(d: dict) -> str:
+    rows = d.get("periods") or []
+    if not rows:
+        return ""
+    body = []
+    for r in rows:
+        mark = '<span class="pos">✓ holds</span>' if r["holds"] else ""
+        sel, un = r["sel"], r["unseen"]
+        body.append([_label(r["family"]), E(r["window"]),
+                     f'<span class="{_cls(sel["exp_r"])}">{E(_r(sel["exp_r"], 3))}</span> <small>n {sel["n"]}</small>',
+                     f'<span class="{_cls(un["exp_r"])}">{E(_r(un["exp_r"], 3))}</span> <small>n {un["n"]}</small>', mark])
+    return ('<section id="periods"><h2>Two periods: what holds up</h2><p class="note">Expectancy (R per trade, after '
+            f'costs) per model × window: selection period (≤ {SPLIT:%Y-%m-%d}) vs the unseen period after it. A bucket '
+            f'"holds" only if both are positive with n ≥ {CROSS_MIN_N}. Choose on the left column, judge on the right.</p>'
+            + _table(["model", "window", "2022–24 (selection)", "2024-07+ (unseen)", ""], body) + "</section>")
+
+
+def _research(d: dict) -> str:
+    items = d.get("research") or []
+    if not items:
+        return ""
+    blocks = "".join(f'<details><summary>{E(i["name"])}</summary><pre class="research">{E(i["text"])}</pre></details>'
+                     for i in items)
+    return ('<section id="research"><h2>Research log</h2><p class="note">Pre-registered tests: the pass rules were '
+            'written before each run (research/*.md).</p>' + blocks + "</section>")
+
+
 def render(d: dict) -> str:
     """Full HTML page for ``build()`` output."""
     header = (f'<header><h1>ICT Model Review</h1><span class="chip">{E(d["range"][0])} → {E(d["range"][1])}</span>'
               f'<span class="chip">{E(", ".join(d["assets"]))}</span><nav>'
               '<a href="#overview">overview</a><a href="#tips">tips</a><a href="#wrong">what went wrong</a>'
-              '<a href="#gates">gates</a><a href="#cross">cross-model</a><a href="#buckets">buckets</a>'
+              '<a href="#periods">two periods</a><a href="#gates">gates</a><a href="#cross">cross-model</a>'
+              '<a href="#buckets">buckets</a><a href="#research">research</a>'
               '<a href="index.html">day packs</a><button id="theme" title="toggle theme" aria-label="toggle theme">◐</button></nav></header>')
-    body = header + "<main>" + _overview(d) + _tips(d) + _wrong(d) + _gates(d) + _cross(d) + _buckets(d) + "</main>"
+    body = (header + "<main>" + _overview(d) + _periods(d) + _tips(d) + _wrong(d) + _gates(d) + _cross(d)
+            + _buckets(d) + _research(d) + "</main>")
     blob = json.dumps(d, separators=(",", ":"), allow_nan=False)
     blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")   # safe inside <script>
     page = TEMPLATE.read_text()
@@ -378,11 +436,21 @@ def write(df: pd.DataFrame, path: Path | None = None, export=None, cap: int = MA
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="ict_engine.viz.review_page")
-    ap.add_argument("tables", nargs="+", type=Path)
+    ap.add_argument("tables", nargs="*", type=Path)
+    ap.add_argument("--store", action="store_true", help="read the trade store (ict_engine.eval.store) instead of tables")
+    ap.add_argument("--commit", help="with --store: only runs made at this commit")
     ap.add_argument("--out", type=Path, default=OUT / "review.html")
     ap.add_argument("--max-exports", type=int, default=MAX_EXPORTS, help="cap on new day packs to export")
     a = ap.parse_args(argv)
-    df = pd.concat([pd.read_parquet(p) for p in a.tables], ignore_index=True)
+    if a.store:
+        from ict_engine.eval import store
+        df = store.load(**({"commit": a.commit} if a.commit else {}))
+        df = df.drop(columns=[c for c in ("family", "run_id", "commit", "extras", "period_start", "period_end",
+                                          "added_at") if c in df])
+    elif a.tables:
+        df = pd.concat([pd.read_parquet(p) for p in a.tables], ignore_index=True)
+    else:
+        ap.error("give backtest tables or --store")
     print(write(df, a.out, cap=a.max_exports))
 
 

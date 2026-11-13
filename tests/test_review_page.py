@@ -143,3 +143,27 @@ def test_index_links_review_page(tmp_path, monkeypatch):
     monkeypatch.setattr(daypack, "OUT", tmp_path)
     page = daypack.write_index([]).read_text()
     assert 'href="review.html"' in page
+
+
+def test_two_periods_table_marks_buckets_that_hold_in_both():
+    early = table(n=40, rs=(2.0, -1.0))                                     # 2023: +0.5R
+    late = table(n=40, rs=(2.0, -1.0)).assign(day=lambda d: d.day + pd.Timedelta(days=600),
+                                             decided_at=lambda d: d.decided_at + pd.Timedelta(days=600))
+    bad = table(model="mmbm", n=40, rs=(-1.0,)).assign(day=lambda d: d.day + pd.Timedelta(days=600),
+                                                      decided_at=lambda d: d.decided_at + pd.Timedelta(days=600))
+    df = pd.concat([early, late, table(model="mmbm", n=40, rs=(2.0,)), bad], ignore_index=True)
+    rows = {(r["family"], r["window"]): r for r in rp.periods(rp.rv.trades(rp.rv.prepare(df)))}
+    assert rows[("2022_model", "ny_am_kz")]["holds"] and not rows[("mmxm", "ny_am_kz")]["holds"]
+    page = rp.render(rp.build(df, ex={}))
+    assert 'id="periods"' in page and "✓ holds" in page
+
+
+def test_research_log_is_escaped(tmp_path, monkeypatch):
+    (tmp_path / "pre-1.md").write_text("# test\n<script>alert(1)</script>")
+    monkeypatch.setattr(rp, "RESEARCH", tmp_path)
+    page = rp.render(rp.build(both(), ex={}))
+    assert 'id="research"' in page and "<script>alert(1)" not in page and "&lt;script&gt;alert(1)" in page
+
+
+def test_cameron_and_sb_have_labels():
+    assert rp.FAMILY_LABEL["cameron"] == "Cameron's Model" and rp.FAMILY_LABEL["silver_bullet"] == "Silver Bullet"

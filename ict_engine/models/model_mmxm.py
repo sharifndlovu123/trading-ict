@@ -343,7 +343,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         return setup
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1:.2f}, terminus {final:.2f}"))
     if p.max_cost_r is not None:
-        cost_r = cost_at(asset, entry) / risk
+        cost_r = cost_at(asset, entry, decided) / risk
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
