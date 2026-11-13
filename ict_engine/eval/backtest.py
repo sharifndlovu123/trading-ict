@@ -165,7 +165,7 @@ def main(argv=None):
     ap.add_argument("start", type=date.fromisoformat)
     ap.add_argument("end", type=date.fromisoformat)
     ap.add_argument("--cap", choices=("window", "day"), default=None, help="default: the model's own (SB: day)")
-    ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm")
+    ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm | silver_bullet | cameron")
     a = ap.parse_args(argv)
     from ict_engine.models.registry import modules
     params = modules()[a.model].Params()

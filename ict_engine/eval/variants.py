@@ -23,7 +23,7 @@ from pathlib import Path
 import pandas as pd
 
 from ict_engine.eval.bias import wilson
-from ict_engine.models import model_mmxm, model_sb
+from ict_engine.models import model_cameron, model_mmxm, model_sb
 from ict_engine.models.model_2022 import Params
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,7 +96,19 @@ SB_VARIANTS: dict[str, model_sb.Params] = {
     "partial 75% + runner trail (lock half)": replace(SB, partial_frac=0.75, runner_stop="lock_half"),
     "partial 50% + runner trail (lock half)": replace(SB, runner_stop="lock_half"),
 }
-SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS}
+CB = model_cameron.Params()
+CAMERON_VARIANTS: dict[str, model_cameron.Params] = {
+    "baseline": CB,
+    "not running required": replace(CB, require_running=False),
+    "with bias prev_day_dol": replace(CB, use_bias=True),
+    "trigger 1m > entry 1m": replace(CB, trigger_tf="1m"),
+    "entry at CE": replace(CB, entry_level="ce"),
+    "tp1 cap 2R": replace(CB, tp1_cap_r=2.0),
+    "one trade per window": replace(CB, cap_scope="window"),
+    "partial 80% + runner at breakeven": replace(CB, partial_frac=0.8),
+    "partial 75% + runner trail (lock half)": replace(CB, partial_frac=0.75, runner_stop="lock_half"),
+}
+SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS}
 
 def _job(args) -> pd.DataFrame:
     name, params, asset, start, end = args

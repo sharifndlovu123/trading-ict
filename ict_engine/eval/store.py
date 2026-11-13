@@ -2,7 +2,7 @@
 
     uv run python -m ict_engine.eval.store add reports/backtest*-2024-07-01-2026-11-12.parquet
     uv run python -m ict_engine.eval.store runs
-    uv run python -m ict_engine.eval.store board --by family window --min-n 30 [--asset US100] [--start 2022-01-01]
+    uv run python -m ict_engine.eval.store board --by family window --min-n 30 [--asset US100] [--start 2022-01-01] [--commit abc1234]
 
 Layout: ``reports/trades/<run_id>.parquet``, one file per run. A run is one
 (model, asset, period, settings label, code commit) backtest. Every row is one setup,
@@ -165,6 +165,7 @@ def main(argv=None):
     b.add_argument("--min-n", type=int, default=30)
     b.add_argument("--asset")
     b.add_argument("--family")
+    b.add_argument("--commit", help="only runs made at this commit (don't mix rule versions)")
     b.add_argument("--start")
     b.add_argument("--end")
     args = ap.parse_args(argv)
@@ -181,7 +182,7 @@ def main(argv=None):
     elif args.cmd == "runs":
         print(runs().to_string(index=False))
     else:
-        filt = {k: v for k, v in (("asset", args.asset), ("family", args.family)) if v}
+        filt = {k: v for k, v in (("asset", args.asset), ("family", args.family), ("commit", args.commit)) if v}
         df = load(**filt)
         if args.start:
             df = df[df.day >= pd.Timestamp(args.start)]
