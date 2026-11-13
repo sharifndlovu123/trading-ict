@@ -31,7 +31,7 @@ Name files `NN-firstauthor-short-title.pdf` so they sort in reading order. Extra
 | 1 | Harris: Trading and Exchanges → 1-harris-trading-and-exchanges.pdf (656 pp; 2003 draft edition) | ✅ |
 | 2 | Bouchaud, Bonart, Donier, Gould: Trades, Quotes and Prices → 2-bouchaud-trades-quotes-prices.pdf (463 pp) | ✅ |
 | 3 | Hasbrouck: Empirical Market Microstructure → 3-hasbrouck-empirical-market-microstructure.pdf (209 pp) | ✅ |
-| 4 | Cartea, Jaimungal, Penalva: Algorithmic and High-Frequency Trading → 4-cartea-algorithmic-hf-trading.pdf (360 pp) | ⚠️ no text layer: needs OCR before pdftotext works |
+| 4 | Cartea, Jaimungal, Penalva: Algorithmic and High-Frequency Trading → 4-cartea-algorithmic-hf-trading.pdf (360 pp) | ❌ corrupted file (damaged page tree: blank renders, Ghostscript sees 0 pages). Re-download another copy (PDF or EPUB) |
 | 5 | Lehalle, Laruelle: Market Microstructure in Practice → 5-lehalle-market-microstructure-in-practice.pdf (367 pp, 2nd ed.) | ✅ |
 | 6 | López de Prado: Advances in Financial Machine Learning → 6-lopez-de-prado-advances-financial-ml.pdf (393 pp) | ✅ |
 | 7 | Patterson: Dark Pools → 7-patterson-dark-pools.pdf (295 pp) | ⚠️ a Bookey chapter summary, not the full book |
