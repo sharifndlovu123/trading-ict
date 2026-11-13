@@ -1,0 +1,45 @@
+# --- Python / tooling -------------------------------------------------------
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# --- Market data (re-downloadable: `python -m ict_engine.data.dukascopy fetch ...`) ---
+data/
+.dukascopy-cache/
+download/
+*.parquet
+*.csv
+
+# --- Generated outputs (day packs, reports, viewer builds) ---------------------
+out/
+reports/
+viewer/node_modules/
+viewer/dist/
+
+# --- Not for a public repo ----------------------------------------------------
+# Third-party copyrighted ICT study material (PDFs) — keep locally only.
+references/*.pdf
+# Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
+references/personal/
+
+# --- Secrets / local config -----------------------------------------------------
+.env
+.env.*
+*.key
+*.pem
+.claude/settings.local.json
+
+# --- Editors / OS ---------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

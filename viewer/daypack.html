@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICT Day Pack</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js" integrity="sha384-OK7vELvjHdhUFi31JYioPIcRHTROLdcDa6ZsNWgvgLaKj+9JqhU0Ad8g4wz3CXjA" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f6f7f9; --text: #1b1f24; --muted: #5b6470; --line: #dde1e6;
+    --bull: #1a9e6c; --bear: #d64545; --accent: #3867d6; --warn: #c98a00; --ict: #8e44ad;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #161b21; --text: #e6e9ed; --muted: #95a0ad; --line: #2a313a;
+      --bull: #2ecc8f; --bear: #ff6b6b; --accent: #6c8cff; --warn: #f0b429; --ict: #c58cf0;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #161b21; --text: #e6e9ed; --muted: #95a0ad; --line: #2a313a;
+    --bull: #2ecc8f; --bear: #ff6b6b; --accent: #6c8cff; --warn: #f0b429; --ict: #c58cf0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .chip.bull { color: var(--bull); border-color: currentColor; } .chip.bear { color: var(--bear); border-color: currentColor; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-left: auto; }
+  .controls label { color: var(--muted); cursor: pointer; user-select: none; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; font: inherit; }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; height: calc(100vh - 50px); }
+  #chart { min-height: 420px; }
+  aside { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 12px 14px; }
+  aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; }
+  aside h2:first-child { margin-top: 0; }
+  .card { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .row { display: flex; justify-content: space-between; gap: 8px; }
+  .muted { color: var(--muted); }
+  .setup { cursor: pointer; }
+  .setup.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .tag { font-size: 11px; padding: 0 6px; border-radius: 4px; border: 1px solid currentColor; }
+  .traded { color: var(--bull); } .ordered { color: var(--accent); } .blocked { color: var(--muted); }
+  .gates { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .gate { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  .gate.ok { background: color-mix(in srgb, var(--bull) 18%, transparent); color: var(--bull); }
+  .gate.no { background: color-mix(in srgb, var(--bear) 18%, transparent); color: var(--bear); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td { padding: 1px 0; } td:last-child { text-align: right; }
+  .filters { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+  .detail-line { margin: 2px 0; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+  #empty { padding: 40px; color: var(--muted); }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; height: auto; }
+    #chart { height: 60vh; }
+    aside { border-left: 0; border-top: 1px solid var(--line); }
+    header { padding: 10px 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">ICT Day Pack</h1>
+  <span id="bias" class="chip"></span>
+  <span id="variant" class="chip"></span>
+  <div class="controls">
+    <span><button data-tf="1m" class="on">1m</button> <button data-tf="5m">5m</button></span>
+    <label><input type="checkbox" data-layer="windows" checked> windows</label>
+    <label><input type="checkbox" data-layer="levels" checked> levels</label>
+    <label><input type="checkbox" data-layer="fvgs" checked> FVGs</label>
+    <label><input type="checkbox" data-layer="sweeps" checked> sweeps</label>
+    <label><input type="checkbox" data-layer="structure" checked> MSS</label>
+    <label><input type="checkbox" data-layer="bos"> BOS</label>
+    <label><input type="checkbox" data-layer="swings"> swings</label>
+    <label><input type="checkbox" data-layer="reference" checked> ICT trade</label>
+    <button id="theme" title="toggle theme">◐</button>
+  </div>
+</header>
+<main>
+  <div id="chart"></div>
+  <aside>
+    <h2>ICT reference</h2><div id="reference"></div>
+    <h2>Context</h2><div id="context" class="card"></div>
+    <h2>Setups</h2>
+    <div class="filters">
+      <button data-f="all" class="on">all</button><button data-f="traded">traded</button>
+      <button data-f="ordered">ordered</button><button data-f="blocked">blocked</button>
+    </div>
+    <div id="setups"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:#3867d633"></i>killzone</span>
+      <span><i class="sw" style="background:#f0b42955"></i>silver bullet</span>
+      <span><i class="sw" style="background:#8e44ad44"></i>macro</span>
+      <span><i class="sw" style="background:#99999933"></i>lunch / no trade</span>
+    </div>
+  </aside>
+</main>
+<script>
+const PACK = /*__DAYPACK__*/null;
+const $ = (s, el = document) => el.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmtT = t => t == null ? "—" : new Date(t * 1000).toISOString().slice(11, 16);
+const num = x => x == null ? "—" : (+x).toFixed(2);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+const state = { tf: "1m", layers: new Set(["windows", "levels", "fvgs", "sweeps", "structure", "reference"]), sel: null, filter: "all" };
+let chart, candles, winSeries, overlays = [], priceLines = [];
+
+function init() {
+  if (!PACK) { document.body.replaceChildren(el("div", "", "No day pack embedded. Run: uv run python -m ict_engine.viz.daypack US100 2024-01-09")); return; }
+  $("#title").textContent = `${PACK.asset} (${PACK.futures_root}) · ${PACK.day} · ${PACK.model}`;
+  const b = $("#bias"); b.textContent = `bias ${PACK.context.bias}`; b.title = PACK.context.bias_reason;
+  b.classList.add(PACK.context.bias === "bull" ? "bull" : PACK.context.bias === "bear" ? "bear" : "x");
+  $("#variant").textContent = PACK.variant;
+  renderContext(); renderReference(); renderSetups();
+  document.querySelectorAll("[data-tf]").forEach(x => x.onclick = () => { state.tf = x.dataset.tf; document.querySelectorAll("[data-tf]").forEach(y => y.classList.toggle("on", y === x)); draw(); });
+  document.querySelectorAll("[data-layer]").forEach(x => x.onchange = () => { x.checked ? state.layers.add(x.dataset.layer) : state.layers.delete(x.dataset.layer); draw(); });
+  document.querySelectorAll("[data-f]").forEach(x => x.onclick = () => { state.filter = x.dataset.f; document.querySelectorAll("[data-f]").forEach(y => y.classList.toggle("on", y === x)); renderSetups(); });
+  $("#theme").onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; r.dataset.theme = dark ? "light" : "dark"; build(); };
+  build();
+}
+
+function build() {
+  $("#chart").replaceChildren();
+  chart = LightweightCharts.createChart($("#chart"), {
+    autoSize: true,
+    layout: { background: { color: css("--bg") }, textColor: css("--muted") },
+    grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
+    timeScale: { timeVisible: true, secondsVisible: false },
+    crosshair: { mode: 0 },
+  });
+  winSeries = chart.addHistogramSeries({ priceScaleId: "win", priceLineVisible: false, lastValueVisible: false });
+  chart.priceScale("win").applyOptions({ scaleMargins: { top: 0, bottom: 0 }, visible: false });
+  candles = chart.addCandlestickSeries({ upColor: css("--bull"), downColor: css("--bear"), wickUpColor: css("--bull"), wickDownColor: css("--bear"), borderVisible: false });
+  draw();
+  const s0 = PACK.setups.find(s => s.status === "traded") || null;
+  if (s0) select(s0.id); else focus(PACK.reference[0]?.time);
+}
+
+const snap = t => state.tf === "5m" ? t - (t % 300) : t;
+
+function draw() {
+  overlays.forEach(s => chart.removeSeries(s)); overlays = [];
+  priceLines.forEach(p => candles.removePriceLine(p)); priceLines = [];
+  const rows = PACK.candles[state.tf];
+  candles.setData(rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close })));
+
+  // time windows as background bands
+  const prio = { macro: 4, silver_bullet: 3, killzone: 2, no_trade: 1, sweet_spot: 0, range: -1 };
+  const col = { macro: css("--ict") + "44", silver_bullet: css("--warn") + "55", killzone: css("--accent") + "26", no_trade: "#99999933" };
+  winSeries.setData(state.layers.has("windows") ? rows.map(([t]) => {
+    let best = null;
+    for (const w of PACK.windows) if (t >= w.start && t < w.end && col[w.kind] && (!best || prio[w.kind] > prio[best.kind])) best = w;
+    return best ? { time: t, value: 1, color: col[best.kind] } : { time: t, value: 0, color: "transparent" };
+  }) : []);
+
+  if (state.layers.has("levels")) for (const [k, v] of Object.entries(PACK.context.levels))
+    priceLines.push(candles.createPriceLine({ price: v, color: css("--muted"), lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: k }));
+
+  if (state.layers.has("fvgs")) for (const g of PACK.events.fvgs.slice(0, 150)) box(g.t, Math.min(g.end, g.t + 45 * 60), g.bottom, g.top, (g.dir === "bull" ? css("--bull") : css("--bear")) + "99", 1);
+
+  const markers = [];
+  const named = l => !/swing_/.test(l);
+  if (state.layers.has("sweeps")) for (const e of PACK.events.sweeps)
+    markers.push({ time: snap(e.t), position: e.dir === "bull" ? "belowBar" : "aboveBar", color: e.kind === "sweep" ? css("--warn") : css("--muted"), shape: e.dir === "bull" ? "arrowUp" : "arrowDown", size: named(e.meta.level) ? 1 : 0.5, text: named(e.meta.level) ? `${e.kind} ${e.meta.level}` : "" });
+  for (const e of PACK.events.structure) if ((e.kind === "mss" && state.layers.has("structure")) || (e.kind === "bos" && state.layers.has("bos")))
+    markers.push({ time: snap(e.t), position: e.dir === "bull" ? "belowBar" : "aboveBar", color: e.dir === "bull" ? css("--bull") : css("--bear"), shape: "circle", text: e.kind.toUpperCase() + (e.meta.displacement === "True" || e.meta.displacement === true ? "⚡" : "") });
+  if (state.layers.has("swings")) for (const e of PACK.events.swings)
+    markers.push({ time: snap(e.t), position: e.kind === "swing_high" ? "aboveBar" : "belowBar", color: css("--muted"), shape: "square", size: 0.4 });
+
+  for (const s of PACK.setups) if (s.result && s.result.filled) {
+    markers.push({ time: snap(s.result.filled), position: s.side === "long" ? "belowBar" : "aboveBar", color: css("--accent"), shape: s.side === "long" ? "arrowUp" : "arrowDown", text: `#${s.id} entry` });
+    if (s.result.exit) markers.push({ time: snap(s.result.exit), position: "inBar", color: s.result.vote ? css("--bull") : css("--bear"), shape: "circle", text: `#${s.id} ${s.result.reason} ${(+s.result.r).toFixed(2)}R` });
+  }
+
+  if (state.layers.has("reference")) for (const r of PACK.reference) {
+    if (r.time) markers.push({ time: snap(r.time), position: r.side === "long" ? "belowBar" : "aboveBar", color: css("--ict"), shape: r.side === "long" ? "arrowUp" : "arrowDown", text: "ICT" });
+    for (const [k, v] of [["ICT entry", r.entry], ["ICT stop", r.stop], ["ICT TP1", r.tp1]]) if (v != null)
+      priceLines.push(candles.createPriceLine({ price: v, color: css("--ict"), lineWidth: 1, lineStyle: 3, axisLabelVisible: true, title: k }));
+  }
+
+  const sel = PACK.setups.find(s => s.id === state.sel);
+  if (sel) drawSetup(sel, markers);
+  markers.sort((a, b) => a.time - b.time);
+  candles.setMarkers(markers);
+}
+
+function box(t0, t1, lo, hi, color, w) {
+  if (t0 == null || t1 == null || t1 <= t0) return;
+  for (const v of [lo, hi]) {
+    const s = chart.addLineSeries({ color, lineWidth: w, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    s.setData([{ time: t0, value: v }, { time: t1, value: v }]);
+    overlays.push(s);
+  }
+}
+
+function drawSetup(s, markers) {
+  const p = s.plan || s.would_plan;
+  for (const [k, e] of Object.entries(s.evidence)) {
+    if (k === "fvg") box(e.t, (p && p.expires) || e.t + 3600, e.bottom, e.top, css("--accent"), 2);
+    markers.push({ time: snap(e.t), position: "aboveBar", color: css("--accent"), shape: "square", text: `#${s.id} ${k}` });
+  }
+  if (!p) return;
+  const lines = [["entry", p.entry, css("--accent"), 0], ["stop", p.stop, css("--bear"), 0], [`TP1 ${p.tp1_name}`, p.tp1, css("--bull"), 0], [`final ${p.final_name}`, p.final, css("--bull"), 2]];
+  if (p.arm != null) lines.push(["arm", p.arm, css("--warn"), 2]);
+  for (const [t, v, c, st] of lines) if (v != null) priceLines.push(candles.createPriceLine({ price: v, color: c, lineWidth: 2, lineStyle: st, axisLabelVisible: true, title: `#${s.id} ${t}` }));
+}
+
+function focus(t) {
+  if (!t) return;
+  chart.timeScale().setVisibleRange({ from: t - 2.5 * 3600, to: t + 2.5 * 3600 });
+}
+
+function select(id) {
+  state.sel = id; draw(); renderSetups();
+  const s = PACK.setups.find(x => x.id === id); if (s) focus(s.decided);
+}
+
+function renderContext() {
+  const c = PACK.context, card = $("#context");
+  card.replaceChildren(el("div", "detail-line", c.bias_reason));
+  const t = el("table");
+  for (const [k, v] of Object.entries(c.levels)) { const tr = el("tr"); tr.append(el("td", "muted", k), el("td", "", num(v))); t.append(tr); }
+  for (const [k, [lo, hi]] of Object.entries(c.ranges)) { const tr = el("tr"); tr.append(el("td", "muted", `${k}-day range`), el("td", "", `${num(lo)} – ${num(hi)}`)); t.append(tr); }
+  for (const g of c.gaps) { const tr = el("tr"); tr.append(el("td", "muted", g.name), el("td", "", `${num(g.close)} → ${num(g.open)}`)); t.append(tr); }
+  card.append(t);
+}
+
+function renderReference() {
+  const box_ = $("#reference");
+  if (!PACK.reference.length) { box_.append(el("div", "muted", "No ICT reference trade for this asset/day.")); return; }
+  for (const r of PACK.reference) {
+    const card = el("div", "card");
+    card.append(el("div", "row", null));
+    card.firstChild.append(el("b", "", `${r.side} · ${r.model}`), el("span", "muted", `${r.author} · ${r.confidence}`));
+    card.append(el("div", "detail-line", `${r.id} · ${r.contract}`));
+    const t = el("table");
+    const rows = [["time", r.window ? `${fmtT(r.window[0])}–${fmtT(r.window[1])}` : fmtT(r.time)],
+      ["entry (futures → feed)", `${num(r.futures.entry)} → ${num(r.entry)}`], ["stop", `${num(r.futures.stop)} → ${num(r.stop)}`],
+      ["TP1", `${num(r.futures.tp1)} → ${num(r.tp1)}`], ["feed offset", r.offset == null ? "no anchors" : `${num(r.offset)} (${r.offset_n} anchor${r.offset_n === 1 ? "" : "s"})`]];
+    for (const [k, v] of rows) { const tr = el("tr"); tr.append(el("td", "muted", k), el("td", "", v)); t.append(tr); }
+    card.append(t);
+    if (r.best_setup) {
+      const b = r.best_setup, d = el("div", "detail-line");
+      d.append(`closest engine setup: `);
+      const a = el("a", "", `#${b.id}`); a.href = "#"; a.onclick = ev => { ev.preventDefault(); select(b.id); };
+      d.append(a, ` — ${b.verdict} ${(+b.score).toFixed(2)}`);
+      card.append(d, el("div", "detail-line", Object.entries(b.traits).map(([k, v]) => `${k} ${(+v).toFixed(2)}`).join(" · ")));
+    }
+    if (r.notes) card.append(el("div", "detail-line", r.notes));
+    box_.append(card);
+  }
+}
+
+function renderSetups() {
+  const box_ = $("#setups"); box_.replaceChildren();
+  const list = PACK.setups.filter(s => state.filter === "all" || s.status.startsWith(state.filter))
+    .filter(s => "fvg" in s.evidence || s.status !== "blocked@trigger");
+  if (!list.length) box_.append(el("div", "muted", "none"));
+  for (const s of list) {
+    const card = el("div", "card setup" + (s.id === state.sel ? " sel" : ""));
+    const cls = s.status === "traded" ? "traded" : s.status === "ordered" ? "ordered" : "blocked";
+    const head = el("div", "row");
+    head.append(el("b", "", `#${s.id} ${fmtT(s.decided)} ${s.side}`), el("span", `tag ${cls}`, s.status));
+    card.append(head);
+    if (s.result && s.result.filled) card.append(el("div", "detail-line", `${s.result.reason} · ${(+s.result.r).toFixed(2)}R${s.result.vote ? " · vote" : ""}${s.result.ambiguous ? " · ambiguous" : ""}`));
+    else if (s.result) card.append(el("div", "detail-line", s.result.reason));
+    if (s.id === state.sel) {
+      const g = el("div", "gates");
+      for (const x of s.gates) { const c = el("span", `gate ${x.passed ? "ok" : "no"}`, x.name); c.title = x.detail; g.append(c); }
+      card.append(g);
+      for (const x of s.gates) card.append(el("div", "detail-line", `${x.passed ? "✓" : "✗"} ${x.name}: ${x.detail}`));
+      const p = s.plan || s.would_plan;
+      if (p) card.append(el("div", "detail-line", `${s.plan ? "plan" : "would-be plan"}: entry ${num(p.entry)} · stop ${num(p.stop)} · TP1 ${num(p.tp1)} (${p.tp1_name}) · final ${num(p.final)}${p.arm ? ` · arm ${num(p.arm)}` : ""}`));
+    }
+    card.onclick = () => select(s.id);
+    box_.append(card);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

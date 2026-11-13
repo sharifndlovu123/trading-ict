@@ -1,0 +1,287 @@
+# Reference trades from ICT's live executions (Sharif's Notion → references/personal/notion/live-exec.md).
+# Prices were read off chart screenshots by eye: ±0.25–0.5 pt ES, ±0.5–2 pt NQ. Times are New York.
+# Most charts are Sharif's TradingView redraws of ICT's trades; 2023-12-01 looks like ICT's own screen.
+# null = not shown on the chart. The comparison drops missing traits instead of penalising them.
+# These are ICT's chosen examples (all reached TP1): they test whether the engine FINDS the trade,
+# not the engine's win rate.
+
+cases:
+  - id: 2023-11-20-nq-range
+    day: 2023-11-20
+    market: NQ
+    contract: NQZ23
+    side: long
+    entry_time: "08:33"
+    entry_price: 15889.5
+    stop: 15881.25
+    tp1: 15932.25
+    final_target: 15940.0
+    pd_array: bisi
+    pd_array_tf: 1m
+    liquidity_taken: [ssl]          # 06:30 and 08:00 lows
+    model: pd_array_return
+    outcome: win
+    final_reached: true
+    confidence: high
+    source: live-exec.md#2023-11-20 (img/live-exec/fea2-1..4.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "high@05:00", price: 15932.25}
+      - {level: "low@06:30", price: 15906.0}
+    notes: 15m/5m FVG 15889.75–15907.5 in discount of the 05:00-high range; buy limits in 1m BISI.
+
+  - id: 2023-11-24-nq-post-thanksgiving
+    day: 2023-11-24
+    market: NQ
+    contract: NQZ23
+    side: long
+    entry_window: ["08:30", "08:40"]
+    entry_price: 16030.5
+    stop: 16029.25                  # tight — as read; low confidence
+    tp1: 16049.25                   # "partial 80% to 75%"
+    final_target: 16054.0
+    pd_array: ifvg
+    pd_array_tf: 1m
+    liquidity_taken: [ssl]          # 08:05 low dipped (not labelled on chart)
+    model: 2022_model
+    outcome: partial
+    final_reached: null
+    confidence: low
+    source: live-exec.md#2023-11-24 (img/live-exec/82a3-1..2.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "high@06:00", price: 16054.0}
+      - {level: "high@07:05", price: 16049.25}
+      - {level: "low@08:05", price: 16029.0}
+    notes: Two entries 08:30 and 08:40. Runner trailed at ~16043.75 and stopped.
+
+  - id: 2023-11-28-es-silver-bullet
+    day: 2023-11-28
+    market: ES
+    contract: ESZ23
+    side: long
+    entry_time: "10:36"
+    entry_price: 4553.75
+    stop: null
+    tp1: 4560.0
+    pd_array: fvg
+    pd_array_tf: 1m
+    model: silver_bullet
+    outcome: win
+    confidence: medium
+    source: live-exec.md#2023-11-28 (img/live-exec/1025-1..4.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "low@04:00", price: 4550.5}
+
+  - id: 2023-11-28-es-post-macro-vi
+    day: 2023-11-28
+    market: ES
+    contract: ESZ23
+    side: long
+    entry_time: "11:11"
+    entry_price: 4563.5
+    stop: 4563.0                    # as labelled; very tight — check
+    tp1: 4576.5                     # -1 STDV
+    pd_array: vi
+    pd_array_tf: 1m
+    model: pd_array_return
+    outcome: win
+    confidence: low
+    source: live-exec.md#2023-11-28
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "low@04:00", price: 4550.5}
+
+  - id: 2023-11-28-es-post-macro-ifvg
+    day: 2023-11-28
+    market: ES
+    contract: ESZ23
+    side: long
+    entry_time: "11:14"
+    entry_price: 4566.0
+    stop: 4563.0
+    tp1: 4576.5
+    pd_array: ifvg
+    pd_array_tf: 1m
+    model: pd_array_return
+    outcome: win
+    confidence: medium
+    source: live-exec.md#2023-11-28
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "low@04:00", price: 4550.5}
+
+  - id: 2023-11-30-nq-housing-short
+    day: 2023-11-30
+    market: NQ
+    contract: NQZ23
+    side: short
+    entry_time: "09:54"
+    entry_price: 15980.0
+    stop: 15990.0
+    tp1: 15938.75
+    pd_array: fvg
+    pd_array_tf: 2m
+    model: pd_array_return
+    outcome: win
+    confidence: medium
+    source: live-exec.md#2023-11-30 (img/live-exec/67fc-1..2.png)
+    notes: Ahead of the 10:00 housing release. Buy-side raid before entry not labelled.
+
+  - id: 2023-12-01-es-60m-bisi
+    day: 2023-12-01
+    market: ES
+    contract: ESZ23
+    side: long
+    entry_window: ["09:33", "09:50"]
+    entry_price: 4566.0
+    stop: null
+    tp1: 4574.25                    # "first partial" 4573.75–4575
+    final_target: 4577.25
+    pd_array: bisi
+    pd_array_tf: 1h
+    liquidity_taken: [ssl]          # raid at the 09:30 open
+    model: pd_array_return
+    outcome: win
+    final_reached: true
+    author: ict
+    confidence: medium
+    source: live-exec.md#2023-12-01 (img/live-exec/ae89-1..3.png) — ICT's own chart
+
+  - id: 2023-12-07-nq-employment
+    day: 2023-12-07
+    market: NQ
+    contract: NQZ23
+    side: long
+    entry_time: "08:30"
+    entry_price: 15851.0
+    stop: null
+    tp1: 15872.5
+    final_target: 15938.5
+    liquidity_taken: [ssl]          # sweep ~15846
+    model: 2022_model
+    outcome: win
+    final_reached: true
+    confidence: medium
+    source: live-exec.md#2023-12-07 (img/live-exec/0caf-1..3.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "low@07:50", price: 15846.0}
+    notes: STDV levels printed (0 = 15871.50, -4 = 15931.50).
+
+  - id: 2023-12-08-es-nfp
+    day: 2023-12-08
+    market: ES
+    contract: ESZ23
+    side: long
+    entry_time: "08:30"
+    entry_price: 4566.0
+    stop: 4560.0
+    tp1: 4586.0
+    final_target: 4607.75
+    pd_array: fvg
+    pd_array_tf: 4h
+    model: pd_array_return
+    outcome: win
+    final_reached: true
+    confidence: medium
+    source: live-exec.md#2023-12-08 (img/live-exec/d0ff-1..4.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "high@05:30", price: 4586.0}
+    notes: After TP1, stop trailed to just below the 4h FVG (~4568.25).
+
+  - id: 2023-12-11-nq-scale-in
+    day: 2023-12-11
+    market: NQ
+    contract: NQZ23
+    side: long
+    entry_window: ["06:45", "09:30"]
+    entry_price: 16072.0            # middle of consolidation 16057–16087 (no entry line)
+    stop: null
+    tp1: 16119.0                    # Friday high (buy stops)
+    final_target: 16208.5
+    liquidity_taken: [ssl]          # 16045.50
+    model: mmbm
+    outcome: partial
+    final_reached: false
+    confidence: low
+    source: live-exec.md#2023-12-11 (img/live-exec/6c9e-1..2.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "pdh", price: 16119.0}
+      - {level: "low@06:45", price: 16045.5}
+
+  - id: 2024-01-05-es-nfp
+    day: 2024-01-05
+    market: ES
+    contract: MESH24
+    side: long
+    entry_time: "09:00"
+    entry_price: 4710.0
+    stop: 4707.5                    # wick CE
+    tp1: 4724.0
+    final_target: 4736.5            # Asia high
+    pd_array: fvg
+    pd_array_tf: 1m
+    model: 2022_model
+    outcome: win
+    final_reached: true
+    confidence: low                 # basis check: two anchors agree (-39.6) but entry lands 7 pts off the CFD range ±3 min — entry time/price likely misread
+    source: live-exec.md#2024-01-05 (img/live-exec/eaf2-1-ict-5m.png, eaf2-2-ict-1m.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "high@08:19", price: 4724.0}
+      - {level: "asia_high", price: 4736.5}
+
+  - id: 2024-01-05-nq-sharif-mmxm
+    day: 2024-01-05
+    market: NQ
+    contract: MNQH24
+    side: long
+    entry_price: 16398.0
+    stop: 16366.5
+    tp1: 16470.25
+    model: mmbm
+    outcome: win
+    author: sharif
+    confidence: high               # prices printed on the chart
+    source: live-exec.md#2024-01-05 (img/live-exec/eaf2-3-sharif-1h.png, eaf2-4-sharif-15m.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "asia_high", price: 16470.25}
+    notes: Sharif's own example, not ICT's trade. Entry time not shown.
+
+  - id: 2024-01-09-nq-macro-pdh
+    day: 2024-01-09
+    market: NQ
+    contract: MNQH24
+    side: long
+    entry_time: "11:04"
+    entry_price: 16745.0
+    stop: 16727.5
+    tp1: 16796.0                    # Asia high
+    final_target: 16811.0           # PDH / buy-side
+    pd_array: ifvg
+    pd_array_tf: 1m
+    model: macro
+    outcome: win
+    final_reached: true
+    confidence: high
+    source: live-exec.md#2024-01-09 (img/live-exec/e4f2-1..3.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "asia_high", price: 16796.0}
+      - {level: "pdh", price: 16811.0}
+    notes: '"ICT BUY HERE" label; above a 1m breaker; 10:50–11:10 macro.'
+
+  - id: 2024-01-10-es-funded
+    day: 2024-01-10
+    market: ES
+    contract: MESH24
+    side: long
+    entry_time: "09:25"
+    entry_price: 4793.25
+    stop: 4791.75
+    tp1: 4795.25
+    final_target: 4804.5
+    pd_array: fvg
+    pd_array_tf: 1m
+    liquidity_taken: [ssl]          # equal lows ~4789 dipped (not labelled)
+    model: 2022_model
+    outcome: win
+    final_reached: true
+    confidence: medium
+    source: live-exec.md#2024-01-10 (img/live-exec/a00f-1..2.png)
+    anchors:                        # named chart levels → feed basis (ict_engine/eval/basis.py)
+      - {level: "low@06:55", price: 4789.0}
