@@ -40,3 +40,17 @@ whether the engine **finds** his trades, not its win rate.
   only for any choices.
 - Audit the POI rule against the 4 near-exact cases.
 - Build the PD array return model (references/models.md).
+
+## POI audit (read-only, while the futures run was going)
+- The POI gate's "blocks" of ICT's 0.95 (11-28 ES) and 0.80 (01-09 NQ) matches are **not 2022-model errors**.
+  Those trades are labelled Silver Bullet, macro and PD array return, and those models don't require an HTF POI.
+  The 2022 model rejecting them is correct. POI is not the main fidelity gap.
+- **ICT's own 2022-model trades use very tight stops:** NQ 11-24 at 1.25 pt; ES 01-05 at 2.5 pt (wick CE);
+  ES 01-10 at 1.5 pt.
+  - Even on futures costs (NQ ≈ 0.47 pt, ES ≈ 0.34 pt per round trip) that is 0.2–0.4R, so our gate
+    (`max_cost_r` = 0.1 of **risk**) would still reject them.
+  - ICT accepts the cost because his targets are many R away.
+- Candidate fixes (to test on 2022–24 only, after the futures run):
+  1. **Cost gate relative to the reward:** cost ≤ 10% of the distance to TP1, instead of 10% of risk.
+  2. **Stop variant:** stop at the CE of the sweep wick or of the FVG (ICT's placement), instead of beyond the
+     swept extreme.
