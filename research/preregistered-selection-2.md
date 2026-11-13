@@ -29,7 +29,6 @@ The only clean confirmation left is forward data: days after 2026-11-12, live or
 - One shot: whatever the result, the rule is not changed and re-run on this test period.
 - If nothing passes the filter, that is the result ("no bucket qualifies").
 
-## Result
 ## Result (run 2026-11-13, commit 5f33441 rule on 0f2bfad runs): FAIL
 
 - 26 buckets had n ≥ 40 in 2022–24. **3 kept:**
