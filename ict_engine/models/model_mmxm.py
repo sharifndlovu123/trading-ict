@@ -39,7 +39,7 @@ import pandas as pd
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import DayContext, build_context
 from ict_engine.concepts.events import Event, fvgs, gap_lifecycle, structure, swings
-from ict_engine.data.instruments import COST
+from ict_engine.data.instruments import cost_at
 from ict_engine.models.base import Gate, Setup, TradePlan
 from ict_engine.models.model_2022 import _tf_minutes, _ts, _window_at, _window_end, bias_gate
 
@@ -343,7 +343,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         return setup
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1:.2f}, terminus {final:.2f}"))
     if p.max_cost_r is not None:
-        cost_r = COST.get(asset, 0.0) / risk
+        cost_r = cost_at(asset, entry) / risk
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided

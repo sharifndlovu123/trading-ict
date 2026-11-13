@@ -214,8 +214,8 @@ def test_tp1_cap_brings_the_earliest_close_nearer():
 
 
 def test_cost_gate_blocks_stops_too_small_for_costs(monkeypatch):
-    from ict_engine.data.instruments import COST
-    monkeypatch.setitem(COST, "US100", 1.0)                       # 1 point vs a ~1.75-point stop = 0.57R
+    from ict_engine.data.instruments import COST_BPS
+    monkeypatch.setitem(COST_BPS, "US100", 100.0)                 # 100 bp at price ~100 = 1 point vs a ~1.75-point stop = 0.57R
     ss = find_setups(bars(), DAY, "US100", Params(max_cost_r=0.1))
     planned = [s for s in ss if s.would_plan is not None]
     assert planned and all(s.plan is None and s.failed_gate == "risk" for s in planned)

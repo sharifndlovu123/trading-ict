@@ -38,7 +38,7 @@ from ict_engine.eval.bias import day_outcome
 from ict_engine.models import model_2022
 from ict_engine.models.base import Setup
 from ict_engine.news import calendar as news_cal
-from ict_engine.data.instruments import COST
+from ict_engine.data.instruments import cost_at
 from ict_engine.sim.run import manage, run_day
 from ict_engine.sim.simulate import simulate
 
@@ -126,7 +126,6 @@ def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
         extras: bool = True) -> pd.DataFrame:
     """``extras`` = shadow + counterfactual simulations (post-analysis); off for fast variant sweeps."""
     rows, d = [], start
-    cost = COST.get(asset, 0.0)
     while d <= end:
         if d.weekday() < 5:
             try:
@@ -138,6 +137,7 @@ def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
                 outcome = day_outcome(bars_1m, d, ctx.levels["pdh"], ctx.levels["pdl"])
                 close = pd.Timestamp(datetime.combine(d, time(16)), tz=NY)
                 for s in setups:
+                    cost = cost_at(asset, s.would_plan.entry) if s.would_plan else 0.0
                     shadow = simulate(manage(s.would_plan, params), bars_1m, close, cost=cost) if s.would_plan and extras else None
                     row = setup_row(s, ctx, outcome, params.bias_rule, shadow)
                     if extras:

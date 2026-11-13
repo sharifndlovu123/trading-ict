@@ -18,7 +18,7 @@ from datetime import date, datetime, time, timedelta
 import pandas as pd
 
 from ict_engine.concepts.context import build_context
-from ict_engine.data.instruments import COST
+from ict_engine.data.instruments import cost_at
 from ict_engine.models import model_2022
 from ict_engine.news import calendar as news_cal
 from ict_engine.models.registry import module_for
@@ -76,7 +76,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.plan = None
             continue
         s.plan = manage(s.plan, params)
-        s.result = simulate(s.plan, bars_1m, close, cost=COST.get(asset, 0.0))
+        s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry))
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope
         if s.result.filled_at is not None:
