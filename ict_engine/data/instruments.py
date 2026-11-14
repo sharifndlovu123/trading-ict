@@ -67,9 +67,10 @@ COST_BASES = ("cfd", "futures")
 
 
 def cost_basis() -> str:
-    """Which cost model trades pay: ``cfd`` (measured Dukascopy spreads; default) or ``futures``.
+    """Which cost model trades pay: ``futures`` (1 tick + commission; default since 2026-11-14, Sharif: "skip cfds, focus
+    on futures") or ``cfd`` (measured Dukascopy spreads).
     Set with the env var ICT_COST_BASIS (the backtest CLI's ``--cost`` sets it, so worker processes inherit it)."""
-    b = os.environ.get("ICT_COST_BASIS", "cfd")
+    b = os.environ.get("ICT_COST_BASIS", "futures")
     if b not in COST_BASES:
         raise ValueError(f"ICT_COST_BASIS must be one of {COST_BASES}, got {b!r}")
     return b

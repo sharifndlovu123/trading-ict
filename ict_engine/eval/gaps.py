@@ -146,7 +146,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="ict_engine.eval.gaps")
     ap.add_argument("--start", default="2022-01-03")
     ap.add_argument("--end", default="2024-06-28")
-    ap.add_argument("--cost", choices=("cfd", "futures"), default="cfd")
+    ap.add_argument("--cost", choices=("cfd", "futures"), default="futures")
     ap.add_argument("--near", type=float, default=0.8)
     a = ap.parse_args(argv)
     df = store.load()

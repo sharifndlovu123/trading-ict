@@ -5,6 +5,12 @@ import pytest
 from ict_engine.data.instruments import COST_BPS, cost_at
 
 
+@pytest.fixture(autouse=True)
+def _cfd_basis(monkeypatch):
+    """These tests are about the CFD cost model; the default basis is futures since 2026-11-14."""
+    monkeypatch.setenv("ICT_COST_BASIS", "cfd")
+
+
 def test_cost_is_basis_points_of_price():
     assert cost_at("XAUUSD", 2000) == pytest.approx(2000 * COST_BPS["XAUUSD"] / 1e4)
     assert cost_at("XAUUSD", 4000) == pytest.approx(2 * cost_at("XAUUSD", 2000))     # doubles with price
@@ -44,10 +50,10 @@ def test_futures_cost_basis_is_one_tick_plus_commission(monkeypatch):
     assert ins.cost_basis() == "futures"
 
 
-def test_cost_basis_defaults_to_cfd_and_rejects_unknown(monkeypatch):
+def test_cost_basis_defaults_to_futures_and_rejects_unknown(monkeypatch):
     from ict_engine.data import instruments as ins
     monkeypatch.delenv("ICT_COST_BASIS", raising=False)
-    assert ins.cost_basis() == "cfd"
+    assert ins.cost_basis() == "futures"
     monkeypatch.setenv("ICT_COST_BASIS", "spot")
     with pytest.raises(ValueError):
         ins.cost_basis()

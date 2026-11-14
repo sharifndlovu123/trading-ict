@@ -168,7 +168,7 @@ def main(argv=None):
     ap.add_argument("--cap", choices=("window", "day"), default=None, help="default: the model's own (SB: day)")
     ap.add_argument("--model", default="2022_model", help="registered model: 2022_model | mmxm | silver_bullet | cameron")
     ap.add_argument("--cost", choices=("cfd", "futures"), default=None,
-                    help="cost basis (default: env ICT_COST_BASIS, else cfd = measured Dukascopy spreads)")
+                    help="cost basis (default: env ICT_COST_BASIS, else futures = 1 tick + commission)")
     a = ap.parse_args(argv)
     import os
     if a.cost:

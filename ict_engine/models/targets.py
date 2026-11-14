@@ -33,7 +33,7 @@ CTX_HIGH, CTX_LOW = ("pdh", "pwh"), ("pdl", "pwl")
 
 def session_close(day) -> pd.Timestamp:
     """Flat before the close: 16:55 NY on futures (CME halts 17:00), 16:10 on CFDs (index CFDs halt 16:15)."""
-    futures = os.environ.get("ICT_COST_BASIS", "cfd") == "futures"
+    futures = os.environ.get("ICT_COST_BASIS", "futures") == "futures"
     return pd.Timestamp(datetime.combine(day, time(16, 55) if futures else time(16, 10)), tz=NY)
 
 
