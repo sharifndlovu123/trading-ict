@@ -48,3 +48,20 @@ on any period**, so these tests are fresh. The engine's setups are fixed by code
 - A passing result is a **candidate**, not a default. It goes into the forward test as a new version, with its
   own clock.
 - Anything explored beyond H1–H3 is labelled exploratory and can't be used to justify a rule.
+
+## Amendment 1 (2026-11-14, before any download): data actually bought
+The full TBBO quote for 2024–2025 was $394.60, over the $125 credit. Sharif chose **2024 only**. Changes, all
+made before any order-flow data existed:
+- **Flow data:** schema `trades` (every trade with its aggressor side; same `side` field as TBBO, without the
+  quote), weekdays **01:30–16:30 NY** only. Every decision and exit in the 2022–24 trade store (US100, all
+  models, n = 7145) falls inside that window. Cost ≈ $112.
+- **Bars for the engine:** CME `ohlcv-1m` for NQ.v.0, all hours, 2024-01 → 2025-12 (≈ $2.60). These are bars
+  from the exchange's own trades, so this replaces "1m bars built from the NQ trades" (identical in principle,
+  and complete outside the flow window). The engine needs history before the first setup; the first 20 trading
+  days of 2024 are warm-up for the V denominator.
+- **Side check:** one day of TBBO (2024-03-05, 01:30–16:30 NY) instead of a month.
+- **Period and split:** tests run on **2024 only**. "2024 and 2025 separately" becomes **2024-H1 and 2024-H2
+  separately** (both reported; the pass rule is on the full year). Terciles are cut on the full 2024 sample
+  (no rule is fitted, so there is no hold-out to protect). **2025 order flow is reserved, unbought**: if any of
+  H1–H3 passes, buying 2025 and re-running the identical test is its confirmation.
+- Hypotheses, measures, thresholds (z ≥ 2.4 one-sided, day-clustered) and models are **unchanged**.

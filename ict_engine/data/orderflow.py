@@ -1,11 +1,14 @@
 """Order-flow data (CME via Databento) — pipeline stage 0 for the order-flow tests.
 
-    uv run python -m ict_engine.data.orderflow quote 2024-01-01 2026-01-01      # price check (free), no download
-    uv run python -m ict_engine.data.orderflow fetch 2024-01-01 2026-01-01      # monthly TBBO files → data/orderflow/
-    uv run python -m ict_engine.data.orderflow check 2024-01                    # aggressor-side sanity check
+    uv run python -m ict_engine.data.orderflow quote 2024-01-01 2025-01-01 [--schema trades]   # price (free)
+    uv run python -m ict_engine.data.orderflow fetch 2024-01-01 2025-01-01      # trades, 01:30–16:30 NY, monthly files
+    uv run python -m ict_engine.data.orderflow bars 2024-01-01 2026-01-01       # CME 1m OHLCV (cheap, all hours)
+    uv run python -m ict_engine.data.orderflow sidecheck 2024-03-05             # one day of TBBO → aggressor-side check
 
-Data: GLBX.MDP3, schema ``tbbo`` = every trade plus the best bid/offer just before it. Symbol ``NQ.v.0`` =
-continuous front month by volume. The API key is read from ``.env`` (DATABENTO_API_KEY, git-ignored) or the
+Data: GLBX.MDP3. Schema ``trades`` = every trade with its aggressor side (``tbbo`` adds the best bid/offer before
+it and costs ~1.7×; bought for one day only, for the side check). Symbol ``NQ.v.0`` = continuous front month by
+volume. Trades are bought only inside ``SESSION`` (NY time, weekdays): every model decision and exit in the
+2022–24 trade store falls inside it (checked 2026-11-14), and it keeps one year under the $125 credit. The API key is read from ``.env`` (DATABENTO_API_KEY, git-ignored) or the
 environment, and is never printed. Pre-registration: research/preregistered-orderflow-NQ-2024-2025.md.
 
 Side convention (Databento): a trade's ``side`` is the initiating (aggressor) side: B = buy, A = sell, N = none.
@@ -25,7 +28,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "orderflow"
 NY = "America/New_York"
-DATASET, SCHEMA, SYMBOL = "GLBX.MDP3", "tbbo", "NQ.v.0"
+DATASET, SCHEMA, SYMBOL = "GLBX.MDP3", "trades", "NQ.v.0"
+BARS = "ohlcv-1m"
+SESSION = ("01:30", "16:30")
 KEEP = ["price", "size", "side", "bid_px_00", "ask_px_00", "bid_sz_00", "ask_sz_00"]
 SIGN = {"B": 1, "A": -1}
 
@@ -54,14 +59,27 @@ def months(start: date, end: date) -> list[tuple[str, str]]:
     return [(a.date().isoformat(), b.date().isoformat()) for a, b in zip(pts, pts[1:])]
 
 
-def quote(start: date, end: date, symbol: str = SYMBOL) -> float:
+def quote(start: date, end: date, symbol: str = SYMBOL, schema: str = SCHEMA) -> float:
+    """Price of the full [start, end) range. Windowed downloads cost less, so this is an upper bound."""
     c = client()
-    return float(c.metadata.get_cost(dataset=DATASET, symbols=[symbol], stype_in="continuous", schema=SCHEMA,
+    return float(c.metadata.get_cost(dataset=DATASET, symbols=[symbol], stype_in="continuous", schema=schema,
                                      start=str(start), end=str(end)))
 
 
-def fetch(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT, max_usd: float = 125.0) -> list[Path]:
-    """Download month by month after a total quote. Stops before spending more than ``max_usd``."""
+def path_for(symbol: str, schema: str, month: str, root: Path = OUT) -> Path:
+    return root / f"{symbol.split('.')[0]}-{schema}-{month}.parquet"
+
+
+def _get(c, symbol, schema, a, b) -> pd.DataFrame:
+    data = c.timeseries.get_range(dataset=DATASET, symbols=[symbol], stype_in="continuous", schema=schema,
+                                  start=a, end=b)
+    return data.to_df()
+
+
+def fetch(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT, max_usd: float = 125.0,
+          session: tuple[str, str] | None = SESSION) -> list[Path]:
+    """Trades for [start, end), month by month, only inside ``session`` (NY, weekdays). Refuses before spending
+    more than ``max_usd`` (checked on the full-range quote, an upper bound). Months already on disk are skipped."""
     total = quote(start, end, symbol)
     if total > max_usd:
         raise SystemExit(f"quote ${total:.2f} exceeds the ${max_usd:.2f} cap; nothing downloaded")
@@ -69,23 +87,65 @@ def fetch(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT, max_usd
     out.mkdir(parents=True, exist_ok=True)
     paths = []
     for a, b in months(start, end):
-        p = out / f"{symbol.split('.')[0]}-{SCHEMA}-{a[:7]}.parquet"
-        if p.exists():
-            paths.append(p)
-            continue
-        data = c.timeseries.get_range(dataset=DATASET, symbols=[symbol], stype_in="continuous", schema=SCHEMA,
-                                      start=a, end=b)
-        df = data.to_df()
-        tidy(df).to_parquet(p)
+        p = path_for(symbol, SCHEMA, a[:7], out)
+        if not p.exists():
+            spans = day_windows(date.fromisoformat(a), date.fromisoformat(b), session) if session else [(a, b)]
+            parts = [_get(c, symbol, SCHEMA, x, y) for x, y in spans]
+            df = pd.concat([x for x in parts if len(x)]) if any(len(x) for x in parts) else pd.DataFrame()
+            tidy(df).to_parquet(p)
+            print(p.name, len(df), flush=True)
         paths.append(p)
-        print(p.name, len(df))
     return paths
+
+
+def fetch_bars(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT) -> list[Path]:
+    """CME 1m OHLCV bars (built by the exchange feed from trades), all hours, monthly files."""
+    c = client()
+    out.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for a, b in months(start, end):
+        p = path_for(symbol, BARS, a[:7], out)
+        if not p.exists():
+            tidy_bars(_get(c, symbol, BARS, a, b)).to_parquet(p)
+            print(p.name, flush=True)
+        paths.append(p)
+    return paths
+
+
+def fetch_tbbo_day(day: date, symbol: str = SYMBOL, out: Path = OUT) -> Path:
+    """One NY session of TBBO (trades + quote) for the aggressor-side check."""
+    out.mkdir(parents=True, exist_ok=True)
+    p = out / f"{symbol.split('.')[0]}-tbbo-day-{day}.parquet"
+    if not p.exists():
+        (a, b), = day_windows(day, day + pd.Timedelta(days=1), SESSION)
+        tidy(_get(client(), symbol, "tbbo", a, b)).to_parquet(p)
+    return p
 
 
 # --- pure pieces (unit-tested) --------------------------------------------------------------------------
 
+def day_windows(start: date, end: date, session: tuple[str, str] = SESSION) -> list[tuple[str, str]]:
+    """One (UTC start, UTC end) ISO pair per weekday in [start, end): ``session`` in NY local time (DST-aware)."""
+    out = []
+    for d in pd.bdate_range(start, pd.Timestamp(end) - pd.Timedelta(days=1)):
+        a, b = (pd.Timestamp(f"{d.date()} {t}", tz=NY).tz_convert("UTC").isoformat() for t in session)
+        out.append((a, b))
+    return out
+
+
+def tidy_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """Databento OHLCV frame → open/high/low/close/volume indexed by the bar's NY start minute."""
+    idx = pd.to_datetime(df["ts_event"] if "ts_event" in df else df.index, utc=True)
+    out = df[["open", "high", "low", "close", "volume"]].astype(float).copy()
+    out.index = pd.DatetimeIndex(idx).tz_convert(NY)
+    out.index.name = "ts"
+    return out.sort_index()
+
+
 def tidy(df: pd.DataFrame) -> pd.DataFrame:
     """Databento TBBO frame → trades indexed by NY event time, only the columns we use."""
+    if df.empty:
+        return pd.DataFrame(columns=KEEP, index=pd.DatetimeIndex([], tz=NY, name="ts"))
     idx = pd.to_datetime(df["ts_event"] if "ts_event" in df else df.index, utc=True)
     out = df[[c for c in KEEP if c in df]].copy()
     out.index = pd.DatetimeIndex(idx).tz_convert(NY)
@@ -131,9 +191,9 @@ def side_check(trades: pd.DataFrame) -> dict:
     return res
 
 
-def load(start: date, end: date, symbol: str = SYMBOL, root: Path = OUT) -> pd.DataFrame:
-    """Cached trades for [start, end) (NY dates)."""
-    files = [root / f"{symbol.split('.')[0]}-{SCHEMA}-{a[:7]}.parquet" for a, _ in months(start, end)]
+def load(start: date, end: date, symbol: str = SYMBOL, root: Path = OUT, schema: str = SCHEMA) -> pd.DataFrame:
+    """Cached trades (or ``schema=BARS`` bars) for [start, end) (NY dates)."""
+    files = [path_for(symbol, schema, a[:7], root) for a, _ in months(start, end)]
     df = pd.concat([pd.read_parquet(f) for f in files if f.exists()])
     lo, hi = pd.Timestamp(start, tz=NY), pd.Timestamp(end, tz=NY)
     return df[(df.index >= lo) & (df.index < hi)]
@@ -142,21 +202,24 @@ def load(start: date, end: date, symbol: str = SYMBOL, root: Path = OUT) -> pd.D
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="ict_engine.data.orderflow")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("quote", "fetch"):
+    for name in ("quote", "fetch", "bars"):
         x = sub.add_parser(name)
         x.add_argument("start", type=date.fromisoformat)
         x.add_argument("end", type=date.fromisoformat)
         x.add_argument("--symbol", default=SYMBOL)
+        x.add_argument("--schema", default=SCHEMA)
         x.add_argument("--max-usd", type=float, default=125.0)
-    c = sub.add_parser("check")
-    c.add_argument("month", help="YYYY-MM")
+    c = sub.add_parser("sidecheck")
+    c.add_argument("day", type=date.fromisoformat)
     a = ap.parse_args(argv)
     if a.cmd == "quote":
-        print(f"{a.symbol} {SCHEMA} {a.start} → {a.end}: ${quote(a.start, a.end, a.symbol):.2f}")
+        print(f"{a.symbol} {a.schema} {a.start} → {a.end}: ${quote(a.start, a.end, a.symbol, a.schema):.2f}")
     elif a.cmd == "fetch":
         fetch(a.start, a.end, a.symbol, max_usd=a.max_usd)
+    elif a.cmd == "bars":
+        fetch_bars(a.start, a.end, a.symbol)
     else:
-        print(side_check(pd.read_parquet(OUT / f"{SYMBOL.split('.')[0]}-{SCHEMA}-{a.month}.parquet")))
+        print(side_check(pd.read_parquet(fetch_tbbo_day(a.day))))
 
 
 if __name__ == "__main__":

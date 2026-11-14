@@ -61,3 +61,19 @@ def test_months_split_and_key_never_from_nowhere(tmp_path, monkeypatch):
         of.api_key(tmp_path / ".env")
     (tmp_path / ".env").write_text("OTHER=1\nDATABENTO_API_KEY='abc'\n")
     assert of.api_key(tmp_path / ".env") == "abc"
+
+
+def test_day_windows_are_weekdays_in_ny_time_across_dst():
+    w = of.day_windows(date(2024, 3, 8), date(2024, 3, 12), ("01:30", "16:30"))   # Fri, (weekend), Mon after DST
+    assert len(w) == 2
+    assert w[0] == ("2024-03-08T06:30:00+00:00", "2024-03-08T21:30:00+00:00")          # EST = UTC−5
+    assert w[1] == ("2024-03-11T05:30:00+00:00", "2024-03-11T20:30:00+00:00")          # EDT = UTC−4
+
+
+def test_tidy_bars_and_empty_tidy():
+    raw = pd.DataFrame({"ts_event": pd.to_datetime(["2024-01-09 15:00"], utc=True), "open": [1], "high": [2],
+                        "low": [0.5], "close": [1.5], "volume": [10], "rtype": 33})
+    b = of.tidy_bars(raw)
+    assert b.index[0] == pd.Timestamp("2024-01-09 10:00", tz=NY) and list(b.columns) == ["open", "high", "low", "close", "volume"]
+    e = of.tidy(pd.DataFrame())
+    assert e.empty and list(e.columns) == of.KEEP
