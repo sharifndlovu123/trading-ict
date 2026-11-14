@@ -158,9 +158,15 @@ def main(argv=None):
     s = summary(t)
     text = render(s, a.cost, a.start, a.end)
     out = ROOT / "reports" / f"gaps-{a.cost}"
-    t.drop(columns=[c for c in t.columns if t[c].dtype == object and c not in ("family", "asset", "gap", "side",
-                                                                               "window", "status", "exit")])\
-        .to_parquet(out.with_suffix(".parquet"))
+    save = t.copy()
+    for c in save.columns:
+        if c.endswith("_at"):
+            save[c] = pd.to_datetime(save[c], utc=True).dt.tz_convert("America/New_York")
+        elif save[c].dtype == object and pd.to_numeric(save[c], errors="coerce").notna().sum() == save[c].notna().sum():
+            save[c] = pd.to_numeric(save[c], errors="coerce")
+        elif save[c].dtype == object:
+            save[c] = save[c].map(lambda v: None if v is None or (isinstance(v, float) and np.isnan(v)) else str(v))
+    save.to_parquet(out.with_suffix(".parquet"))
     out.with_suffix(".md").write_text(text)
     print(text)
 
