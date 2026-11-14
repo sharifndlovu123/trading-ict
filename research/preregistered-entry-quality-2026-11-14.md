@@ -20,3 +20,8 @@ until displacement proves the turn; a range stores orders, it is not a place to 
 cost bases. A cell (model × variant × basis) counts only if its out-of-sample exp R beats that model's baseline with
 **z ≥ 2.6** (15 cells per basis) and it has **≥ 30 out-of-sample trades**. Report all. A pass = forward-v2 candidate.
 2024-07+ unused. Sharif's batch-2 trades inspired the gates and are not used to score them.
+
+## Amendment (2026-11-14, futures only)
+Sharif: "skip cfds, focus on futures". Written after the CFD results of this pre-registration had printed (every CFD cell
+failed) and **before any futures result printed**. The decision is now made on the **futures cost basis only**; the CFD
+cells stay in the results as history and cannot pass or fail anything. Bars unchanged (z ≥ 2.6, ≥ 30 OOS trades).

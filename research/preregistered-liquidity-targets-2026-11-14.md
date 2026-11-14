@@ -48,3 +48,8 @@ Added variant (same two models; TP1 and its partial unchanged):
 Today every trade is cut at 16:00. For this variant only, the close moves as above. Measure: expectancy **with the
 runner** (`runner_r`), as the rest of this pre-registration. 4 variants × 2 models = 8 cells now: pass bar **z ≥ 2.6**,
 and **≥ 30 out-of-sample trades** per cell (a z from fewer trades is not counted; see the flip result).
+
+## Amendment (2026-11-14, futures only)
+Sharif: "skip cfds, focus on futures". Written after the CFD results of this pre-registration had printed (every CFD cell
+failed) and **before any futures result printed**. The decision is now made on the **futures cost basis only**; the CFD
+cells stay in the results as history and cannot pass or fail anything. Bars unchanged (z ≥ 2.6, ≥ 30 OOS trades).
