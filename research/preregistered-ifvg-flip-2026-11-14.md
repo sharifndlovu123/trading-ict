@@ -28,7 +28,7 @@ Also reported, not tested: how often a stopped trade produces a flip, and the fl
 not used to score it.
 
 ## Amendment 1 (2026-11-14, before the full run): the flip's stop
-A feasibility check on US100 2023-03/04 (in-sample; filter counts only, no performance read) showed that almost
+A feasibility check on US100 2023-03/04 (in-sample; filter counts, plus the exits of the 5 flips a smoke run produced: 3 stops, 1 TP1, 1 missed on US100 for SB/PD return, too few to steer anything) showed that almost
 every stopped trade's entry FVG does close through on its own TF, but with the stop at the IFVG's far edge the
 risk is only the 1m/5m gap's height: round-trip cost is a median 26–55% of 1R, so the models' cost gate
 (≤ 0.1R) blocks ~85% of flips. (As written, the "failed trade's extreme" clause could never move the stop past the
