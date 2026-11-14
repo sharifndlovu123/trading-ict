@@ -5,7 +5,7 @@ Why: the 2024-07→2026-11-12 hold-out is burned (seen several times). The only 
 data that doesn't exist yet (López de Prado ch.11–12; `references/orderflow.md` §11).
 
 ## Frozen
-- **Code:** the engine at the commit tagged `forward-v1` (set when this protocol is committed). Bug fixes are
+- **Code:** the engine at the commit tagged `forward-v1` = 17b1e5c (the protocol commit c730043 plus `ict_engine/data`, which `.gitignore` had silently excluded; those files are unchanged since 2026-11-13). Bug fixes are
   allowed only if they don't change any decision on 2022–24 (check: re-run 2022–24, same trades). Anything else
   is a new version (`forward-v2`) whose forward clock starts again from the day it is frozen.
 - **Models and settings:** registry defaults at `forward-v1`, cost basis **cfd** (the data we have) and
