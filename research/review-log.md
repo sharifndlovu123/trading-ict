@@ -15,6 +15,6 @@ a default after it beats the baseline out-of-sample on 2022–24 and then passes
 | 7 | 2026-11-14, 2022 model Apr 16 2024 | Daily FVG failed on a DAILY close → IFVG; leaves EQLs; retest validates; OB inside. Bias stayed bullish: the IFVG is a counter-bias **sellers' turn** (a leg to the EQLs), which the bias gate blocks today | engine flips on 1m closes (wrong for HTF) | `preregistered-htf-ifvg-2026-11-14.md` | to build after the OB sweep |
 | 8 | 2026-11-14, week of Apr 15 2024 | Power of 3 / weekly play: HTF picture sets the week's expectation; sell above the open (manipulation), then distribution | weekly open: not built | `preregistered-po3-opening-price-2026-11-14.md` | open |
 
-## Also from ICT's live executions (re-read 2026-11-14)
+## Also from ICT's live executions (re-read 2026-11-14; most charts are Sharif's TradingView redraws of ICT's trades, so the markings are his)
 Ride the wave in 8 of 11; a sweep of a session/intraday low first in 10 of 11; entries 08:30–11:15 NY (6 on news or
 macros); TP1 = nearest internal swing (75–80% off), runner to the real pool; HTF entry arrays mostly 1H/4H FVGs.
