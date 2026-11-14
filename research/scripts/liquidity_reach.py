@@ -36,8 +36,9 @@ ASSETS = ("US100", "US500", "US30", "XAUUSD", "XAGUSD")
 BUCKETS = [0, 1, 2, 3, 5, 10, np.inf]
 
 
-def levels_ahead(hist: pd.DataFrame, ctx, decided: pd.Timestamp, long: bool, entry: float) -> list[tuple[str, float]]:
-    """(type, price) of every untaken level ahead of entry on the trade's side, from bars before ``decided`` only."""
+def levels_ahead(hist: pd.DataFrame, ctx, decided: pd.Timestamp, long: bool, entry: float) -> list[tuple[str, float, pd.Timestamp]]:
+    """(type, price, formed) of every untaken level ahead of entry on the trade's side, from bars before ``decided``
+    only; ``formed`` = when the level existed as liquidity (freshness split, ruling §18 engineered liquidity)."""
     ahead = (lambda p: p > entry) if long else (lambda p: p < entry)
     out = []
 
@@ -48,12 +49,14 @@ def levels_ahead(hist: pd.DataFrame, ctx, decided: pd.Timestamp, long: bool, ent
     day0 = pd.Timestamp(datetime.combine(decided.date(), time(0)), tz=NY)
     for n in (("pdh", "pwh", "asia_high") if long else ("pdl", "pwl", "asia_low")):
         if n in ctx.levels and ahead(ctx.levels[n]) and untaken(ctx.levels[n], day0 - timedelta(hours=6)):
-            out.append((n.replace("asia_high", "asia").replace("asia_low", "asia"), ctx.levels[n]))
+            formed = {"pdh": day0 - timedelta(hours=7), "pdl": day0 - timedelta(hours=7), "asia_high": day0,
+                      "asia_low": day0}.get(n, day0 - timedelta(days=3))
+            out.append((n.replace("asia_high", "asia").replace("asia_low", "asia"), ctx.levels[n], formed))
     lon = hist[(hist.index >= day0 + timedelta(hours=2)) & (hist.index < day0 + timedelta(hours=5))]
     if decided >= day0 + timedelta(hours=5) and len(lon):
         p = float(lon.high.max() if long else lon.low.min())
         if ahead(p) and untaken(p, day0 + timedelta(hours=5)):
-            out.append(("london", p))
+            out.append(("london", p, day0 + timedelta(hours=5)))
     side = "high" if long else "low"
     tol = entry * TOL_BP / 1e4
     for tf in ("15m", "1h", "4h", "1d"):
@@ -62,11 +65,11 @@ def levels_ahead(hist: pd.DataFrame, ctx, decided: pd.Timestamp, long: bool, ent
         sw = [e for e in swings(bars, tf) if e.ts <= decided]
         for lv in swing_levels(sw):
             if lv.side == side and ahead(lv.price) and untaken(lv.price, lv.valid_from):
-                out.append((f"swing_{tf}", float(lv.price)))
+                out.append((f"swing_{tf}", float(lv.price), lv.valid_from))
         if tf in ("1h", "4h"):
             for lv in equal_levels(bars, sw, tol):
                 if lv.side == side and lv.valid_from <= decided and ahead(lv.price) and untaken(lv.price, lv.valid_from):
-                    out.append((f"eq_{tf}", float(lv.price)))
+                    out.append((f"eq_{tf}", float(lv.price), lv.valid_from))
         if tf in ("1h", "4h", "1d"):
             for g in fvgs(bars, tf):
                 if g.ts > decided or g.direction == ("bull" if long else "bear"):
@@ -77,7 +80,7 @@ def levels_ahead(hist: pd.DataFrame, ctx, decided: pd.Timestamp, long: bool, ent
                 if filled or not ahead(near):
                     continue
                 for part, p in (("near", near), ("ce", (near + far) / 2), ("far", far)):
-                    out.append((f"fvg_{tf}_{part}", float(p)))
+                    out.append((f"fvg_{tf}_{part}", float(p), g.ts))
     return out
 
 
@@ -107,14 +110,14 @@ def job(args):
         path = bars[(bars.index >= fill) & (bars.index <= nxt)]
         t_stop = first_hit(path, stop, not long)
         seen = set()
-        for kind, price in levels_ahead(hist, ctx, dec, long, entry):
+        for kind, price, formed in levels_ahead(hist, ctx, dec, long, entry):
             key = (kind, round(price, 2))
             if key in seen:
                 continue
             seen.add(key)
             t = first_hit(path, price, long)
             rows.append(dict(model=model, asset=asset, day=str(day), decided=dec, side=r.side, kind=kind, price=price,
-                             dist_r=abs(price - entry) / risk, trade_r=r.r, runner_r=r.runner_r,
+                             dist_r=abs(price - entry) / risk, age_h=(dec - pd.Timestamp(formed)).total_seconds() / 3600, trade_r=r.r, runner_r=r.runner_r,
                              before_stop=t is not None and (t_stop is None or t < t_stop),
                              by_close=t is not None and t <= close, by_next=t is not None))
     print(model, asset, len(d), "trades", len(rows), "levels", flush=True)
