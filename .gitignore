@@ -12,7 +12,7 @@ build/
 *.egg-info/
 
 # --- Market data (re-downloadable: `python -m ict_engine.data.dukascopy fetch ...`) ---
-data/
+/data/
 .dukascopy-cache/
 download/
 *.parquet
