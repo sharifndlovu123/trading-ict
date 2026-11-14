@@ -11,7 +11,7 @@ Name files `NN-firstauthor-short-title.pdf` so they sort in reading order. Extra
 | 02 | 02-hasbrouck-stpp.pdf (NYU notes) | ✅ (manuscript STPPms14c, 202 pp) |
 | 03 | 03-cont-price-impact-order-book-events.pdf (arXiv 1011.6402) | ✅ |
 | 04 | 04-xu-multi-level-ofi.pdf (arXiv 1907.06230) | ✅ |
-| 05 | 05-stoikov-micro-price.pdf (SSRN 2970694) | ☐ SSRN blocks scripts: download in a browser (free account) |
+| 05 | 05-stoikov-micro-price.pdf (SSRN 2970694) | ✅ (14 pp, 2018 version; added by Sharif 2026-11-14) |
 | 06 | 06-avellaneda-hft-in-lob.pdf | ✅ |
 | 07 | 07-almgren-optimal-execution.pdf | ✅ (mirror; the Quantitative Brokers link returns a web page) |
 | 08 | 08-bouchaud-markets-digest-supply-demand.pdf (arXiv 0809.0822) | ✅ |
@@ -19,7 +19,7 @@ Name files `NN-firstauthor-short-title.pdf` so they sort in reading order. Extra
 | 10 | 10-easley-flow-toxicity-vpin.pdf | ✅ |
 | 11 | 11-andersen-vpin-flash-crash.pdf | ✅ |
 | 12 | 12-easley-microstructure-machine-age.pdf | ✅ |
-| 13 | 13-kolm-deep-ofi.pdf (SSRN 3900141) | ☐ SSRN blocks scripts: download in a browser (free account) |
+| 13 | 13-kolm-deep-ofi.pdf (SSRN 3900141) | ✅ (43 pp; Kolm, Turiel, Westray; added by Sharif 2026-11-14) |
 | 14 | 14-zhang-deeplob.pdf (arXiv 1808.03668) | ✅ |
 | 15 | 15-prata-lobcast.pdf (arXiv 2308.01915) | ✅ |
 | 16 | 16-how-smart-institutional-trading.pdf (ABFER 2017) | ✅ |
