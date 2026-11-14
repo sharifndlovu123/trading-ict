@@ -62,6 +62,10 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "tf: entry 5m": replace(BASE, entry_tf="5m", sweep_lookback_min=180, tp1_swing_tfs=("15m",)),
     "tf: entry 15m": replace(BASE, entry_tf="15m", sweep_lookback_min=360, tp1_swing_tfs=("1h",)),
     "runner: trailed on 5m": replace(BASE, runner_stop="trail_5m"),
+    # nested FVG / location / range target (research/preregistered-nested-fvg-2026-11-14.md; score with --metric runner_r)
+    "loc: entry FVG inside a 4h FVG": replace(BASE, entry_gate="nested_4h"),
+    "loc: not inside a daily FVG": replace(BASE, entry_gate="outside_daily_fvg"),
+    "targets: 50% of the 4h range, runner to the HTF draw": replace(BASE, target_mode="eq_hold"),
 }
 
 
@@ -96,6 +100,10 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "tf: frame 1h > entry 15m": replace(MB, frame_tf="1h", entry_tf="15m", curve_max_h=48.0, low_lookback_min=480),
     "tf: frame 4h > entry 1h": replace(MB, frame_tf="4h", entry_tf="1h", curve_max_h=192.0, low_lookback_min=1440),
     "runner: trailed on 5m": replace(MB, runner_stop="trail_5m"),
+    # nested FVG / location / range target (research/preregistered-nested-fvg-2026-11-14.md; score with --metric runner_r)
+    "loc: entry FVG inside a 4h FVG": replace(MB, entry_gate="nested_4h"),
+    "loc: not inside a daily FVG": replace(MB, entry_gate="outside_daily_fvg"),
+    "targets: 50% of the 4h range, runner to the HTF draw": replace(MB, target_mode="eq_hold"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

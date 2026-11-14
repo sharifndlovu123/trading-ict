@@ -83,6 +83,7 @@ class Params:
     # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
     news_blackout: tuple[int, int] | None = None
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
+    target_mode: str = "default"         # targets.MODES (nested-FVG pre-registration: eq_hold)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -94,7 +95,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)
@@ -245,10 +246,11 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=10)) & (bars_1m.index < d1)]
     htf_gaps = [g for tf in p.poi_tfs for g in fvgs(resample(hist, tf), tf)]
     span_1m = span.assign(close_ts=lambda x: x.index)
-    return [_evaluate(m, ctx, day, asset, p, day_1m, span_1m, frame, frame_sw, gaps, htf_gaps) for m in shifts]
+    return [_evaluate(m, ctx, day, asset, p, day_1m, span_1m, frame, frame_sw, gaps, htf_gaps, hist) for m in shifts]
 
 
-def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, frame_sw, gaps, htf_gaps) -> Setup:
+def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, frame_sw, gaps, htf_gaps,
+              hist=None) -> Setup:
     long = mss.direction == "bull"
     side = "long" if long else "short"
     setup = Setup(NAMES[0] if long else NAMES[1], p.variant, asset, "day", day, side, mss.ts, {"shift": mss},
@@ -342,15 +344,22 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     if tp1 is None or (final - entry) * (1 if long else -1) <= 0:
         setup.gates.append(Gate("target", False, "no untaken curve level beyond the minimum TP1 distance"))
         return setup
+    final_name = "oc high" if long else "oc low"
+    t_exit = None
+    if p.target_mode != "default":
+        from ict_engine.models import targets
+        tp1, tp1_name, final, final_name, t_exit = targets.apply(
+            p.target_mode, entry=entry, stop=stop, long=long, tp1=tp1, tp1_name=tp1_name, final=final,
+            final_name=final_name, bars_1m=hist if hist is not None else span_1m, decided=decided, ctx=ctx, day=day,
+            min_tp1=p.min_tp1_r * risk)
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1:.2f}, terminus {final:.2f}"))
     if p.max_cost_r is not None:
         cost_r = cost_at(asset, entry, decided) / risk
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
-    setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name,
-                                 "oc high" if long else "oc low",
-                                 invalid_level=far_edge, invalid_tf=p.invalidate_tf)
+    setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
+                                 invalid_level=far_edge, invalid_tf=p.invalidate_tf, time_exit=t_exit)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     return setup

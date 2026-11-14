@@ -247,3 +247,36 @@ def test_higher_timeframes_and_trailed_runner_on_real_bars():
             assert again.result.runner_r == pytest.approx(s.result.runner_r)
             n += 1
     assert n > 0
+
+
+def test_nested_fvg_location_gates_and_range_target_on_real_bars():
+    """Nested-FVG pre-registration on real US100 bars (March 2023), both models: the location gates give the same
+    verdict with the bars after the decision removed; eq_hold plans carry the session close and a TP1 ahead of entry."""
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.eval.variants import MMXM_VARIANTS, VARIANTS
+    from ict_engine.models import entry_quality as eq, targets as tg
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 1, 20), date(2023, 3, 17))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    days = [d for d in pd.date_range("2023-03-06", "2023-03-17").date if d.weekday() < 5]
+    for table in (VARIANTS, MMXM_VARIANTS):
+        verdicts = {True: 0, False: 0}
+        for gate in ("loc: entry FVG inside a 4h FVG", "loc: not inside a daily FVG"):
+            for d in days:
+                for s in run_day(bars, d, "US100", table[gate]):
+                    g = next((g for g in s.gates if g.name == "entry_quality"), None)
+                    if g is None:
+                        continue
+                    cut = bars[bars.index <= s.decided_at]
+                    assert eq.check(s, cut, None, table[gate].entry_gate) == (g.passed, g.detail)
+                    verdicts[g.passed] += 1
+        assert sum(verdicts.values()) > 0
+        plans = [s for d in days for s in run_day(bars, d, "US100", table["targets: 50% of the 4h range, runner to the HTF draw"])
+                 if s.plan is not None]
+        assert plans
+        for s in plans:
+            p = s.plan
+            assert p.time_exit == tg.session_close(s.day)
+            assert (p.tp1 > p.entry) if s.side == "long" else (p.tp1 < p.entry)

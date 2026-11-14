@@ -9,6 +9,8 @@
     both      fvg_tp1 + pool
     hold      runner → the nearest higher-timeframe draw ≥ 3R (PDH/PDL, PWH/PWL, a 4h/1d pool, the near edge of an
               unfilled 4h/1d FVG ahead), held to the session close (16:55 NY futures, 16:10 CFD)
+    eq_hold   TP1 → the 50% of the 4h dealing range (newest confirmed 4h swing high and low) when it lies ahead by at
+              least the minimum TP1, else unchanged; runner as ``hold`` (research/preregistered-nested-fvg-2026-11-14.md)
 
 Every candidate is built from bars at or before the decision (no look-ahead); a level counts only while untaken.
 """
@@ -23,7 +25,7 @@ import pandas as pd
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.events import Level, equal_levels, fvgs, liquidity_pools, swing_levels, swings
 
-MODES = ("default", "pool", "fvg_tp1", "both", "hold")
+MODES = ("default", "pool", "fvg_tp1", "both", "hold", "eq_hold")
 NY = "America/New_York"
 LOOKBACK_DAYS = 10
 TOL_BP = 2.0
@@ -85,6 +87,19 @@ def fvg_draws(hist: pd.DataFrame, decided: pd.Timestamp, tfs: tuple[str, ...], l
     return out
 
 
+def range_eq(hist: pd.DataFrame, decided: pd.Timestamp) -> tuple[float, float, float] | None:
+    """(50%, low, high) of the 4h dealing range: the newest confirmed 4h swing high and swing low before ``decided``."""
+    bars = resample(hist, "4h")
+    bars = bars[bars.close_ts <= decided]
+    sw = [e for e in swings(bars, "4h") if e.ts <= decided]
+    hs = [e for e in sw if e.kind == "swing_high"]
+    ls = [e for e in sw if e.kind == "swing_low"]
+    if not hs or not ls:
+        return None
+    hi, lo = max(hs, key=lambda e: e.ts).top, max(ls, key=lambda e: e.ts).bottom
+    return ((hi + lo) / 2, lo, hi) if hi > lo else None
+
+
 def apply(mode: str, *, entry: float, stop: float, long: bool, tp1: float, tp1_name: str, final: float,
           final_name: str, bars_1m: pd.DataFrame, decided: pd.Timestamp, ctx, day, min_tp1: float,
           edge: float | None = None):
@@ -113,7 +128,14 @@ def apply(mode: str, *, entry: float, stop: float, long: bool, tp1: float, tp1_n
         if ps:
             px, n, _ = max(ps, key=lambda p: (p[2], -abs(p[0] - entry)))
             final, final_name = px, n
-    if mode == "hold":
+    if mode == "eq_hold":
+        r = range_eq(hist, decided)
+        ref = entry if edge is None else (max(entry, edge) if long else min(entry, edge))
+        if r is not None and beyond(r[0], ref) and abs(r[0] - entry) >= min_tp1:
+            tp1, tp1_name = r[0], f"4h range 50% ({r[1]:.2f}-{r[2]:.2f})"
+        if abs(final - entry) < abs(tp1 - entry):
+            final, final_name = tp1, tp1_name
+    if mode in ("hold", "eq_hold"):
         draws = [(px, n) for px, n, _ in pools(hist, decided, ctx, ("4h", "1d"), long, entry)]
         draws += fvg_draws(hist, decided, ("4h", "1d"), long, entry)
         draws = [(px, n) for px, n in draws if abs(px - entry) >= HOLD_MIN_R * risk and beyond(px, tp1)]
