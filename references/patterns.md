@@ -115,7 +115,8 @@ Cleaned sources in `personal/notion/` (local-only, not in the repo) (each sectio
   Sep 12 2024, Venom Apr 3 2025): a Twitter copy of Power of 3 + turtle soup of the previous candle's high/low, which in
   his version needs HTF order flow and a PD array** (rulings §16). Track as the pattern *prior-candle H/L swept, closed
   back inside* per TF; never a model of its own. Already close to it: Cameron (5m swing swept, next candle closes back),
-  PO3 day (models.md §4).
+  PO3 day (models.md §4). **Tested 2026-11-14 (`research/crt-results-2026-11-14.md`): no edge on any TF/time, either
+  cost basis; 50% reached ~60% after a close back inside vs ~20% after a close beyond.**
 
 ## To research
 - Other macro windows beyond 09:50–10:10 and 10:50–11:10
