@@ -118,7 +118,8 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
         <div class="seg" id="tools" role="group" aria-label="Drawing tool"></div>
         <label class="tog" for="d-tag">Tag <select id="d-tag"></select></label>
         <input type="text" id="d-text" placeholder="Label (optional)" aria-label="Label for the drawing">
-        <button type="button" class="btn" id="bigger" aria-pressed="false" style="padding:5px 12px;font-size:13px">Bigger chart</button>
+        <span class="seg"><button type="button" id="undo">Undo last</button><button type="button" id="clearall">Clear all</button></span>
+      <button type="button" class="btn" id="bigger" aria-pressed="false" style="padding:5px 12px;font-size:13px">Bigger chart</button>
       <span class="hint" id="d-hint">Pick a tool to draw. Pan/zoom works when the tool is off.</span>
       </div>
       <div class="plot" id="plot"><div id="chart"></div><canvas id="ink"></canvas></div>
@@ -319,6 +320,13 @@ function setTool(k) {
   if (chart) chart.applyOptions({ handleScroll: !k, handleScale: !k });
 }
 setTool("");
+$("undo").onclick = () => { const l = ink.shapes[T().id] || []; if (l.length) delShape(l[l.length - 1].id); };
+let clearArm = null;
+$("clearall").onclick = () => {
+  if (!clearArm) { $("clearall").textContent = "Click again to clear"; clearArm = setTimeout(() => { clearArm = null; $("clearall").textContent = "Clear all"; }, 3000); return; }
+  clearTimeout(clearArm); clearArm = null; $("clearall").textContent = "Clear all";
+  const id = T().id; ink.shapes[id] = []; shapeList(); saveShapes(id);
+};
 $("bigger").onclick = () => { const on = document.body.classList.toggle("big"); $("bigger").textContent = on ? "Normal size" : "Bigger chart";
   $("bigger").setAttribute("aria-pressed", on); $("chart").scrollIntoView({ block: "nearest" }); };
 const TF_SEC = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
