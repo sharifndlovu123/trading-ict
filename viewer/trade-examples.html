@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>NQ Trade Review</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,10 +53,12 @@ h2 { font-family: var(--f-display); font-size: 15px; margin: 0 0 8px; letter-spa
 .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 label.tog { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
 .chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.plot { position: relative; }
-#chart { height: 520px; }
-@media (max-width: 600px) { #chart { height: 380px; } }
-#ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
+.plot { position: relative; isolation: isolate; }
+#chart { height: clamp(420px, 72vh, 1000px); position: relative; z-index: 0; }
+#ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; z-index: 20; }
+body.big header, body.big .rail { display: none; }
+body.big .app { grid-template-columns: minmax(0, 1fr); }
+body.big #chart { height: calc(100vh - 150px); }
 .plot.drawing #ink { pointer-events: auto; cursor: crosshair; }
 .layers { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .drawbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); }
@@ -114,7 +117,8 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
         <div class="seg" id="tools" role="group" aria-label="Drawing tool"></div>
         <label class="tog" for="d-tag">Tag <select id="d-tag"></select></label>
         <input type="text" id="d-text" placeholder="Label (optional)" aria-label="Label for the drawing">
-        <span class="hint" id="d-hint">Pick a tool to draw. Pan/zoom works when the tool is off.</span>
+        <button type="button" class="btn" id="bigger" aria-pressed="false" style="padding:5px 12px;font-size:13px">Bigger chart</button>
+      <span class="hint" id="d-hint">Pick a tool to draw. Pan/zoom works when the tool is off.</span>
       </div>
       <div class="plot" id="plot"><div id="chart"></div><canvas id="ink"></canvas></div>
       <div class="legend" id="legend"></div>
@@ -314,6 +318,8 @@ function setTool(k) {
   if (chart) chart.applyOptions({ handleScroll: !k, handleScale: !k });
 }
 setTool("");
+$("bigger").onclick = () => { const on = document.body.classList.toggle("big"); $("bigger").textContent = on ? "Normal size" : "Bigger chart";
+  $("bigger").setAttribute("aria-pressed", on); $("chart").scrollIntoView({ block: "nearest" }); };
 const TF_SEC = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
 // time <-> logical index on the current timeframe (fractional, so a drawing keeps its place on every timeframe)
 function timeToLogical(t) {
