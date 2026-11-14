@@ -57,3 +57,8 @@ CFD = commit 0f2bfad (measured spreads); futures = commit 5996937 (`--cost futur
 The selection-#2 survivors are cell-level winners picked from many cells, so their in-sample z overstates them
 (they already failed on the burned hold-out: −0.115R). Two of three don't survive the switch to futures costs
 even in-sample. They are kept as candidates only because the selection was pre-registered.
+
+## Amendment (2026-11-14): futures only
+Sharif: "skip cfds, focus on futures" (supersedes "both"). Written before the forward window is scored. Only the
+**futures** cost basis decides; CFD results are still logged and reported as history but cannot pass. The bar stays
+**z_cl ≥ 3.0** (it was set for 16 tests; 8 now need only ≈ 2.7 — kept stricter on purpose, not lowered after the fact).
