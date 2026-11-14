@@ -120,6 +120,7 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "counter: after a bias trade's TP1": replace(MB, counter_after="tp1"),
     "counter: after the daily draw": replace(MB, counter_after="draw"),
     "purge: hold within 2 bp": replace(MB, liquidity_hold_bp=2.0),
+    "entry: retest of the broken OC": replace(MB, entry="oc_retest"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

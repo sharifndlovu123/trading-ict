@@ -16,6 +16,7 @@ Mechanical version (buy model; the sell model is the mirror):
                                    don't count, a curve always undercuts them).
     4 market structure shift       bullish MSS on the entry TF within ``mss_within_min`` of the low.
     5 entry                        fvg (low-risk): first displacement FVG in the leg off the low;
+                                   oc_retest: limit at the broken OC edge once the leg ran 1R past it;
                                    reacc1/reacc2: the up-close candle bodies of the lowest / next
                                    redistribution carried across — once price closes back above the
                                    zone, a limit sits at its top ("directly across", ICT PAM6).
@@ -61,6 +62,8 @@ class Params:
     low_lookback_min: int = 120          # reversal low searched this far before the MSS
     leg_bars_after_mss: int = 3
     entry: str = "fvg"                   # fvg: low-risk — first FVG after the SMR (ICT GMC Nov 2025)
+                                         # oc_retest: limit at the broken OC's edge once the leg has run 1R past it
+                                         # (Sharif #28; research/preregistered-oc-retest-2026-11-15.md)
                                          # reacc1 / reacc2: re-accumulation zone carried across from the
                                          # lowest / next redistribution's up-close candles (ICT PAM6 38:55)
     fvg_pick: str = "first"              # first (ICT: "the very 1st bullish FVG that forms") | deepest
@@ -318,6 +321,15 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
                  "distal": fvg.bottom if long else fvg.top}[p.entry_level]
         trigger = f"{p.entry_tf} FVG {fvg.bottom:.2f}-{fvg.top:.2f}"
         far_edge = fvg.bottom if long else fvg.top
+    elif p.entry == "oc_retest":
+        r = oc_retest(curve, long, mss, day_1m, p)
+        if isinstance(r, str):
+            setup.gates.append(Gate("trigger", False, r))
+            return setup
+        decided, entry, stop_oc = r
+        setup.pd_array, setup.pd_array_tf = "oc_retest", p.frame_tf
+        far_edge = curve.oc_low if long else curve.oc_high
+        trigger = f"retest of the broken OC {curve.oc_low:.2f}-{curve.oc_high:.2f} (leg ran 1R past it)"
     else:
         which = {"reacc1": 1, "reacc2": 2}[p.entry]
         zone = reacc_zone(frame, curve, long, which)
@@ -339,6 +351,8 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         trigger = f"re-accumulation zone #{which} {z_lo:.2f}-{z_hi:.2f} carried across"
     setup.decided_at = decided
     stop = low - p.stop_buffer if long else low + p.stop_buffer
+    if p.entry == "oc_retest":
+        stop = stop_oc
     if (long and not stop < entry) or (not long and not stop > entry):
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
         return setup
@@ -351,8 +365,11 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     setup.gates.append(bias_gate(ctx, long, decided, day_1m, p))
     eq = (curve.oc_high + low) / 2 if long else (curve.oc_low + low) / 2
     in_zone = entry <= eq if long else entry >= eq
-    setup.gates.append(Gate("pricing", in_zone or not p.use_pricing,
-                            f"entry {entry:.2f} vs curve equilibrium {eq:.2f} ({'discount' if long else 'premium'} wanted)"))
+    if p.entry == "oc_retest":   # the OC edge is the top of the curve: pre-registered without the pricing gate (§17)
+        setup.gates.append(Gate("pricing", True, f"not applied to the OC retest (curve equilibrium {eq:.2f})"))
+    else:
+        setup.gates.append(Gate("pricing", in_zone or not p.use_pricing,
+                                f"entry {entry:.2f} vs curve equilibrium {eq:.2f} ({'discount' if long else 'premium'} wanted)"))
     poi = smr_array(ctx, long, low, low_ts, curve, htf_gaps, span_1m)
     purge = smr_purge(ctx, frame, frame_sw, long, low, low_ts, curve, p) if p.smr_purge else "not required"
     setup.tags.update({"poi": poi, "purge": purge})
@@ -360,12 +377,15 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
     setup.gates.append(Gate("poi", ok, f"{poi or 'reversal not at a HTF array'}; purge: {purge or 'none — no liquidity run at the low'}"))
     setup.gates.append(Gate("trigger", True, trigger))
 
-    tp1, tp1_name = _tp1(entry, risk, long, curve, day_1m, decided, p)
-    final = curve.oc_high if long else curve.oc_low
+    if p.entry == "oc_retest":
+        tp1, tp1_name, final, final_name = oc_retest_targets(entry, risk, long, ctx, day_1m, decided)
+    else:
+        tp1, tp1_name = _tp1(entry, risk, long, curve, day_1m, decided, p)
+        final = curve.oc_high if long else curve.oc_low
+        final_name = "oc high" if long else "oc low"
     if tp1 is None or (final - entry) * (1 if long else -1) <= 0:
         setup.gates.append(Gate("target", False, "no untaken curve level beyond the minimum TP1 distance"))
         return setup
-    final_name = "oc high" if long else "oc low"
     t_exit = None
     if p.target_mode != "default":
         from ict_engine.models import targets
@@ -379,11 +399,48 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, span_1m, frame, fr
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
+    if p.entry == "oc_retest" and w:
+        expires = _ts(decided.date(), time(16))          # the retest may come hours later (pre-registered)
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
                                  invalid_level=far_edge, invalid_tf=p.invalidate_tf, time_exit=t_exit)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     return setup
+
+
+OC_RETEST_TP1_R = 2.0
+OC_RETEST_FINALS = {True: ("asia_high", "pdh", "pwh"), False: ("asia_low", "pdl", "pwl")}
+
+
+def oc_retest(curve: Curve, long: bool, mss: Event, day_1m: pd.DataFrame, p: Params):
+    """(decided, entry, stop) for the retest of the broken original consolidation, or why not (Sharif #28): the first
+    1m close beyond the OC edge after the MSS, then price reaches edge ± 1R (R = OC width + stop buffer); decided at
+    that bar, before 16:00. Entry = the OC edge, stop beyond the OC's far side."""
+    edge = curve.oc_high if long else curve.oc_low
+    stop = curve.oc_low - p.stop_buffer if long else curve.oc_high + p.stop_buffer
+    risk = abs(edge - stop)
+    after = day_1m[(day_1m.index >= mss.origin_ts) & (day_1m.index < _ts(mss.origin_ts.date(), time(16)))]
+    brk = after.index[after.close > edge] if long else after.index[after.close < edge]
+    if not len(brk):
+        return f"price never closed {'above' if long else 'below'} the OC {'high' if long else 'low'} {edge:.2f}"
+    leg = after[after.index >= brk[0]]
+    proof = edge + risk if long else edge - risk
+    hit = leg.index[leg.high >= proof] if long else leg.index[leg.low <= proof]
+    if not len(hit):
+        return f"OC broken at {brk[0]:%H:%M} but the leg never ran 1R ({proof:.2f}) past it"
+    return max(hit[0], mss.ts), edge, stop
+
+
+def oc_retest_targets(entry, risk, long, ctx: DayContext, day_1m, decided):
+    """TP1 = 2R; final = nearest untaken context level (Asia high, PDH, PWH; mirror) beyond TP1 at the decision, else TP1."""
+    sign = 1 if long else -1
+    tp1 = entry + sign * OC_RETEST_TP1_R * risk
+    seen = day_1m[day_1m.index <= decided]
+    far = float(seen.high.max()) if long else float(seen.low.min())
+    ok = [(ctx.levels[n], n) for n in OC_RETEST_FINALS[long] if ctx.levels.get(n) is not None
+          and (ctx.levels[n] - tp1) * sign > 0 and (ctx.levels[n] - far) * sign > 0]
+    final, name = min(ok, key=lambda c: abs(c[0] - entry)) if ok else (tp1, f"{OC_RETEST_TP1_R:g}R")
+    return tp1, f"{OC_RETEST_TP1_R:g}R", final, name
 
 
 def _tp1(entry, risk, long, curve: Curve, day_1m, decided, p: Params):

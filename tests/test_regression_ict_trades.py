@@ -395,3 +395,39 @@ def test_liquidity_hold_on_real_bars_us100_sep_2023():
     assert n_held >= 1
     s1105 = next(s for s in run_day(bars, date(2023, 9, 25), "US100", held) if f"{s.decided_at:%H:%M}" == "11:05")
     assert s1105.plan is None and "bias" in {g.name for g in s1105.gates if not g.passed}
+
+
+def test_oc_retest_on_real_bars_us100_q3_2023():
+    """OC-retest pre-reg on real US100 bars (Jul–Sep 2023, in-sample). Every plan: limit at the OC edge the setup
+    broke, stop beyond the OC's far side, TP1 = 2R, order lives to 16:00, decided after a close beyond the edge and
+    after price ran 1R past it — and the same plan comes out when the bars stop at the decision (no look-ahead)."""
+    from dataclasses import replace
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models import model_mmxm
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 6, 1), date(2023, 9, 29))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    p = replace(model_mmxm.Params(), entry="oc_retest")
+    plans = 0
+    for day in pd.date_range("2023-07-01", "2023-09-28").date:
+        if day.weekday() >= 5:
+            continue
+        for s in run_day(bars, day, "US100", p):
+            if not s.plan:
+                continue
+            plans += 1
+            long, pl = s.side == "long", s.plan
+            hi, lo = s.tags["oc_high"], s.tags["oc_low"]
+            assert pl.entry == (hi if long else lo) and pl.stop == (lo - p.stop_buffer if long else hi + p.stop_buffer)
+            risk = abs(pl.entry - pl.stop)
+            assert abs(abs(pl.tp1 - pl.entry) - 2 * risk) < 1e-6 and f"{pl.expires_at:%H:%M}" == "16:00"
+            seg = bars[(bars.index >= s.evidence["shift"].origin_ts) & (bars.index <= s.decided_at)]
+            assert ((seg.close > hi).any() and seg.high.max() >= hi + risk) if long else \
+                   ((seg.close < lo).any() and seg.low.min() <= lo - risk)
+            if plans <= 3:
+                cut = bars[bars.index <= s.decided_at]
+                again = [x.plan for x in run_day(cut, day, "US100", p) if x.plan and x.decided_at == s.decided_at]
+                assert any(a.entry == pl.entry and a.stop == pl.stop and a.tp1 == pl.tp1 for a in again)
+    assert plans >= 10
