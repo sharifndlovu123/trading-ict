@@ -22,7 +22,7 @@ header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; pad
 header .t { font-weight: 600; font-size: 15px; }
 .pill { padding: 1px 8px; border-radius: 999px; background: var(--chip); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 .long { color: var(--long); } .short { color: var(--short); } .muted { color: var(--muted); }
-.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; padding: 6px; height: calc(100vh - 128px); min-height: 520px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; padding: 6px; height: calc(100vh - 160px); min-height: 520px; }
 .cell { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .cell .lab { position: absolute; top: 4px; left: 8px; z-index: 3; font-weight: 600; font-family: ui-monospace, monospace; color: var(--muted); }
 .cell .chart { position: absolute; inset: 0; }
@@ -30,6 +30,7 @@ footer { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; pad
 kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--key); font: 12px ui-monospace, monospace; text-align: center; }
 .tag { cursor: pointer; user-select: none; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); }
 .tag.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.tag.on kbd { color: var(--ink); }
 .verdict { font-weight: 700; }
 #note { flex: 1 1 220px; min-width: 160px; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); }
 #result { font-family: ui-monospace, monospace; font-weight: 600; }
@@ -44,6 +45,7 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
   <span id="bias"></span>
   <span id="result"></span>
   <span id="status" class="muted"></span>
+  <span id="layers" style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span class="muted">lines:</span></span>
 </header>
 <div class="grid">
   <div class="cell"><span class="lab">4H</span><div class="chart" id="c4h"></div></div>
@@ -63,6 +65,10 @@ const TFS = ["4h", "1h", "15m", "5m"];
 const SHOW = { "4h": 60, "1h": 72, "15m": 96, "5m": 100 };
 const TAGS = [["nested", "inside HTF FVG"], ["in_daily", "inside daily FVG"], ["no_sweep", "no real sweep"], ["chop", "chop / consolidation"],
   ["bias", "wrong bias"], ["room", "good room to target"], ["no_room", "target too close / blocked"], ["time", "bad time / news"], ["late", "late / chased"]];
+const LAYERS = [["plan", "P", "entry / stop / TP1"], ["final", "D", "final target"], ["fvg", "F", "entry FVG"], ["sweep", "W", "swept level"],
+  ["levels", "L", "PDH/PDL/PWH/PWL/midnight"], ["gaps", "G", "4h/daily FVGs"], ["labels", "A", "price labels"]];
+let layers = { plan: true, final: false, fvg: true, sweep: false, levels: false, gaps: false, labels: true };
+try { Object.assign(layers, JSON.parse(localStorage.getItem("triage-layers") || "{}")); } catch (e) {}
 const VERDICT = { t: "take", s: "skip", o: "opposite" };
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const $ = id => document.getElementById(id);
@@ -71,6 +77,13 @@ const charts = {};
 
 TAGS.forEach(([k, l], n) => { const s = document.createElement("span"); s.className = "tag"; s.dataset.k = k;
   s.innerHTML = `<kbd>${n + 1}</kbd> `; s.append(l); s.onclick = () => toggle(k); $("tags").append(s); });
+
+LAYERS.forEach(([k, key, l]) => { const s = document.createElement("span"); s.className = "tag layer"; s.dataset.k = k;
+  s.innerHTML = `<kbd>${key}</kbd> `; s.append(l); s.onclick = () => flip(k); $("layers").append(s); });
+{ const s = document.createElement("span"); s.className = "tag"; s.innerHTML = "<kbd>H</kbd> all off / on"; s.onclick = () => flipAll(); $("layers").append(s); }
+function flip(k) { layers[k] = !layers[k]; try { localStorage.setItem("triage-layers", JSON.stringify(layers)); } catch (e) {} if (st.item) draw(); }
+function flipAll() { const on = !LAYERS.some(([k]) => k !== "labels" && layers[k]); LAYERS.forEach(([k]) => { if (k !== "labels") layers[k] = on; });
+  try { localStorage.setItem("triage-layers", JSON.stringify(layers)); } catch (e) {} if (st.item) draw(); }
 
 function makeCharts() {
   for (const tf of TFS) {
@@ -92,7 +105,8 @@ async function load(id) {
 
 function line(tf, price, color, title, style = 0, width = 1) {
   if (price == null) return;
-  charts[tf].lines.push(charts[tf].series.createPriceLine({ price, color, lineWidth: width, lineStyle: style, axisLabelVisible: !!title, title }));
+  const lab = layers.labels && !!title;
+  charts[tf].lines.push(charts[tf].series.createPriceLine({ price, color, lineWidth: width, lineStyle: style, axisLabelVisible: lab, title: lab ? title : "" }));
 }
 
 function draw() {
@@ -102,12 +116,12 @@ function draw() {
     charts[tf].lines.forEach(l => series.removePriceLine(l)); charts[tf].lines = [];
     const rows = show ? t.panels[tf] : t.live[tf];
     series.setData(rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close })));
-    line(tf, t.entry, css("--entry"), "entry", 0, 2); line(tf, t.stop, css("--stop"), "stop", 0, 1); line(tf, t.tp1, css("--tp"), "TP1", 0, 1);
-    if (t.final != null && t.final !== t.tp1) line(tf, t.final, css("--tp"), "final", 2, 1);
-    if (t.fvg) { line(tf, t.fvg[0], css("--fvg"), "", 1, 1); line(tf, t.fvg[1], css("--fvg"), "entry FVG", 1, 1); }
-    line(tf, t.sweep, css("--sweep"), "swept", 2, 1);
-    for (const [k, v] of Object.entries(t.levels)) if (tf !== "5m" || k !== "pwh" && k !== "pwl") line(tf, v, css("--level"), k.toUpperCase(), 3, 1);
-    if (tf === "4h" || tf === "1h") for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
+    if (layers.plan) { line(tf, t.entry, css("--entry"), "entry", 0, 2); line(tf, t.stop, css("--stop"), "stop", 0, 1); line(tf, t.tp1, css("--tp"), "TP1", 0, 1); }
+    if (layers.final && t.final != null && t.final !== t.tp1) line(tf, t.final, css("--tp"), "final", 2, 1);
+    if (layers.fvg && t.fvg) { line(tf, t.fvg[0], css("--fvg"), "", 1, 1); line(tf, t.fvg[1], css("--fvg"), "entry FVG", 1, 1); }
+    if (layers.sweep) line(tf, t.sweep, css("--sweep"), "swept", 2, 1);
+    if (layers.levels) for (const [k, v] of Object.entries(t.levels)) if (tf !== "5m" || k !== "pwh" && k !== "pwl") line(tf, v, css("--level"), k.toUpperCase(), 3, 1);
+    if (layers.gaps && (tf === "4h" || tf === "1h")) for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
       line(tf, g.top, c, `${g.tf.toUpperCase()} FVG`, 1, 1); line(tf, g.bottom, c, "", 1, 1); }
     const snap = ts => { let b = null; for (const r of rows) { if (r[0] <= ts) b = r[0]; else break; } return b; };
     const mk = [], long = t.side === "long";
@@ -124,7 +138,8 @@ function draw() {
   $("result").innerHTML = show ? `<span class="${t.outcome.r > 0 ? "long" : "short"}">${t.outcome.exit} ${t.outcome.r > 0 ? "+" : ""}${(t.outcome.r ?? 0).toFixed(2)}R</span>`
     + (t.outcome.runner_r != null ? ` <span class="muted">runner ${t.outcome.runner_r > 0 ? "+" : ""}${t.outcome.runner_r.toFixed(2)}R</span>` : "")
     + (a ? ` · you: <span class="verdict">${a.verdict}</span>` : "") : `<span class="muted">result hidden until you answer</span>`;
-  document.querySelectorAll(".tag").forEach(e => e.classList.toggle("on", st.tags.has(e.dataset.k)));
+  document.querySelectorAll("#tags .tag").forEach(e => e.classList.toggle("on", st.tags.has(e.dataset.k)));
+  document.querySelectorAll(".layer").forEach(e => e.classList.toggle("on", !!layers[e.dataset.k]));
 }
 
 function header() {
@@ -164,6 +179,8 @@ document.addEventListener("keydown", e => {
   const k = e.key.toLowerCase();
   if (VERDICT[k]) answer(VERDICT[k]);
   else if (k >= "1" && k <= "9") toggle(TAGS[+k - 1][0]);
+  else if (LAYERS.some(([, key]) => key.toLowerCase() === k)) flip(LAYERS.find(([, key]) => key.toLowerCase() === k)[0]);
+  else if (k === "h") flipAll();
   else if (k === "n") { e.preventDefault(); $("note").focus(); }
   else if (k === "r") { st.reveal = !st.reveal; draw(); }
   else if (k === "arrowright" || k === " " || k === "enter") { e.preventDefault(); next(); }
