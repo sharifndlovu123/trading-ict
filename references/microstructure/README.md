@@ -36,4 +36,4 @@ Name files `NN-firstauthor-short-title.pdf` so they sort in reading order. Extra
 | 5 | Lehalle, Laruelle: Market Microstructure in Practice → 5-lehalle-market-microstructure-in-practice.pdf (367 pp, 2nd ed.) | ✅ |
 | 6 | López de Prado: Advances in Financial Machine Learning → 6-lopez-de-prado-advances-financial-ml.pdf (393 pp) | ✅ |
 | 7 | Patterson: Dark Pools → 7-patterson-dark-pools.epub (Crown 2012, ISBN 978-0-307-88719-1, ~106k words; read with python zipfile) | ✅ (the earlier Bookey summary is kept as 7-patterson-dark-pools-bookey-summary.pdf) |
-| 7b | Lewis: Flash Boys | – not needed (optional narrative; library closed 2026-11-14) |
+| 7b | Lewis: Flash Boys: A Wall Street Revolt → 7b-lewis-flash-boys.pdf (Norton paperback 2015, ISBN 978-0-393-35159-0) | ✅ added by Sharif 2026-11-14 |
