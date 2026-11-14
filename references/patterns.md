@@ -107,6 +107,15 @@ Cleaned sources in `personal/notion/` (local-only, not in the repo) (each sectio
 - **Zeussy MSS:** push into a SIBI makes the intermediate high; a BISI move breaks it; price returns into the BISI (`setups.md`).
 - **TAPDA:** a PD array revisited at the same time of day it formed should hold; failure = first sign of a change in state of delivery (`trading-extras.md`).
 - **True opens (Quarterly Theory):** optional premium/discount references — already in `framework.md` §5.
+- **Candle Range Theory (CRT; Romeo/@Romeotpt, ~2024; researched 2026-11-14):** candle 1 = the range (high, low, 50%);
+  candle 2 trades beyond one extreme and closes back inside; target the 50% then the opposite extreme; stop beyond
+  candle 2's wick. Popular timings: 4H "1-5-9" (01/05/09 NY on the FX/CFD grid; our 4h grid is CME 02/06/10), 1H
+  08-09-10, Sham's "3 AM" (17:00/21:00 4H range, purge 03:00-04:00 on 5m, then a CISD). No primary source or
+  independent stats; one vendor port lost on 5 of 6 CME futures (Jul-Sep 2026). **ICT calls it "bullshit" (Sep 6 2024,
+  Sep 12 2024, Venom Apr 3 2025): a Twitter copy of Power of 3 + turtle soup of the previous candle's high/low, which in
+  his version needs HTF order flow and a PD array** (rulings §16). Track as the pattern *prior-candle H/L swept, closed
+  back inside* per TF; never a model of its own. Already close to it: Cameron (5m swing swept, next candle closes back),
+  PO3 day (models.md §4).
 
 ## To research
 - Other macro windows beyond 09:50–10:10 and 10:50–11:10
