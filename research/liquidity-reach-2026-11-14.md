@@ -33,3 +33,21 @@ stop more than chance says.
   "too early" (16), premium of the current range (8), wrong side of the bias (6).
 - A TP ladder is still useful for *shaping* (more frequent wins, partials, a runner) but should only be tested on top
   of an entry that has an edge; on today's entries it can only rearrange ≈ 0.
+
+## Freshness split (2026-11-15; ruling §18 "engineered liquidity", review log #21)
+Same trades and levels, each level tagged with when it formed (age at the decision). Excess hit rate (before the stop)
+over random 1/(1+d), per-trade averaged, levels ≤ 10 R:
+
+| age | 2022 model | MMxM |
+|---|---|---|
+| < 4 h | +1.3 pts (z 1.1) | −0.7 (z −0.4) |
+| 4–12 h | +0.8 (z 0.5) | −0.6 (z −0.4) |
+| 12–24 h | −1.6 (z −0.9) | +0.5 (z 0.3) |
+| 1–3 d | −0.5 (z −0.2) | −1.1 (z −0.4) |
+| > 3 d | −1.7 (z −1.1) | +0.1 (z 0.0) |
+
+By family (equal highs/lows, swings, FVGs) no cell reaches |z| 2. The 2022 model shows a faint fresh-over-old slope
+(+1.3 → −1.7 pts), MMxM none. **Fresh, recently built liquidity is not reached more often than old liquidity from these
+entries.** Together with the main result, the target side is not where the edge is lost: from today's entries price is
+a coin flip in either direction, so any level is a coin flip. The entry (side, timing, curve stage — review log #20–28)
+is the lever.
