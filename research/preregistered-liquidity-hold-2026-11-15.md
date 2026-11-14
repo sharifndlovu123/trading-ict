@@ -45,3 +45,13 @@ OOS. Every cell is reported. A pass becomes a forward-v2 candidate.
 
 Regression check (not a selection input): the US100 Sep 25 2023 11:00 turn should be found as a hold by the 2022 model
 (it may still fail bias — that is the expected outcome, ruling §17/#20).
+
+## Amendment (2026-11-15, during the build, before any sweep or result)
+Probing the regression day (US100 Sep 25 2023) showed the 2022 model's trigger is almost never the block: the 11:05
+turn swept a trivial **1m** swing low (10:31) on its way down, so the trigger passed and the setup failed the **POI**
+gate ("no HTF POI under the sweep"), plus bias. A trigger-only fallback would barely change trades. So, for the 2022
+model, the hold also counts at the POI gate: when the setup has no POI, the manipulation extreme (the stop's anchor)
+holding within 2 bp short of an untaken **context level** (PDL, PWL, Asia low; mirror for shorts — the same names that
+count when swept) passes the POI as "held <name>". The trigger fallback above stays. MMxM is unchanged (its purge sits
+inside the POI gate already). Still 2 cells, same measure and pass rule. The Sep 25 11:05 setup is a check of the code,
+not of the idea; it is expected to still fail bias either way.

@@ -73,6 +73,7 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     # counter-bias second trade (research/preregistered-counter-bias-2026-11-15.md; scored per day by counter_bias_eval)
     "counter: after a bias trade's TP1": replace(BASE, counter_after="tp1"),
     "counter: after the daily draw": replace(BASE, counter_after="draw"),
+    "trigger: hold within 2 bp": replace(BASE, liquidity_hold_bp=2.0),
 }
 
 
@@ -118,6 +119,7 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     # counter-bias second trade (research/preregistered-counter-bias-2026-11-15.md; scored per day by counter_bias_eval)
     "counter: after a bias trade's TP1": replace(MB, counter_after="tp1"),
     "counter: after the daily draw": replace(MB, counter_after="draw"),
+    "purge: hold within 2 bp": replace(MB, liquidity_hold_bp=2.0),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

@@ -353,3 +353,45 @@ def test_counter_bias_on_real_bars_us100_sep_2023():
                 hhmm = g.detail.rsplit(" at ", 1)[1][:5]
                 assert hhmm < f"{s.decided_at:%H:%M}" or s.decided_at.hour < 18 <= int(hhmm[:2])
     assert admitted > 0
+
+
+def test_liquidity_hold_on_real_bars_us100_sep_2023():
+    """Liquidity-hold pre-reg on real US100 bars, September 2023 (in-sample). The hold only adds: every baseline plan is
+    still planned. Every 'held <level>' POI names a context level the manipulation extreme stopped short of by ≤ 2 bp
+    without trading through, untaken from the day start to the shift. Sep 25 11:05 (Sharif's 11:00 long) still fails
+    the bias."""
+    from dataclasses import replace
+    from datetime import datetime, time
+    from ict_engine.concepts.context import build_context
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models import model_2022
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 8, 1), date(2023, 9, 29))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    base, held = model_2022.Params(), replace(model_2022.Params(), liquidity_hold_bp=2.0)
+    n_held = 0
+    for day in pd.date_range("2023-09-01", "2023-09-28").date:
+        if day.weekday() >= 5:
+            continue
+        key = lambda s: (s.decided_at, s.side, s.plan.entry)
+        b = {key(s) for s in run_day(bars, day, "US100", base) if s.plan}
+        sh = run_day(bars, day, "US100", held)
+        assert b <= {key(s) for s in sh if s.plan}
+        ctx = build_context(bars, day)
+        for s in sh:
+            poi = str(s.tags.get("poi"))
+            if not poi.startswith("held "):
+                continue
+            n_held += 1
+            long, lvl = s.side == "long", ctx.levels[poi.split()[1]]
+            stop_anchor = s.would_plan.stop + held.stop_buffer if long else s.would_plan.stop - held.stop_buffer
+            gap = stop_anchor - lvl if long else lvl - stop_anchor
+            assert 0 <= gap <= abs(lvl) * 2e-4 + 1e-9
+            d0 = pd.Timestamp(datetime.combine(day, time(0)), tz="America/New_York")
+            seg = bars[(bars.index >= d0) & (bars.index < s.evidence["shift"].origin_ts)]
+            assert (seg.low.min() >= lvl) if long else (seg.high.max() <= lvl)
+    assert n_held >= 1
+    s1105 = next(s for s in run_day(bars, date(2023, 9, 25), "US100", held) if f"{s.decided_at:%H:%M}" == "11:05")
+    assert s1105.plan is None and "bias" in {g.name for g in s1105.gates if not g.passed}

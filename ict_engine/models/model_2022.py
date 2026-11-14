@@ -79,6 +79,9 @@ class Params:
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
     counter_after: str | None = None     # sim.run.COUNTER_MODES (counter-bias pre-registration)
+    # no sweep before the MSS → accept a turn that held within this many bp above (below) an untaken 5m swing /
+    # context level inside a window (liquidity-hold pre-registration); None = off
+    liquidity_hold_bp: float | None = None
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -105,6 +108,8 @@ class Params:
             extra.append(f"range_{self.range_entry}")
         if self.counter_after:
             extra.append(f"counter_{self.counter_after}")
+        if self.liquidity_hold_bp:
+            extra.append(f"hold{self.liquidity_hold_bp:g}bp")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:
@@ -156,14 +161,17 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=10)) & (bars_1m.index < d1)]
     htf_gaps = [g for tf in p.poi_tfs for g in fvgs(resample(hist, tf), tf)]
     swing_highs_lows = sw_5m + sw_entry
+    hold_levels = list(ctx.liquidity) + swing_levels(sw_5m)
 
     out = []
     for mss in shifts:
-        out.append(_evaluate(mss, ctx, day, asset, p, day_1m, taken, gaps, htf_gaps, swing_highs_lows, bars_1m=bars_1m))
+        out.append(_evaluate(mss, ctx, day, asset, p, day_1m, taken, gaps, htf_gaps, swing_highs_lows, bars_1m=bars_1m,
+                             hold_levels=hold_levels))
     return out
 
 
-def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_gaps, swing_pts, bars_1m=None) -> Setup:
+def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_gaps, swing_pts, bars_1m=None,
+              hold_levels=()) -> Setup:
     long = mss.direction == "bull"
     side = "long" if long else "short"
     decided = mss.ts
@@ -176,6 +184,9 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
            if e.meta["level"] and _side_of(e) == want
            and mss.origin_ts - timedelta(minutes=p.sweep_lookback_min) <= e.origin_ts < mss.origin_ts
            and e.ts <= decided]
+    if not liq and p.liquidity_hold_bp:
+        h = hold(mss, long, hold_levels, day_1m, p)
+        liq = [h] if h is not None else []
     if not liq:
         setup.gates.append(Gate("trigger", False, "no opposite liquidity taken before the MSS"))
         return setup
@@ -232,6 +243,12 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
                             f"{' (already)' if armed_now else ''}; htf20 {htf.zone} ({htf.fraction:.2f})"))
 
     poi = _poi(liquidity, long, htf_gaps, day_1m)
+    if poi is None and p.liquidity_hold_bp:
+        # amendment: the manipulation extreme held just short of an untaken context level (pre-registered)
+        turn_ts = manip.index[int(manip.low.to_numpy().argmin()) if long else int(manip.high.to_numpy().argmax())]
+        ctx_levels = [lv for lv in ctx.liquidity if lv.name in HTF_LIQUIDITY]
+        lv = held_level(extreme, turn_ts, long, ctx_levels, day_1m, mss.origin_ts, p.liquidity_hold_bp)
+        poi = f"held {lv.name}" if lv is not None else None
     setup.tags["poi"] = poi
     setup.gates.append(Gate("poi", poi is not None or not p.use_poi, poi or "no HTF POI under the sweep"))
 
@@ -327,10 +344,50 @@ def _tf_minutes(tf: str) -> int:
     return {"1m": 1, "2m": 2, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240}[tf]
 
 
+def held_level(turn: float, turn_ts: pd.Timestamp, long: bool, levels, day_1m: pd.DataFrame, until: pd.Timestamp,
+               bp: float):
+    """Nearest resting level (side matching, known by the turn bar, untaken from formation to ``until``) that the turn
+    stopped short of by at most ``bp`` basis points without trading through it; None if none."""
+    best = None
+    for lv in levels:
+        if lv.side != ("low" if long else "high") or lv.valid_from > turn_ts:
+            continue
+        gap = (turn - lv.price) if long else (lv.price - turn)
+        if not 0 <= gap <= abs(lv.price) * bp / 1e4:
+            continue
+        seg = day_1m[(day_1m.index >= lv.valid_from) & (day_1m.index < until)]
+        if not seg.empty and ((seg.low.min() < lv.price) if long else (seg.high.max() > lv.price)):
+            continue                                         # taken since it formed → not resting liquidity
+        if best is None or gap < best[0]:
+            best = (gap, lv)
+    return None if best is None else best[1]
+
+
+def hold(mss: Event, long: bool, levels, day_1m: pd.DataFrame, p: Params) -> Event | None:
+    """The turn that adds liquidity (Sharif, review log #21/#22): the extreme of the ``sweep_lookback_min`` before the
+    MSS candle stops within ``liquidity_hold_bp`` short of an untaken resting level (context level or 5m swing known
+    before the turn bar), inside one of the model's windows → a ``hold`` event standing in for the sweep."""
+    t0 = mss.origin_ts - timedelta(minutes=p.sweep_lookback_min)
+    span = day_1m[(day_1m.index >= t0) & (day_1m.index < mss.origin_ts)]
+    if span.empty:
+        return None
+    i = int(span.low.to_numpy().argmin()) if long else int(span.high.to_numpy().argmax())
+    turn_ts = span.index[i]
+    turn = float(span.low.iloc[i] if long else span.high.iloc[i])
+    if _window_at(turn_ts, p.windows) is None:
+        return None
+    lv = held_level(turn, turn_ts, long, levels, day_1m, mss.origin_ts, p.liquidity_hold_bp)
+    if lv is None:
+        return None
+    known = day_1m["close_ts"].iloc[day_1m.index.get_loc(turn_ts)] if "close_ts" in day_1m else turn_ts
+    return Event("hold", "1m", "bull" if long else "bear", pd.Timestamp(known), turn_ts, turn, turn,
+                 {"level": lv.name, "level_price": lv.price})
+
+
 def _poi(liquidity: Event, long: bool, htf_gaps: list[Event], day_1m) -> str | None:
     name = liquidity.meta["level"]
     if name in HTF_LIQUIDITY:
-        return f"swept {name}"
+        return f"{'held' if liquidity.kind == 'hold' else 'swept'} {name}"
     extreme = liquidity.bottom if long else liquidity.top
     t = liquidity.origin_ts
     for g in htf_gaps:

@@ -85,6 +85,9 @@ class Params:
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
     counter_after: str | None = None     # sim.run.COUNTER_MODES (counter-bias pre-registration)
+    # no purge → accept a reversal low that held within this many bp above a context level / older framing swing
+    # (liquidity-hold pre-registration); None = off
+    liquidity_hold_bp: float | None = None
     target_mode: str = "default"         # targets.MODES (nested-FVG pre-registration: eq_hold)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
@@ -97,7 +100,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after", "liquidity_hold_bp"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)
@@ -208,6 +211,22 @@ def smr_purge(ctx: DayContext, frame: pd.DataFrame, frame_sw: list[Event], long:
             la, lb = price(on_curve[a]), price(on_curve[b])
             if abs(la - lb) <= tol and (low < min(la, lb) if long else low > max(la, lb)):
                 return f"ran equal {'lows' if long else 'highs'} {min(la, lb) if long else max(la, lb):.2f}"
+    if p.liquidity_hold_bp:
+        # the turn that adds liquidity: the low stops just short of the same resting levels (pre-registered)
+        def short_of(lvl):
+            gap = (low - lvl) if long else (lvl - low)
+            return 0 <= gap <= abs(lvl) * p.liquidity_hold_bp / 1e4
+        for n in (SMR_LEVELS_LOW if long else SMR_LEVELS_HIGH):
+            lvl = ctx.levels.get(n)
+            if lvl is not None and short_of(lvl) and (lvl < curve.oc_low if long else lvl > curve.oc_high):
+                return f"held {n}"
+        for x in sorted((x for x in known if x.origin_ts < curve.oc_start), key=lambda e: -e.origin_ts.value):
+            lvl = price(x)
+            if not short_of(lvl):
+                continue
+            between = frame[(frame["close_ts"] > x.ts) & (frame.index < final_leg)]
+            if between.empty or (between.low.min() > lvl if long else between.high.max() < lvl):
+                return f"held older {x.tf} swing {'low' if long else 'high'} {lvl:.2f}"
     return None
 
 
