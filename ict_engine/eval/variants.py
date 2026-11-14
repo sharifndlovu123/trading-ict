@@ -66,6 +66,10 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "loc: entry FVG inside a 4h FVG": replace(BASE, entry_gate="nested_4h"),
     "loc: not inside a daily FVG": replace(BASE, entry_gate="outside_daily_fvg"),
     "targets: 50% of the 4h range, runner to the HTF draw": replace(BASE, target_mode="eq_hold"),
+    # range in play (research/preregistered-range-in-play-2026-11-14.md; score with --metric runner_r)
+    "range: entry in the cheap half": replace(BASE, range_entry="cheap_half"),
+    "range: limit at the 50%": replace(BASE, range_entry="eq_limit"),
+    "leg: limit at OTE 70.5%": replace(BASE, range_entry="leg_ote"),
 }
 
 
@@ -104,6 +108,10 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "loc: entry FVG inside a 4h FVG": replace(MB, entry_gate="nested_4h"),
     "loc: not inside a daily FVG": replace(MB, entry_gate="outside_daily_fvg"),
     "targets: 50% of the 4h range, runner to the HTF draw": replace(MB, target_mode="eq_hold"),
+    # range in play (research/preregistered-range-in-play-2026-11-14.md; score with --metric runner_r)
+    "range: entry in the cheap half": replace(MB, range_entry="cheap_half"),
+    "range: limit at the 50%": replace(MB, range_entry="eq_limit"),
+    "leg: limit at OTE 70.5%": replace(MB, range_entry="leg_ote"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

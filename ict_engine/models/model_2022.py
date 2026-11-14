@@ -77,6 +77,7 @@ class Params:
     news_blackout: tuple[int, int] | None = None
     target_mode: str = "default"         # targets.MODES (liquidity-targets pre-registration)
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
+    range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -99,6 +100,8 @@ class Params:
             extra.append(f"targets_{self.target_mode}")
         if self.entry_gate:
             extra.append(f"gate_{self.entry_gate}")
+        if self.range_entry:
+            extra.append(f"range_{self.range_entry}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:

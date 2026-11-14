@@ -280,3 +280,40 @@ def test_nested_fvg_location_gates_and_range_target_on_real_bars():
             p = s.plan
             assert p.time_exit == tg.session_close(s.day)
             assert (p.tp1 > p.entry) if s.side == "long" else (p.tp1 < p.entry)
+
+
+def test_range_in_play_entries_on_real_bars():
+    """Range-in-play pre-registration on real US100 bars (March 2023), both models: every range verdict is the same with
+    the bars after the decision removed; a moved limit is deeper than the model's own entry and stays inside the stop."""
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.eval.variants import MMXM_VARIANTS, VARIANTS
+    from ict_engine.models import range_entry
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 1, 20), date(2023, 3, 17))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    days = [d for d in pd.date_range("2023-03-06", "2023-03-17").date if d.weekday() < 5]
+    for table in (VARIANTS, MMXM_VARIANTS):
+        base = {s.decided_at: s.plan for d in days for s in run_day(bars, d, "US100", table["baseline"]) if s.plan}
+        seen = 0
+        for name in ("range: entry in the cheap half", "range: limit at the 50%", "leg: limit at OTE 70.5%"):
+            p = table[name]
+            for d in days:
+                for s in run_day(bars, d, "US100", p):
+                    g = next((g for g in s.gates if g.name == "range"), None)
+                    if g is None:
+                        continue
+                    seen += 1
+                    orig = base.get(s.decided_at)
+                    if orig is None:
+                        continue
+                    cut = bars[bars.index <= s.decided_at]
+                    ok, why, new = range_entry.apply(p.range_entry, orig, cut, stop_buffer=p.stop_buffer, asset="US100",
+                                                     max_cost_r=p.max_cost_r)
+                    assert (ok, why) == (g.passed, g.detail)
+                    if ok:
+                        long = orig.side == "long"
+                        assert (new.entry <= orig.entry if long else new.entry >= orig.entry)
+                        assert (new.entry > orig.stop if long else new.entry < orig.stop)
+        assert seen > 0

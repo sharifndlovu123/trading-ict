@@ -70,6 +70,16 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             if not ok:
                 s.plan = None
                 continue
+        rmode = getattr(params, "range_entry", None)
+        if rmode:
+            from ict_engine.models import range_entry
+            ok, why, plan = range_entry.apply(rmode, s.plan, bars_1m, stop_buffer=getattr(params, "stop_buffer", 0.0),
+                                              asset=asset, max_cost_r=getattr(params, "max_cost_r", None))
+            s.gates.append(Gate("range", ok, why))
+            if not ok:
+                s.plan = None
+                continue
+            s.plan = plan
         scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
         # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).
         if prev is not None and s.decided_at < busy_until and (
