@@ -46,3 +46,19 @@ that short. Added variant:
 
 "Overrides" is limited to IFVG arrays; every other array still needs the bias. Same test and pass bar as above
 (5 variants now, z ≥ 2.0 out-of-sample, both cost bases).
+
+## Amendment 2 (2026-11-14, before any code or run): the same narrative one level up (weekly IFVG inside a monthly OB)
+Sharif's second example (US100, monthly/weekly/3h, Sep–Nov 2026; his TradingView charts 2biuVKwc, fwcyfOXi,
+JcsH0CVS): a weekly bull FVG ≈29,704–30,081 (left by the week of Sep 21) failed on the **weekly** close of the week
+of Oct 12 (29,168) and became an IFVG. It sits inside a **monthly** bearish OB (the September up-candle, body
+≈29,437–30,662). Price retested the IFVG three times (Oct 15–16, Oct 21, Oct 28 wick to ≈30,020) and was
+respected each time, then ran the sellside liquidity at the Sep 16 low (≈28,745) and the July low (≈27,063, swept in
+the first week of November, low ≈26,265). Before that, the October high (≈31,365) had swept the buyside at the
+June/September highs (≈30,760–30,797). Added variant:
+
+| name | HTF TFs | arrays | IFVG inverted on | lookback days |
+|---|---|---|---|---|
+| HTF IFVG + OB 1d+1w+1M (tf close; OB open, body) | 1d, 1w, 1M | ifvg, ob | own-TF close | 60 |
+
+6 variants now, same test and pass bar (z ≥ 2.0 out-of-sample, both cost bases). The 2026 example falls in the
+burned period: it inspired the rule and is not used to score it.
