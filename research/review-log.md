@@ -7,7 +7,7 @@ a default after it beats the baseline out-of-sample on 2022–24 and then passes
 | # | Found (date, trade) | What the engine missed | Built | Pre-registered | Result |
 |---|---|---|---|---|---|
 | 1 | 2026-11-14, 2022 model / PD return Sep 16–17 2024 | Ride the wave: don't sell the presumed top; 15m momentum sets the side | – | – | open |
-| 2 | 2026-11-14, several | IFVG flip: a close through your FVG means you're on the wrong side | – (exit-only version tested 2026-11-13, hurt) | – | open |
+| 2 | 2026-11-14, several | IFVG flip: a close through your FVG means you're on the wrong side | – (exit-only version tested 2026-11-13, hurt) | flip version: `preregistered-ifvg-flip-2026-11-14.md` | to build |
 | 3 | 2026-11-14, MMxM / SB Sep 16–17 2024 | Re-entry after a sweep stop-out inside the window | – | – | open |
 | 4 | 2026-11-14, SB Apr 15 2024 | Targets too close; aim at PDL/PWL (real draws) | liquidity pools (#6) | next | open |
 | 5 | 2026-11-14, 2022 model Apr 16 2024 | Daily OB: confirmation on a close through its open; body quadrants, 50% = MT (ICT rulings §11) | `order_blocks(confirm=)`, `quadrants`, pd_return `ob_confirm/ob_measure` | `preregistered-htf-ob-2026-11-14.md` | **failed** (all 5, both bases; best z +0.3): `htf-ob-results-2026-11-14.md` |
