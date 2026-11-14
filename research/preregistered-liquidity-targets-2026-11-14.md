@@ -32,3 +32,19 @@ the rule and are not used to score it.
 ## Not in this test
 Trendline "phantom" liquidity (not built); the pool left behind by a failed FVG as the draw (needs the IFVG
 result first); conditional quarterly expansion (Q4 out of a Q2–Q3 range: needs its own pre-registration).
+
+## Amendment 1 (2026-11-14, before any code or run): hold the day trade
+Sharif (review batch 2): "you're doing very small trades … we can have a trade run a few hours for day trading but it
+must be closed during market close for futures"; "extend the TP, take partials and then let the rest play … the FVG I
+added on the daily, that's an interest to sell towards, it's far but partials are key". Measured on CME NQ 2024: median
+hold 7–31 minutes, only 3–11% of trades over 2 hours. ICT rulings §15 (hold into the PM session).
+
+Added variant (same two models; TP1 and its partial unchanged):
+
+| name | TP1 | runner target | runner stop | time exit |
+|---|---|---|---|---|
+| hold: runner to the HTF draw | unchanged (50% off) | the nearest **higher-timeframe** draw at ≥ 3R: PDH/PDL, PWH/PWL, a 4h/1d pool, or the near edge of an unfilled 4h/1d FVG ahead in the trade direction | entry (after TP1) | the session close: **16:55 NY** on futures (flat before the 17:00 CME halt), the last bar before the CFD halt (16:10) on CFDs |
+
+Today every trade is cut at 16:00. For this variant only, the close moves as above. Measure: expectancy **with the
+runner** (`runner_r`), as the rest of this pre-registration. 4 variants × 2 models = 8 cells now: pass bar **z ≥ 2.6**,
+and **≥ 30 out-of-sample trades** per cell (a z from fewer trades is not counted; see the flip result).
