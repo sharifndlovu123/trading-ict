@@ -26,3 +26,8 @@ Futures basis only. US100 US500 US30 XAUUSD XAGUSD, 2022-01-03→2024-06-28, the
 expectancy all out at TP1 (R), with `release_slip` on. 3 variants × 5 models = 15 cells: pass = OOS Δ vs baseline with
 **z ≥ 2.6** and **≥ 30 OOS trades**. Also reported (not scored): the same with `release_slip` off, and Δ on only the
 trades the rule changes. Expect small effects: only ~5% of stops sit in a release minute. 2024-07+ unused.
+
+## Amendment 1 (2026-11-14 20:30 SAST, before any code or run): two models
+Sharif narrowed development to the 2022 model and MMxM (`research/model-selection-2026-11-14.md`). Cells: 3 variants ×
+2 models = 6; pass bar **z ≥ 2.3** (Bonferroni-style for 6 one-sided tests ≈ 2.4; 2.3 kept as in the earlier 6-cell
+pre-registration), ≥ 30 OOS trades. Silver Bullet, Cameron and PD return are not run.
