@@ -17,6 +17,9 @@ Rules (pipeline.md §7):
     - runner variant: ``partial_frac`` off at TP1, the rest to final target / runner stop / time exit
       (runner stop: entry | lock_half = halfway entry→TP1 | original); a bar touching both the
       runner stop and the final target counts the stop first
+    - market order (plan.order == "market"): fills at the open of the first bar after ``placed_at``; R and cost
+      are measured from that fill. TP1 may count on the fill bar (the open came first); stop and TP1 in that bar
+      → stop first. If the open is already through TP1 ("missed") or the stop ("cancelled"), no trade
 """
 
 from __future__ import annotations
@@ -30,6 +33,8 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
     long = plan.side == "long"
     after = bars[(bars.index > plan.placed_at) & (bars.index < time_exit)]
     res = Result()
+    if plan.order == "market":
+        return _market(plan, after, bars, time_exit, cost, res)
     cost_r = cost / plan.risk
 
     def hit_entry(row):
@@ -64,7 +69,37 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
     if fill_i is None:
         return res
 
+    return _after_fill(plan, after, bars, time_exit, fill_i, cost_r, res, tp_on_fill_bar=False)
+
+
+def _market(plan: TradePlan, after: pd.DataFrame, bars: pd.DataFrame, time_exit, cost: float, res: Result) -> Result:
+    """Market order: fill at the first bar's open. No trade if that open is already at/through the stop or TP1."""
+    if after.empty:
+        res.exit_reason = "not_filled"
+        return res
+    from dataclasses import replace
+    long = plan.side == "long"
+    px = float(after.open.iloc[0])
+    if (long and (px <= plan.stop or px >= plan.tp1)) or (not long and (px >= plan.stop or px <= plan.tp1)):
+        res.exit_at = after.index[0]
+        res.exit_reason = "missed" if (px >= plan.tp1 if long else px <= plan.tp1) else "cancelled"
+        return res
+    filled = replace(plan, entry=px, arm=None)
+    return _after_fill(filled, after, bars, time_exit, 0, cost / filled.risk, res, tp_on_fill_bar=True)
+
+
+def _after_fill(plan: TradePlan, after: pd.DataFrame, bars: pd.DataFrame, time_exit, fill_i: int, cost_r: float,
+                res: Result, tp_on_fill_bar: bool) -> Result:
+    long = plan.side == "long"
+
+    def hit_stop(row):
+        return row.low <= plan.stop if long else row.high >= plan.stop
+
+    def hit(row, level):
+        return row.high >= level if long else row.low <= level
+
     res.filled_at = after.index[fill_i]
+    res.fill_price = plan.entry
     worst = 0.0
     tp1_at = None
     tf_min = _tf_minutes(plan.invalid_tf) if plan.invalid_tf and plan.invalid_level is not None else None
@@ -78,7 +113,7 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
             break
         worst = min(worst, plan.r_at(row.low if long else row.high))
         stop_now = hit_stop(row)
-        tp_now = hit(row, plan.tp1) and (j > fill_i or _fill_bar_reaches_tp(row, plan, long))
+        tp_now = hit(row, plan.tp1) and (j > fill_i or tp_on_fill_bar or _fill_bar_reaches_tp(row, plan, long))
         if stop_now:
             res.exit_at, res.exit_reason, res.r = ts, "stop", -1.0 - cost_r
             res.ambiguous = bool(tp_now)

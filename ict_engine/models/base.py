@@ -46,6 +46,9 @@ class TradePlan:
     # stop at "entry" (breakeven), "lock_half" (halfway entry→TP1) or "original" (initial stop).
     partial_frac: float = 0.5
     runner_stop: str = "entry"
+    # "limit": rest at ``entry`` until filled. "market": fill at the open of the first bar after ``placed_at``
+    # (``entry`` is then the decision price, for reference); R and costs use the actual fill.
+    order: str = "limit"
 
     @property
     def risk(self) -> float:
@@ -67,6 +70,7 @@ class Result:
     final_reached: bool | None = None # runner: final target before stop (after TP1)
     runner_r: float | None = None     # partial_frac at TP1 + the rest as a runner (plan.runner_stop)
     mae_r: float | None = None        # worst excursion before exit (R)
+    fill_price: float | None = None   # actual fill (= plan.entry for limits; the next open for market orders)
 
 
 @dataclass

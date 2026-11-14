@@ -48,6 +48,9 @@ class Params:
     leg_bars_after_mss: int = 3          # FVG may finish forming up to N bars after the MSS candle
     fvg_pick: str = "deepest"            # deepest (lowest for buys) | nearest (closest to the MSS)
     entry_level: str = "proximal"        # proximal | ce | distal
+    # limit: rest at the FVG (entry_level). market: same setup and gates, but enter at market at the next bar's
+    # open after the decision (gap sweep 2026-11-14: 48% of limit orders saw TP1 trade before filling)
+    entry_mode: str = "limit"
     use_bias: bool = True
     # prev_day_dol: best bias rule in all 3 models OOS (variant sweep 2026-11-13, 4 assets; z < 2 — best so far)
     bias_rule: str = "prev_day_dol"
@@ -98,6 +101,8 @@ class Params:
             extra.append(f"fomc_{self.fomc_day}")
         if (self.partial_frac, self.runner_stop) != (0.5, "entry"):
             extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
+        if self.entry_mode != "limit":
+            extra.append(self.entry_mode)
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
         return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)
@@ -245,9 +250,17 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
                                 f"cost {cost_at(asset, entry, decided):.2f} = {cost_r:.2f}R of a {risk:.2f} stop (max {p.max_cost_r:g}R)"))
 
     expires = _window_end(decided, w) if w else decided
+    if p.entry_mode == "market":
+        # gates were judged on the limit plan above (same setups); the order itself goes in at market
+        px = float(day_1m.close[day_1m.index <= decided].iloc[-1])
+        ok = (stop < px < tp1) if long else (tp1 < px < stop)
+        setup.gates.append(Gate("trigger", ok, f"market entry at {px:.2f}" if ok else
+                                f"price {px:.2f} already outside stop {stop:.2f} / TP1 {tp1:.2f}"))
+        entry, arm, needs_arm = px, None, False
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
                                  arm=arm if needs_arm else None,
-                                 invalid_level=fvg.bottom if long else fvg.top, invalid_tf=p.invalidate_tf)
+                                 invalid_level=fvg.bottom if long else fvg.top, invalid_tf=p.invalidate_tf,
+                                 order=p.entry_mode)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     setup.tags["window"] = w.name if w else None

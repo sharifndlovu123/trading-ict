@@ -241,3 +241,26 @@ def test_invalidation_is_off_by_default_and_labelled_when_on():
     from ict_engine.models.model_2022 import Params
     assert Params().invalidate_tf is None and "inval" not in Params().variant
     assert replace(Params(), invalidate_tf="5m").variant.endswith("-inval5m")
+
+
+# --- entry_mode="market" (gap sweep 2026-11-14) ------------------------------------------------------
+
+def test_market_mode_same_setup_and_gates_but_a_market_order_at_the_decision_price():
+    lim = traded(find_setups(bars(), DAY, "US100"))[0]
+    p = Params(entry_mode="market")
+    mk = [s for s in traded(find_setups(bars(), DAY, "US100", p)) if s.decided_at == lim.decided_at][0]
+    assert p.variant.endswith("-market") and mk.plan.order == "market" and lim.plan.order == "limit"
+    decision_close = bars().close[bars().index <= mk.decided_at].iloc[-1]
+    assert mk.plan.entry == decision_close and mk.plan.arm is None
+    assert (mk.plan.stop, mk.plan.tp1) == (lim.plan.stop, lim.plan.tp1)
+    assert mk.plan.stop < mk.plan.entry < mk.plan.tp1
+
+
+def test_market_mode_fills_next_open_and_has_no_lookahead():
+    p = Params(entry_mode="market")
+    s = traded(run_day(bars(), DAY, "US100", p))[0]
+    nxt = bars()[bars().index > s.decided_at].iloc[0]
+    assert s.result.filled_at == nxt.name and s.result.fill_price == nxt.open
+    cut = bars()[bars().index <= s.decided_at]
+    s2 = traded(find_setups(cut, DAY, "US100", p))[0]
+    assert (s2.plan.entry, s2.plan.stop, s2.plan.tp1) == (s.plan.entry, s.plan.stop, s.plan.tp1)

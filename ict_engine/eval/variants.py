@@ -48,6 +48,7 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "partial 80% + runner at breakeven": replace(BASE, partial_frac=0.8),
     "partial 75% + runner trail (lock half)": replace(BASE, partial_frac=0.75, runner_stop="lock_half"),
     "partial 50% + runner trail (lock half)": replace(BASE, runner_stop="lock_half"),
+    "entry at market (next open)": replace(BASE, entry_mode="market"),
 }
 
 

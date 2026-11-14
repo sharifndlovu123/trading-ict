@@ -196,3 +196,33 @@ def test_runner_keeping_the_original_stop_can_lose_on_the_rest():
 def test_unknown_runner_stop_is_rejected():
     with pytest.raises(ValueError):
         simulate(TradePlan("long", t(0), t(30), 100, 98, 104, 108, runner_stop="maybe"), _after_tp1([]), CLOSE)
+
+
+# --- market orders ---------------------------------------------------------------------------------
+
+MKT = TradePlan("long", placed_at=t(0), expires_at=t(30), entry=101, stop=98, tp1=104, final_target=108, order="market")
+
+
+def test_market_order_fills_at_next_open_and_r_uses_the_fill():
+    # decision bar t0; next bar opens 102 → risk 4, TP1 104 is +0.5R; TP1 trades on the fill bar itself
+    b = bars([(101, 101, 101, 101), (102, 104.2, 101.8, 104)])
+    r = simulate(MKT, b, CLOSE)
+    assert r.filled_at == t(1) and r.fill_price == 102 and r.exit_reason == "tp1" and r.r == pytest.approx(0.5)
+
+
+def test_market_order_stop_first_when_fill_bar_hits_both_and_costs_use_fill_risk():
+    b = bars([(101, 101, 101, 101), (100, 104.5, 97.5, 101)])
+    r = simulate(MKT, b, CLOSE, cost=0.4)
+    assert r.exit_reason == "stop" and r.ambiguous and r.r == pytest.approx(-1.0 - 0.4 / 2.0)
+
+
+def test_market_order_not_taken_when_the_open_is_already_through_tp1_or_stop():
+    assert simulate(MKT, bars([(101, 101, 101, 101), (104.5, 105, 104, 104.8)]), CLOSE).exit_reason == "missed"
+    r = simulate(MKT, bars([(101, 101, 101, 101), (97.5, 98, 97, 97.2)]), CLOSE)
+    assert r.exit_reason == "cancelled" and r.filled_at is None
+
+
+def test_market_short_mirror():
+    p = TradePlan("short", placed_at=t(0), expires_at=t(30), entry=99, stop=102, tp1=96, final_target=92, order="market")
+    r = simulate(p, bars([(99, 99, 99, 99), (98, 98.2, 95.9, 96)]), CLOSE)
+    assert r.fill_price == 98 and r.vote and r.r == pytest.approx(0.5)

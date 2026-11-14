@@ -59,10 +59,11 @@ def _result_cols(prefix: str, r) -> dict:
     if r is None:
         return {f"{prefix}exit": None, f"{prefix}r": None, f"{prefix}vote": None,
                 f"{prefix}filled_at": None, f"{prefix}exit_at": None, f"{prefix}mae_r": None,
-                f"{prefix}runner_r": None, f"{prefix}ambiguous": None}
+                f"{prefix}runner_r": None, f"{prefix}ambiguous": None, f"{prefix}fill_price": None}
     return {f"{prefix}exit": r.exit_reason, f"{prefix}r": r.r if r.filled_at is not None else None,
             f"{prefix}vote": r.vote, f"{prefix}filled_at": r.filled_at, f"{prefix}exit_at": r.exit_at,
-            f"{prefix}mae_r": r.mae_r, f"{prefix}runner_r": r.runner_r, f"{prefix}ambiguous": r.ambiguous}
+            f"{prefix}mae_r": r.mae_r, f"{prefix}runner_r": r.runner_r, f"{prefix}ambiguous": r.ambiguous,
+            f"{prefix}fill_price": getattr(r, "fill_price", None)}
 
 
 def setup_row(s: Setup, ctx, outcome: str, bias_rule: str, shadow) -> dict:
