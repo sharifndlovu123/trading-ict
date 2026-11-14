@@ -67,11 +67,11 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
+    global ANSWERS
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--answers", type=Path, default=ANSWERS, help="answers file (tests use a scratch file)")
     a = ap.parse_args()
-    global ANSWERS
     ANSWERS = a.answers.resolve()
     if not (DATA / "index.json").exists():
         raise SystemExit("build the set first: uv run python research/scripts/triage_build.py")

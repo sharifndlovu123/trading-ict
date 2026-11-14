@@ -33,6 +33,10 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
 .tag.on kbd { color: var(--ink); }
 .verdict { font-weight: 700; }
 #note { flex: 1 1 220px; min-width: 160px; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); }
+.ans { font: inherit; font-weight: 600; padding: 4px 10px; margin-right: 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.ans.picked { outline: 2px solid var(--accent); background: var(--accent); color: var(--panel); }
+.ans.picked kbd { color: var(--ink); }
+.ans kbd { font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-weight: 700; }
 #result { font-family: ui-monospace, monospace; font-weight: 600; }
 #status { margin-left: auto; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, 300px); height: auto; } }
@@ -54,7 +58,7 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
   <div class="cell"><span class="lab">5m</span><div class="chart" id="c5m"></div></div>
 </div>
 <footer>
-  <span><kbd>T</kbd> take <kbd>S</kbd> skip <kbd>O</kbd> opposite</span>
+  <span id="answers"><button class="ans" data-v="take"></button><button class="ans" data-v="skip"></button><button class="ans" data-v="opposite"></button></span>
   <span id="tags"></span>
   <input id="note" placeholder="N: note (Enter to leave)" aria-label="Note"> <span id="saved"></span>
   <span class="muted"><kbd>→</kbd>/<kbd>Space</kbd> next <kbd>←</kbd> back <kbd>R</kbd> reveal</span>
@@ -86,7 +90,7 @@ function touched() {                       // a note or tag changed: keep a draf
 function noteStatus() {
   const id = st.item && st.item.id, d = drafts[id], a = st.answers[id];
   const draft = d && (d.note || d.tags.length) && !a;
-  $("saved").innerHTML = a ? '<span class="long">saved ✓</span>' : draft ? '<span class="short">draft — press T / S / O to save</span>' : "";
+  $("saved").innerHTML = a ? '<span class="long">saved ✓</span>' : draft ? '<span class="short">note not recorded yet: pick Take, Skip or the opposite side</span>' : "";
 }
 
 TAGS.forEach(([k, l], n) => { const s = document.createElement("span"); s.className = "tag"; s.dataset.k = k;
@@ -151,10 +155,22 @@ function draw() {
   const a = st.answers[t.id];
   $("result").innerHTML = show ? `<span class="${t.outcome.r > 0 ? "long" : "short"}">${t.outcome.exit} ${t.outcome.r > 0 ? "+" : ""}${(t.outcome.r ?? 0).toFixed(2)}R</span>`
     + (t.outcome.runner_r != null ? ` <span class="muted">runner ${t.outcome.runner_r > 0 ? "+" : ""}${t.outcome.runner_r.toFixed(2)}R</span>` : "")
-    + (a ? ` · you: <span class="verdict">${a.verdict}</span>` : "") : `<span class="muted">result hidden until you answer</span>`;
+    + (a ? ` · you: <span class="verdict">${say(t, a.verdict)}</span>` : "") : `<span class="muted">result hidden until you answer</span>`;
   document.querySelectorAll("#tags .tag").forEach(e => e.classList.toggle("on", st.tags.has(e.dataset.k)));
   document.querySelectorAll(".layer").forEach(e => e.classList.toggle("on", !!layers[e.dataset.k]));
 }
+
+function say(t, v) {
+  const side = t.side === "long" ? "LONG" : "SHORT", other = t.side === "long" ? "SELL" : "BUY";
+  return { take: `take the ${side}`, skip: "skip (no trade)", opposite: `${other} instead` }[v];
+}
+function buttons() {
+  const a = st.answers[st.item.id];
+  document.querySelectorAll(".ans").forEach(b => { const v = b.dataset.v;
+    b.innerHTML = `<kbd>${{ take: "T", skip: "S", opposite: "O" }[v]}</kbd> ${say(st.item, v)}`;
+    b.classList.toggle("picked", !!a && a.verdict === v); });
+}
+document.querySelectorAll(".ans").forEach(b => b.onclick = () => answer(b.dataset.v));
 
 function header() {
   const t = st.item, n = Object.keys(st.answers).filter(k => st.ids.includes(k)).length;
@@ -170,7 +186,7 @@ async function show(i) {
   st.item = await load(st.ids[st.i]);
   const a = st.answers[st.item.id] || drafts[st.item.id];
   st.tags = new Set(a ? a.tags : []); $("note").value = a ? a.note || "" : ""; st.reveal = false; st.shownAt = performance.now();
-  header(); draw(); noteStatus();
+  header(); draw(); noteStatus(); buttons();
   for (const j of [st.i + 1, st.i + 2]) if (st.ids[j]) load(st.ids[j]);       // prefetch
 }
 
@@ -187,7 +203,7 @@ async function answer(v) {
   if (!r.ok) { $("status").textContent = "NOT SAVED — is the server running?"; return; }
   st.answers[t.id] = a; delete drafts[t.id];
   try { localStorage.setItem("triage-drafts", JSON.stringify(drafts)); } catch (e) {}
-  header(); draw(); noteStatus();
+  header(); draw(); noteStatus(); buttons();
 }
 
 function next() { let j = st.i + 1; while (j < st.ids.length && st.answers[st.ids[j]]) j++; show(j < st.ids.length ? j : st.i + 1); }
