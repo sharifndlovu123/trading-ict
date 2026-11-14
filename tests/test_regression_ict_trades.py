@@ -132,3 +132,42 @@ def test_htf_ifvg_inverts_on_its_own_timeframe_close_sharifs_examples(start, end
                          if e.direction == "bear" and abs(e.bottom - fvg_bottom) < 1 and str(e.origin_ts.date()) == origin]
     (tf_close,), (m1,) = pick("tf"), pick("1m")
     assert str(tf_close.ts.date()) == own_tf_day and str(m1.ts.date()) == one_min_day
+
+
+def test_flip_after_failed_trade_on_real_bars_us100_march_2023():
+    """The flip (research/preregistered-ifvg-flip-2026-11-14.md) on real bars: every flip comes from a real own-TF
+    close through the failed trade's entry FVG, sits on the opposite side, and is identical without future bars."""
+    from datetime import date, datetime, time, timedelta
+    from ict_engine.concepts.bars import resample
+    from ict_engine.concepts.context import build_context
+    from ict_engine.eval import flip as fl
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models.registry import modules
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 3, 1), date(2023, 3, 31))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    NY = "America/New_York"
+    P = modules()["silver_bullet"].Params()
+    seen, d = 0, date(2023, 3, 1)
+    while d <= date(2023, 3, 31):
+        if d.weekday() < 5:
+            ctx = build_context(bars, d)
+            day = bars[(bars.index >= pd.Timestamp(datetime.combine(d, time(0)), tz=NY)) &
+                       (bars.index < pd.Timestamp(datetime.combine(d, time(16, 30)), tz=NY))]
+            for s in run_day(bars, d, "US100", P, ctx=ctx):
+                for rule in fl.STOP_RULES:
+                    p = fl.flip_plan(s, day, ctx, P, rule)
+                    if p is None:
+                        continue
+                    seen += 1
+                    f = s.evidence["fvg"]
+                    c = resample(day, f.tf)
+                    close = float(c[c.close_ts == p.placed_at].close.iloc[0])
+                    assert (close < f.bottom) if s.side == "long" else (close > f.top)
+                    assert p.side != s.side and p.placed_at <= s.result.exit_at + timedelta(minutes=5)
+                    cut = day[day.index <= max(p.placed_at, s.result.exit_at)]
+                    assert fl.flip_plan(s, cut, ctx, P, rule) == p
+        d += timedelta(days=1)
+    assert seen > 0
