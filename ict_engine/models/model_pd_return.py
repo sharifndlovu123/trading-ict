@@ -22,7 +22,7 @@ Mechanical version (bullish; bearish is the mirror):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import replace, dataclass, field
 from datetime import date, time, timedelta
 
 import pandas as pd
@@ -44,6 +44,8 @@ class Params:
     windows: tuple[str, ...] = ("london_kz", "ny_premarket", "ny_am_kz", "ny_pm_kz")
     htf_tfs: tuple[str, ...] = ("15m", "1h", "4h")
     arrays: tuple[str, ...] = ("fvg",)    # fvg | ob | breaker | mitigation (models.md §6 variants)
+    ob_confirm: str = "extreme"          # OB known on a close beyond its extreme (Bible p.16) | "open" (close through its open)
+    ob_measure: str = "range"            # OB zone + 50% on the full range | "body" (ICT Month 04: open to close, no wicks)
     lookback_days: int = 5
     trigger_tf: str = "1m"
     trigger_wait_min: int = 30
@@ -69,7 +71,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ob_confirm", "ob_measure", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
             if getattr(self, name) != getattr(d, name):
@@ -79,16 +81,21 @@ class Params:
 
 # --- pieces (pure, unit-tested) ---------------------------------------------------------------
 
-def htf_arrays(hist_1m: pd.DataFrame, tfs: tuple[str, ...], kinds: tuple[str, ...] = ("fvg",)) -> list[Event]:
+def htf_arrays(hist_1m: pd.DataFrame, tfs: tuple[str, ...], kinds: tuple[str, ...] = ("fvg",),
+               ob_confirm: str = "extreme", ob_measure: str = "range") -> list[Event]:
     """PD arrays on each higher timeframe of the history (each known from its ``ts``): FVGs, order blocks,
-    breakers and/or mitigation blocks."""
+    breakers and/or mitigation blocks. ``ob_measure="body"`` turns each OB into its body (open-to-close range
+    of its candles), so the zone, the 50% (mean threshold) and the fail level ignore wicks."""
     out = []
     for tf in tfs:
         bars = resample(hist_1m, tf)
         if "fvg" in kinds:
             out += fvgs(bars, tf)
         if "ob" in kinds:
-            out += order_blocks(bars, tf)
+            obs = order_blocks(bars, tf, confirm=ob_confirm)
+            if ob_measure == "body":
+                obs = [replace(o, top=o.meta["body"][0], bottom=o.meta["body"][1]) for o in obs]
+            out += obs
         if "breaker" in kinds or "mitigation" in kinds:
             out += [b for b in breaker_blocks(bars, tf) if b.kind in kinds]
     return out
@@ -146,7 +153,7 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     if day_1m.empty:
         return []
     hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=p.lookback_days + 2)) & (bars_1m.index < d1)]
-    arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays) if g.ts >= d0 - timedelta(days=p.lookback_days)]
+    arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays, p.ob_confirm, p.ob_measure) if g.ts >= d0 - timedelta(days=p.lookback_days)]
     ref = float(day_1m.close.iloc[0])
     ltf = fvgs(resample(day_1m, p.trigger_tf), p.trigger_tf, min_size=ref * p.min_trigger_gap_bp / 1e4)
     swing_pts = swings(resample(day_1m, "5m"), "5m") + swings(resample(day_1m, "15m"), "15m")

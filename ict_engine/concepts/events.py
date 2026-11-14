@@ -175,11 +175,15 @@ def inversions(gaps: Iterable[Event], bars_1m: pd.DataFrame, min_size: float = 0
 BLOCK_KINDS = ("ob", "breaker", "mitigation")
 
 
-def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5) -> list[Event]:
+def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5, confirm: str = "extreme") -> list[Event]:
     """Bullish OB: the last down-close candle(s) before a candle CLOSES above their high (the close that
     validates it, Bible p.16 step 3, is ``ts``). Bearish is the mirror (last up-close candles, close below
-    their low). ``max_wait``: the validating close must come within this many bars of the block.
-    ``meta['fvg']``: a FVG formed in the move away by the validating bar (a higher-quality OB, p.17 step 4)."""
+    their low). ``confirm="open"`` validates earlier, on a close through the block's opening price (Sharif,
+    2026-11-14: the sell candle "closing the green candle"). ``max_wait``: the validating close must come
+    within this many bars of the block. ``meta['fvg']``: a FVG formed in the move away by the validating bar
+    (a higher-quality OB, p.17 step 4). ``meta['body']`` = (body top, body bottom) for quadrant levels."""
+    if confirm not in ("extreme", "open"):
+        raise ValueError(f"confirm must be 'extreme' or 'open', got {confirm!r}")
     o, h, l, c, cts = (*(_arr(df, x) for x in ("open", "high", "low", "close")), _close_ts(df).to_numpy())
     out = []
     for bull in (True, False):
@@ -196,12 +200,20 @@ def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5) -> list[Event]:
                 run = None
                 continue
             hi, lo = h[a:b + 1].max(), l[a:b + 1].min()
-            if (bull and c[i] > hi) or (not bull and c[i] < lo):
+            lvl = (o[a:b + 1].max() if bull else o[a:b + 1].min()) if confirm == "open" else (hi if bull else lo)
+            if (bull and c[i] > lvl) or (not bull and c[i] < lvl):
                 fvg = any((l[j] > h[j - 2]) if bull else (h[j] < l[j - 2]) for j in range(b + 2, i + 1))
                 out.append(Event("ob", tf, "bull" if bull else "bear", pd.Timestamp(cts[i]), df.index[a],
-                                 float(hi), float(lo), {"fvg": fvg, "candles": b - a + 1}))
+                                 float(hi), float(lo), {"fvg": fvg, "candles": b - a + 1,
+                                 "body": (float(max(o[a:b + 1].max(), c[a:b + 1].max())),
+                                          float(min(o[a:b + 1].min(), c[a:b + 1].min())))}))
                 run = None
     return sorted(out, key=lambda e: e.ts)
+
+
+def quadrants(top: float, bottom: float) -> dict[str, float]:
+    """0/25/50/75/100 % levels of a zone, measured from ``bottom``; 50 % is the mean threshold."""
+    return {f"{q}%": bottom + (top - bottom) * q / 100 for q in (0, 25, 50, 75, 100)}
 
 
 def _colour_run(o: np.ndarray, c: np.ndarray, at: int, up: bool, lo: int) -> tuple[int, int] | None:

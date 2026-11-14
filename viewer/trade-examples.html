@@ -163,6 +163,8 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const $ = id => document.getElementById(id);
 const fmtT = s => { const d = new Date(s * 1000); return d.toISOString().slice(0, 16).replace("T", " "); };
 const T = () => DATA.trades[state.i];
+// a daily candle opens 18:00 NY the evening before; name it by its trading date (as on a futures chart)
+const tradingDate = t => new Date((t + 6 * 3600) * 1000).toISOString().slice(0, 10);
 
 // rail
 function rail() {
@@ -183,7 +185,7 @@ TFS.forEach(tf => { const b = document.createElement("button"); b.textContent = 
 $("blind").onchange = e => { state.blind = e.target.checked; draw(); };
 // chart layers: everything optional, minimal by default; remembered per viewer
 const LAYERS = [["trade", "Entry / stop / TP1", true], ["marks", "Decided / filled / exit", true], ["levels", "Day & week levels", false],
-  ["eq", "20-day EQ", false], ["gaps", "HTF FVGs", false], ["delta", "Order flow", true]];
+  ["eq", "20-day EQ", false], ["gaps", "HTF FVGs", false], ["obs", "HTF order blocks (25/50/75%)", false], ["delta", "Order flow", true]];
 try { Object.assign(state, { layers: JSON.parse(localStorage.getItem("tr-layers") || "null") }); } catch {}
 if (!state.layers) state.layers = Object.fromEntries(LAYERS.map(([k, , on]) => [k, on]));
 LAYERS.forEach(([k, l]) => { const lab = document.createElement("label"); lab.className = "tog";
@@ -201,7 +203,9 @@ function makeChart() {
     grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } },
     rightPriceScale: { borderColor: css("--line") }, timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },
     crosshair: { mode: 0 },
+    localization: { timeFormatter: t => state.tf === "1d" ? tradingDate(t) : fmtT(t) },
   });
+  if (state.tf === "1d") chart.timeScale().applyOptions({ tickMarkFormatter: t => tradingDate(t).slice(5) });
   series = chart.addCandlestickSeries({ upColor: css("--long"), downColor: css("--short"), borderVisible: false,
     wickUpColor: css("--long"), wickDownColor: css("--short") });
   delta = chart.addHistogramSeries({ priceScaleId: "delta", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
@@ -232,6 +236,9 @@ function draw() {
   if (L.trade) { line(t.entry, css("--entry"), "entry"); line(t.stop, css("--stop"), "stop"); line(t.tp1, css("--tp"), "TP1 " + (t.tp1_name || "")); }
   if (L.levels) for (const [k, v] of Object.entries(t.levels)) line(v, css("--level"), k.toUpperCase(), 2, 1);
   if (L.eq) line(t.eq20, css("--eq"), "20D EQ", 1, 1);
+  if (L.obs) for (const o of t.htf_obs || []) { const c = o.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
+    for (const [q, p] of Object.entries(o.levels)) line(p, c, q === "50%" ? `${TF_LABEL[o.tf]} OB 50%` : (q === "0%" || q === "100%" ? `${TF_LABEL[o.tf]} OB` : ""),
+      q === "50%" ? 0 : (q === "25%" || q === "75%" ? 1 : 2), q === "50%" ? 2 : 1); }
   if (L.gaps) for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
     line(g.top, c, `${TF_LABEL[g.tf]} FVG`, 3, 1); line(g.bottom, c, "", 3, 1); }
   // markers

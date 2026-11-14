@@ -241,3 +241,17 @@ def test_blocks_have_no_lookahead():
         again = breaker_blocks(cut, "1m") + order_blocks(cut, "1m")
         assert any((x.kind, x.direction, x.top, x.bottom, x.ts) == (e.kind, e.direction, e.top, e.bottom, e.ts)
                    for x in again), e
+
+
+def test_order_block_open_confirmation_validates_earlier_and_keeps_the_body():
+    # Sharif's Apr 2024 daily NQ: green OB, next candle closes below its open (not its low), then a close below its low
+    from ict_engine.concepts.events import order_blocks, quadrants
+    idx = pd.date_range("2024-04-10", periods=4, freq="D", tz="America/New_York")
+    df = pd.DataFrame({"open": [18190.0, 18184.0, 18486.25, 18151.0], "high": [18200.0, 18518.75, 18507.75, 18350.75],
+                       "low": [18150.0, 18088.0, 18120.25, 17841.5], "close": [18160.0, 18485.5, 18172.5, 17875.0]}, index=idx)
+    ext = [e for e in order_blocks(df, "1d") if e.direction == "bear"]
+    opn = [e for e in order_blocks(df, "1d", confirm="open") if e.direction == "bear"]
+    assert ext[0].ts == idx[3] and opn[0].ts == idx[2]                    # open rule knows it one day earlier
+    assert opn[0].origin_ts == idx[1] and opn[0].meta["body"] == (18485.5, 18184.0)
+    q = quadrants(*opn[0].meta["body"])
+    assert q["50%"] == pytest.approx(18334.75) and q["0%"] == 18184.0

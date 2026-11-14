@@ -128,6 +128,14 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
     "array: breaker": replace(PR, arrays=("breaker",)),
     "array: mitigation block": replace(PR, arrays=("mitigation",)),
     "array: FVG + OB + breaker + MB": replace(PR, arrays=("fvg", "ob", "breaker", "mitigation")),
+    # higher-timeframe order blocks (research/preregistered-htf-ob-2026-11-14.md; ICT rulings §11)
+    "HTF OB 4h+1d (open, body)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ob",), ob_confirm="open", ob_measure="body"),
+    "HTF OB 4h+1d (extreme, body)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ob",), ob_measure="body"),
+    "HTF OB 4h+1d (open, body, lookback 10)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ob",), ob_confirm="open",
+                                                      ob_measure="body", lookback_days=10),
+    "HTF FVG + OB 15m-1d (open, body)": replace(PR, htf_tfs=("15m", "1h", "4h", "1d"), arrays=("fvg", "ob"),
+                                                ob_confirm="open", ob_measure="body"),
+    "HTF daily FVGs added": replace(PR, htf_tfs=("15m", "1h", "4h", "1d")),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}

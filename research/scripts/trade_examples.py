@@ -14,7 +14,7 @@ import pandas as pd
 
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import build_context
-from ict_engine.concepts.events import fvgs, gap_lifecycle
+from ict_engine.concepts.events import fvgs, gap_lifecycle, order_blocks, quadrants
 from ict_engine.data import orderflow as of
 
 NY = "America/New_York"
@@ -77,6 +77,33 @@ def open_htf_gaps(hist: pd.DataFrame, at: pd.Timestamp, price: float) -> list:
     return keep
 
 
+def open_htf_obs(hist: pd.DataFrame, at: pd.Timestamp, price: float) -> list:
+    """Order blocks on 1D/4H/1H known at ``at`` (Sharif's open-confirmation rule), still intact: no body close
+    beyond the far side of the block's body since it was confirmed. Nearest 2 per timeframe and direction, with quadrants."""
+    rows = []
+    for tf in ("1d", "4h", "1h"):
+        bars = resample(hist, tf)
+        for ob in order_blocks(bars, tf, confirm="open"):
+            if ob.ts > at:
+                continue
+            top, bot = ob.meta["body"]
+            after = bars[(bars.index > ob.ts) & (bars.index <= at)]
+            closes = after.close
+            broken = (closes > top).any() if ob.direction == "bear" else (closes < bot).any()
+            if broken:
+                continue
+            rows.append({"tf": tf, "dir": ob.direction, "from": wall(ob.origin_ts), "known": wall(ob.ts),
+                         "levels": {k: num(v) for k, v in quadrants(top, bot).items()},
+                         "dist": abs((top + bot) / 2 - price)})
+    keep = []
+    for tf in ("1d", "4h", "1h"):
+        for side in ("bull", "bear"):
+            keep += sorted([r for r in rows if r["tf"] == tf and r["dir"] == side], key=lambda r: r["dist"])[:2]
+    for r in keep:
+        r.pop("dist")
+    return keep
+
+
 def main():
     runs = {p.stem: pd.read_parquet(p) for p in Path("reports/nqcme").glob("*.parquet") if p.stem in MODELS}
     allbars = of.load(date(2023, 10, 1), date(2025, 1, 1), schema=of.BARS)
@@ -107,6 +134,7 @@ def main():
             "levels": {k: num(v) for k, v in ctx.levels.items()},
             "range20": [num(lo20), num(hi20)], "eq20": num((lo20 + hi20) / 2),
             "pricing20": "premium" if r.entry > (lo20 + hi20) / 2 else "discount",
+            "htf_obs": open_htf_obs(hist_at[hist_at.index >= dec - timedelta(days=90)], dec, r.entry),
             "htf_gaps": open_htf_gaps(hist_at[hist_at.index >= dec - timedelta(days=60)], dec, r.entry),
             "candles": tfs,
         }

@@ -172,3 +172,15 @@ def test_ob_variant_trades_the_return_to_the_overnight_order_block_without_looka
     cut = cut[cut.index <= s.decided_at]
     b = planned(pr.find_setups(cut, DAY, "US100", p))[0]
     assert (b.plan.entry, b.plan.stop, b.plan.tp1, b.decided_at) == (s.plan.entry, s.plan.stop, s.plan.tp1, s.decided_at)
+
+
+def test_htf_arrays_ob_confirm_open_and_body_measure():
+    from ict_engine.models.model_pd_return import htf_arrays, fail_level
+    idx = pd.date_range("2024-04-10 09:30", periods=4, freq="1min", tz="America/New_York")
+    df = pd.DataFrame({"open": [18190.0, 18184.0, 18486.25, 18151.0], "high": [18200.0, 18518.75, 18507.75, 18350.75],
+                       "low": [18150.0, 18088.0, 18120.25, 17841.5], "close": [18160.0, 18485.5, 18172.5, 17875.0]}, index=idx)
+    rng = [a for a in htf_arrays(df, ("1m",), ("ob",)) if a.direction == "bear"]
+    body = [a for a in htf_arrays(df, ("1m",), ("ob",), ob_confirm="open", ob_measure="body") if a.direction == "bear"]
+    assert rng[0].ts == idx[3] and (rng[0].top, rng[0].bottom) == (18518.75, 18088.0)
+    assert body[0].ts == idx[2] and (body[0].top, body[0].bottom) == (18485.5, 18184.0)
+    assert fail_level(body[0]) == 18334.75                      # mean threshold on the body
