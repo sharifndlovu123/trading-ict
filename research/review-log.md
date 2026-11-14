@@ -12,7 +12,7 @@ a default after it beats the baseline out-of-sample on 2022–24 and then passes
 | 4 | 2026-11-14, SB Apr 15 2024 | Targets too close; aim at PDL/PWL (real draws) | liquidity pools (#6) | next | open |
 | 5 | 2026-11-14, 2022 model Apr 16 2024 | Daily OB: confirmation on a close through its open; body quadrants, 50% = MT (ICT rulings §11) | `order_blocks(confirm=)`, `quadrants`, pd_return `ob_confirm/ob_measure` | `preregistered-htf-ob-2026-11-14.md` | sweep running |
 | 6 | 2026-11-14, liquidity guidance | Equal highs/lows; pools (EQH near PDH = stronger); trendline phantoms (ICT rulings §12) | `equal_levels`, `liquidity_pools`; trendlines not yet | targets: next | found Sharif's EQL ×3 at 18051.5 |
-| 7 | 2026-11-14, 2022 model Apr 16 2024 | Daily FVG failed on a DAILY close → IFVG; leaves EQLs; retest validates; OB inside | engine flips on 1m closes (wrong for HTF) | `preregistered-htf-ifvg-2026-11-14.md` | to build after the OB sweep |
+| 7 | 2026-11-14, 2022 model Apr 16 2024 | Daily FVG failed on a DAILY close → IFVG; leaves EQLs; retest validates; OB inside. Bias stayed bullish: the IFVG is a counter-bias **sellers' turn** (a leg to the EQLs), which the bias gate blocks today | engine flips on 1m closes (wrong for HTF) | `preregistered-htf-ifvg-2026-11-14.md` | to build after the OB sweep |
 
 ## Also from ICT's live executions (re-read 2026-11-14)
 Ride the wave in 8 of 11; a sweep of a session/intraday low first in 10 of 11; entries 08:30–11:15 NY (6 on news or

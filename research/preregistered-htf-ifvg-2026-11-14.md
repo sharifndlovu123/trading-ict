@@ -33,3 +33,16 @@ example inspired the rule and is not used to score it.
 ## Not in this test (next pre-registration)
 Targets from liquidity pools (TP1 nearest pool, runner to the strongest pool in the bias direction), and the
 "pool left behind by the failed FVG" as the draw.
+
+## Amendment 1 (2026-11-14, before any code or run): the IFVG as a counter-bias leg
+Sharif: "bias was buying, it was just sellers' turn. The FVG was invalidated but changed to an IFVG and was
+validated, showing respect for it." The higher-timeframe bias stayed bullish; the failed daily FVG marked a sell
+**leg** inside it, aimed at the liquidity the failure left behind (the equal lows). The current bias gate would block
+that short. Added variant:
+
+| name | HTF TFs | arrays | IFVG inverted on | bias gate | lookback days |
+|---|---|---|---|---|---|
+| HTF IFVG 4h+1d (tf close, overrides bias) | 4h, 1d | ifvg | own-TF close | an IFVG trade may go against the daily bias | 10 |
+
+"Overrides" is limited to IFVG arrays; every other array still needs the bias. Same test and pass bar as above
+(5 variants now, z ≥ 2.0 out-of-sample, both cost bases).
