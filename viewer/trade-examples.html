@@ -52,8 +52,22 @@ h2 { font-family: var(--f-display); font-size: 15px; margin: 0 0 8px; letter-spa
 .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 label.tog { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
 .chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-#chart { height: 480px; }
-@media (max-width: 600px) { #chart { height: 360px; } }
+.plot { position: relative; }
+#chart { height: 520px; }
+@media (max-width: 600px) { #chart { height: 380px; } }
+#ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
+.plot.drawing #ink { pointer-events: auto; cursor: crosshair; }
+.layers { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.drawbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.drawbar select, .drawbar input[type=text] { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); }
+.drawbar input[type=text] { width: 180px; max-width: 100%; }
+.drawbar .hint { color: var(--muted); font-size: 12px; }
+.shapes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.shapes li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.shapes .sw { width: 10px; height: 10px; border-radius: 2px; }
+.shapes span.t { font-family: var(--f-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.shapes button { all: unset; cursor: pointer; color: var(--muted); font-size: 12px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; }
+.shapes button:focus-visible { outline: 2px solid var(--accent); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
@@ -93,10 +107,16 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
     <div class="bar">
       <div class="seg" id="tfs" role="group" aria-label="Timeframe"></div>
       <label class="tog"><input type="checkbox" id="blind"> Only what was known at the decision</label>
-      <label class="tog"><input type="checkbox" id="showgaps" checked> Higher-TF FVGs</label>
+      <div class="layers" id="layers" role="group" aria-label="Show on chart"></div>
     </div>
     <div class="chartbox">
-      <div id="chart"></div>
+      <div class="drawbar">
+        <div class="seg" id="tools" role="group" aria-label="Drawing tool"></div>
+        <label class="tog" for="d-tag">Tag <select id="d-tag"></select></label>
+        <input type="text" id="d-text" placeholder="Label (optional)" aria-label="Label for the drawing">
+        <span class="hint" id="d-hint">Pick a tool to draw. Pan/zoom works when the tool is off.</span>
+      </div>
+      <div class="plot" id="plot"><div id="chart"></div><canvas id="ink"></canvas></div>
       <div class="legend" id="legend"></div>
     </div>
     <div class="cards">
@@ -104,6 +124,8 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
       <section class="card"><h2>Bias at the decision</h2><table id="bias"></table>
         <p class="note">Bold = the rule this model used. Each row is a different read: previous day, 20-day range, weekly draw.</p></section>
       <section class="card"><h2>Context</h2><dl id="ctx"></dl></section>
+      <section class="card"><h2>Your drawings</h2><ul class="shapes" id="shapes"></ul>
+        <p class="note" id="d-status">Drawings save as soon as you finish one.</p></section>
     </div>
     <section class="card">
       <h2>Your correction</h2>
@@ -130,7 +152,7 @@ const TF_LABEL = { "1m": "1m", "5m": "5m", "15m": "15m", "1h": "1H", "4h": "4H",
 const VERDICTS = [["good", "Good trade"], ["ok_wrong_mgmt", "Right idea, wrong execution"], ["no_trade", "Should not have traded"], ["opposite", "Should have gone the other way"]];
 const MISSES = [["htf_bias", "Higher-TF bias"], ["dealing_range", "Premium/discount"], ["poi", "Wrong or missing POI"], ["liquidity", "Liquidity / draw"],
   ["entry_early", "Entry too early"], ["entry_late", "Entry too late"], ["stop", "Stop placement"], ["target", "Target"], ["time", "Time of day / news"], ["smt", "SMT / correlated market"]];
-const state = { i: 0, tf: "5m", blind: false, gaps: true, saved: {} };
+const state = { i: 0, tf: "5m", blind: false, saved: {}, rows: [] };
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const $ = id => document.getElementById(id);
 const fmtT = s => { const d = new Date(s * 1000); return d.toISOString().slice(0, 16).replace("T", " "); };
@@ -153,7 +175,15 @@ function rail() {
 TFS.forEach(tf => { const b = document.createElement("button"); b.textContent = TF_LABEL[tf]; b.dataset.tf = tf;
   b.onclick = () => { state.tf = tf; draw(); }; $("tfs").append(b); });
 $("blind").onchange = e => { state.blind = e.target.checked; draw(); };
-$("showgaps").onchange = e => { state.gaps = e.target.checked; draw(); };
+// chart layers: everything optional, minimal by default; remembered per viewer
+const LAYERS = [["trade", "Entry / stop / TP1", true], ["marks", "Decided / filled / exit", true], ["levels", "Day & week levels", false],
+  ["eq", "20-day EQ", false], ["gaps", "HTF FVGs", false], ["delta", "Order flow", true]];
+try { Object.assign(state, { layers: JSON.parse(localStorage.getItem("tr-layers") || "null") }); } catch {}
+if (!state.layers) state.layers = Object.fromEntries(LAYERS.map(([k, , on]) => [k, on]));
+LAYERS.forEach(([k, l]) => { const lab = document.createElement("label"); lab.className = "tog";
+  lab.innerHTML = `<input type="checkbox" id="ly-${k}"> `; lab.append(l); $("layers").append(lab);
+  const c = lab.querySelector("input"); c.checked = state.layers[k] ?? false;
+  c.onchange = () => { state.layers[k] = c.checked; try { localStorage.setItem("tr-layers", JSON.stringify(state.layers)); } catch {} draw(); }; });
 
 let chart, series, delta;
 function makeChart() {
@@ -179,9 +209,12 @@ function draw() {
   const t = T();
   let rows = t.candles[state.tf] || [];
   if (state.blind) rows = rows.filter(r => r[0] <= t.decided);
+  state.rows = rows;
+  chart.applyOptions({ handleScroll: !ink.tool, handleScale: !ink.tool });
+  chart.timeScale().subscribeVisibleLogicalRangeChange(paint);
   series.setData(rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close })));
   // order flow (1m delta bucketed to the timeframe)
-  if (t.delta && rows.length) {
+  if (state.layers.delta && t.delta && rows.length) {
     const b = new Map(); let k = 0;
     for (const [ts, v] of t.delta) { if (state.blind && ts > t.decided) break;
       while (k + 1 < rows.length && rows[k + 1][0] <= ts) k++; if (rows[k][0] > ts) continue;
@@ -189,10 +222,11 @@ function draw() {
     delta.setData([...b].map(([time, value]) => ({ time, value, color: value >= 0 ? css("--long") : css("--short") })));
   }
   const line = (price, color, title, style = 0, width = 2) => price != null && series.createPriceLine({ price, color, title, lineStyle: style, lineWidth: width, axisLabelVisible: true });
-  line(t.entry, css("--entry"), "entry"); line(t.stop, css("--stop"), "stop"); line(t.tp1, css("--tp"), "TP1 " + (t.tp1_name || ""));
-  for (const [k, v] of Object.entries(t.levels)) line(v, css("--level"), k.toUpperCase(), 2, 1);
-  line(t.eq20, css("--eq"), "20D EQ", 1, 1);
-  if (state.gaps) for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
+  const L = state.layers;
+  if (L.trade) { line(t.entry, css("--entry"), "entry"); line(t.stop, css("--stop"), "stop"); line(t.tp1, css("--tp"), "TP1 " + (t.tp1_name || "")); }
+  if (L.levels) for (const [k, v] of Object.entries(t.levels)) line(v, css("--level"), k.toUpperCase(), 2, 1);
+  if (L.eq) line(t.eq20, css("--eq"), "20D EQ", 1, 1);
+  if (L.gaps) for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
     line(g.top, c, `${TF_LABEL[g.tf]} FVG`, 3, 1); line(g.bottom, c, "", 3, 1); }
   // markers
   const mk = [];
@@ -201,12 +235,12 @@ function draw() {
   add(t.decided, "decided", css("--accent"), long ? "belowBar" : "aboveBar", "circle");
   if (!state.blind) { add(t.filled, "filled", css("--entry"), long ? "belowBar" : "aboveBar", long ? "arrowUp" : "arrowDown");
     add(t.exit_at, t.exit === "tp1" ? "TP1" : "stopped", t.exit === "tp1" ? css("--tp") : css("--stop"), long ? "aboveBar" : "belowBar", "square"); }
-  mk.sort((a, b) => a.time - b.time); series.setMarkers(mk);
+  mk.sort((a, b) => a.time - b.time); series.setMarkers(L.marks ? mk : []);
   // frame the decision
   const idx = rows.findIndex(r => r[0] >= (snap(rows, t.decided) || 0));
   const n = { "1m": 180, "5m": 120, "15m": 120, "1h": 120, "4h": 120, "1d": 120 }[state.tf];
   if (idx >= 0) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, idx - n * 0.7), to: Math.min(rows.length + 5, idx + n * 0.3 + (state.blind ? 10 : 0)) });
-  $("legend").innerHTML = [["--entry", "entry"], ["--stop", "stop"], ["--tp", "TP1"], ["--level", "day/week levels"], ["--eq", "20-day equilibrium"],
+  $("legend").innerHTML = ["Toggle layers above the chart. "].join("") + [["--entry", "entry"], ["--stop", "stop"], ["--tp", "TP1"], ["--level", "day/week levels"], ["--eq", "20-day equilibrium"],
     ["--gap-bull", "HTF bullish FVG"], ["--gap-bear", "HTF bearish FVG"]].map(([c, l]) => `<span><i style="background:var(${c})"></i>${l}</span>`).join("")
     + (t.delta ? `<span>bars at bottom: order-flow delta (buy − sell aggressor volume)</span>` : `<span>order-flow delta: not loaded yet</span>`);
 }
@@ -261,7 +295,113 @@ $("form").addEventListener("submit", async e => {
   $("save").disabled = false;
 });
 
-function render() { rail(); draw(); cards(); fillForm(); }
+// ---------- drawing ----------
+const TOOLS = [["", "Off"], ["level", "Level"], ["zone", "Zone"], ["line", "Line"], ["note", "Note"]];
+const TAGS = [["fvg", "FVG", "--long"], ["ifvg", "IFVG", "--short"], ["ob", "Order block", "--eq"], ["liquidity", "Liquidity", "--level"],
+  ["sweep", "Sweep", "--level"], ["mss", "MSS / BOS", "--accent"], ["range", "Range / consolidation", "--muted"], ["entry", "Better entry", "--entry"],
+  ["stop", "Better stop", "--stop"], ["target", "Better target", "--tp"], ["bias", "Bias / momentum", "--accent"], ["other", "Other", "--ink"]];
+const TAG = Object.fromEntries(TAGS.map(([k, l, c]) => [k, { label: l, color: c }]));
+const ink = { tool: "", pending: null, hover: null, shapes: {} };   // shapes: tradeId -> [shape]
+TOOLS.forEach(([k, l]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = l; b.dataset.tool = k;
+  b.onclick = () => setTool(k); $("tools").append(b); });
+TAGS.forEach(([k, l]) => { const o = document.createElement("option"); o.value = k; o.textContent = l; $("d-tag").append(o); });
+const HINT = { "": "Pick a tool to draw. Pan/zoom works when the tool is off.", level: "Click a price.", zone: "Drag a box over the area (e.g. an FVG).",
+  line: "Drag from start to end.", note: "Type a label, then click where it belongs." };
+function setTool(k) {
+  ink.tool = k; ink.pending = null;
+  document.querySelectorAll("#tools button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === k));
+  $("plot").classList.toggle("drawing", !!k); $("d-hint").textContent = HINT[k];
+  if (chart) chart.applyOptions({ handleScroll: !k, handleScale: !k });
+}
+setTool("");
+const TF_SEC = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 };
+// time <-> logical index on the current timeframe (fractional, so a drawing keeps its place on every timeframe)
+function timeToLogical(t) {
+  const r = state.rows; if (!r.length) return null;
+  let lo = 0, hi = r.length - 1;
+  if (t <= r[0][0]) return (t - r[0][0]) / TF_SEC[state.tf];
+  if (t >= r[hi][0]) return hi + (t - r[hi][0]) / TF_SEC[state.tf];
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (r[m][0] <= t) lo = m; else hi = m; }
+  return lo + (t - r[lo][0]) / Math.max(1, r[hi][0] - r[lo][0]);
+}
+function logicalToTime(l) {
+  const r = state.rows; if (!r.length) return null;
+  const i = Math.floor(l);
+  if (i < 0) return Math.round(r[0][0] + l * TF_SEC[state.tf]);
+  if (i >= r.length - 1) return Math.round(r[r.length - 1][0] + (l - (r.length - 1)) * TF_SEC[state.tf]);
+  return Math.round(r[i][0] + (l - i) * (r[i + 1][0] - r[i][0]));
+}
+const toXY = (t, p) => { const l = timeToLogical(t); if (l == null) return null;
+  const x = chart.timeScale().logicalToCoordinate(l), y = series.priceToCoordinate(p); return x == null || y == null ? null : [x, y]; };
+const fromXY = (x, y) => { const l = chart.timeScale().coordinateToLogical(x), p = series.coordinateToPrice(y);
+  return l == null || p == null ? null : { t: logicalToTime(l), p: Math.round(p * 4) / 4 }; };
+const cv = $("ink"), g = cv.getContext("2d");
+function paint() {
+  if (!chart) return;
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const list = [...(ink.shapes[T().id] || [])];
+  if (ink.pending && ink.hover) list.push({ ...ink.pending, t2: ink.hover.t, p2: ink.hover.p, preview: true });
+  g.font = `12px ${css("--f-mono")}`;
+  for (const s of list) {
+    const c = css(TAG[s.tag]?.color || "--ink"); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = 2; g.setLineDash(s.preview ? [5, 4] : []);
+    const a = toXY(s.t1, s.p1); if (!a) continue;
+    const name = (TAG[s.tag]?.label || "") + (s.text ? ": " + s.text : "");
+    if (s.kind === "level") { g.beginPath(); g.moveTo(0, a[1]); g.lineTo(w, a[1]); g.stroke(); g.fillText(name, 8, a[1] - 5); }
+    else if (s.kind === "note") { g.beginPath(); g.arc(a[0], a[1], 4, 0, 7); g.fill(); g.fillText(name, a[0] + 8, a[1] - 6); }
+    else { const b = toXY(s.t2, s.p2); if (!b) continue;
+      if (s.kind === "zone") { g.globalAlpha = .16; g.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+        g.globalAlpha = 1; g.strokeRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+        g.fillText(name, Math.min(a[0], b[0]) + 4, Math.min(a[1], b[1]) - 5); }
+      else { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.fillText(name, b[0] + 6, b[1]); } }
+  }
+  g.setLineDash([]);
+}
+(function loop() { paint(); requestAnimationFrame(loop); })();   // follows pan, zoom and autoscale
+const pt = e => { const r = cv.getBoundingClientRect(); return fromXY(e.clientX - r.left, e.clientY - r.top); };
+cv.addEventListener("pointerdown", e => {
+  if (!ink.tool) return; const p = pt(e); if (!p) return; e.preventDefault();
+  const base = { id: Date.now().toString(36), kind: ink.tool, tag: $("d-tag").value, text: $("d-text").value.trim(), tf: state.tf, t1: p.t, p1: p.p };
+  if (ink.tool === "level" || ink.tool === "note") { addShape(base); return; }
+  ink.pending = base; ink.hover = p; cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove", e => { if (ink.pending) ink.hover = pt(e) || ink.hover; });
+cv.addEventListener("pointerup", e => {
+  if (!ink.pending) return; const p = pt(e) || ink.hover; const s = { ...ink.pending, t2: p.t, p2: p.p }; ink.pending = null; ink.hover = null;
+  if (Math.abs(s.p2 - s.p1) < 0.25 && s.t1 === s.t2) return;     // a click, not a drag
+  if (s.kind === "zone") { [s.p1, s.p2] = [Math.max(s.p1, s.p2), Math.min(s.p1, s.p2)]; if (s.t2 < s.t1) [s.t1, s.t2] = [s.t2, s.t1]; }
+  addShape(s);
+});
+function addShape(s) { const id = T().id; ink.shapes[id] = [...(ink.shapes[id] || []), s]; $("d-text").value = ""; shapeList(); saveShapes(id); }
+function delShape(sid) { const id = T().id; ink.shapes[id] = (ink.shapes[id] || []).filter(s => s.id !== sid); shapeList(); saveShapes(id); }
+function shapeList() {
+  const ul = $("shapes"); ul.innerHTML = "";
+  const list = ink.shapes[T().id] || [];
+  if (!list.length) { const li = document.createElement("li"); li.className = "note"; li.textContent = "No drawings yet for this trade."; ul.append(li); return; }
+  for (const s of list) {
+    const li = document.createElement("li"); const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = `var(${TAG[s.tag]?.color || "--ink"})`;
+    const d = document.createElement("span");
+    const where = s.kind === "level" || s.kind === "note" ? `${s.p1} @ ${fmtT(s.t1)}` : `${s.p1}→${s.p2}, ${fmtT(s.t1)}→${fmtT(s.t2).slice(11)}`;
+    d.innerHTML = `<b></b> <span class="t"></span>`; d.querySelector("b").textContent = `${TAG[s.tag]?.label || s.tag}${s.text ? ": " + s.text : ""}`;
+    d.querySelector(".t").textContent = `${s.kind} on ${TF_LABEL[s.tf]} · ${where}`;
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Delete"; b.onclick = () => delShape(s.id);
+    li.append(sw, d, b); ul.append(li);
+  }
+}
+let saveTimer = {};
+function saveShapes(id) {
+  if (!db) { $("d-status").textContent = "Drawings can't be saved in this view. Open the page on claude.ai while signed in."; return; }
+  clearTimeout(saveTimer[id]);
+  saveTimer[id] = setTimeout(async () => {
+    $("d-status").textContent = "Saving…";
+    try { await db.collection("drawings").doc(id).set({ trade: id, shapes: ink.shapes[id] || [], updated: Date.now() }); $("d-status").textContent = "Saved. Claude can see these drawings."; }
+    catch (err) { $("d-status").textContent = "Not saved: " + (err?.message || "try again"); }
+    delete saveTimer[id];
+  }, 400);
+}
+
+function render() { rail(); draw(); cards(); fillForm(); shapeList(); }
 render();
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
 
@@ -275,5 +415,9 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", dra
     state.saved = {}; snap.docs.forEach(d => state.saved[d.id] = d.data());
     rail(); fillForm();
   }, () => { $("status").textContent = "Couldn't load saved corrections."; });
+  db.collection("drawings").onSnapshot(snap => {
+    snap.docs.forEach(d => { const v = d.data(); if (v && Array.isArray(v.shapes) && !saveTimer[d.id]) ink.shapes[d.id] = v.shapes; });
+    shapeList();
+  }, () => { $("d-status").textContent = "Couldn't load saved drawings."; });
 })();
 </script>
