@@ -1,5 +1,7 @@
 """Event detectors on hand-built candles where the right answer is known."""
 
+from dataclasses import replace
+
 import pandas as pd
 import pytest
 
@@ -301,3 +303,28 @@ def test_pool_strength_counts_one_price_once():
           Level("4h_eqh3@04-05 10:00", 18515.0, "high", t)]
     (p,) = liquidity_pools(lv, tol=5.0)
     assert p.strength == 1 + 3
+
+
+def _tf_bars(rows):
+    """Higher-timeframe bars: (first ts, close ts, close)."""
+    idx = pd.DatetimeIndex([pd.Timestamp(a, tz=NY) for a, _, _ in rows])
+    return pd.DataFrame({"open": [c for *_, c in rows], "high": [c for *_, c in rows], "low": [c for *_, c in rows],
+                         "close": [c for *_, c in rows],
+                         "close_ts": [pd.Timestamp(b, tz=NY) for _, b, _ in rows]}, index=idx)
+
+
+def test_htf_fvg_inverts_on_its_own_timeframe_close_not_the_first_1m_close():
+    """A daily bull FVG 105–110: on day 1 a 1m candle closes at 104 but the day closes back at 106 (no
+    inversion on the daily); day 2 closes at 103 → the IFVG is known at day 2's close, not earlier."""
+    gap = Event("fvg", "1d", "bull", pd.Timestamp("2024-01-08 16:59", tz=NY), pd.Timestamp("2024-01-07 18:00", tz=NY),
+                top=110.0, bottom=105.0)
+    m1 = candles([(107, 107, 104, 104)] + [(106, 106, 106, 106)] * 3, start="2024-01-09 10:00")
+    days = _tf_bars([("2024-01-08 18:00", "2024-01-09 16:59", 106.0), ("2024-01-09 18:00", "2024-01-10 16:59", 103.0)])
+    (one_min,) = inversions([gap], m1)
+    (own_tf,) = inversions([gap], m1, tf_bars={"1d": days})
+    assert one_min.ts == pd.Timestamp("2024-01-09 10:00", tz=NY)
+    assert own_tf.ts == pd.Timestamp("2024-01-10 16:59", tz=NY) and own_tf.direction == "bear"
+    # no look-ahead: with only day 1 known there is no IFVG yet
+    assert inversions([gap], m1, tf_bars={"1d": days.iloc[:1]}) == []
+    # a FVG of a timeframe not in tf_bars keeps the 1m rule
+    assert inversions([replace(gap, tf="4h")], m1, tf_bars={"1d": days})[0].ts == one_min.ts

@@ -7,6 +7,7 @@ aligned across DST changes:
     m/h timeframes  floor of wall-clock time (H4 bins start 18,22,02,06,10,14)
     1d              trading day: 18:00 → 17:00 next day (futures convention)
     1w              trading week: Sunday 18:00 → Friday 17:00
+    1M              trading month: every trading day of the calendar month (the 1st's session opens 18:00 the day before)
 
 Each output bar's index is the timestamp of its **first** 1m bar, and
 ``close_ts`` is the timestamp of its last 1m bar — events detected on a HTF bar
@@ -19,7 +20,7 @@ import pandas as pd
 
 from ict_engine.concepts.clock import trading_day
 
-TIMEFRAMES = ("1m", "2m", "3m", "5m", "15m", "30m", "1h", "4h", "1d", "1w")
+TIMEFRAMES = ("1m", "2m", "3m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M")
 
 
 def _bin_keys(index: pd.DatetimeIndex, tf: str) -> pd.Index:
@@ -29,6 +30,9 @@ def _bin_keys(index: pd.DatetimeIndex, tf: str) -> pd.Index:
     if tf == "1w":
         days = pd.to_datetime(trading_day(index))
         return pd.Index(days - pd.to_timedelta(days.day_of_week, unit="D"), name="bin")  # Monday of the week
+    if tf == "1M":
+        days = pd.to_datetime(trading_day(index))
+        return pd.Index(days.to_period("M").to_timestamp(), name="bin")                 # 1st of the month
     if tf == "4h":
         return pd.Index((naive - pd.Timedelta(hours=2)).floor("4h") + pd.Timedelta(hours=2), name="bin")
     freq = tf.replace("m", "min")

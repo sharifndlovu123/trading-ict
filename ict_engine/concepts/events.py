@@ -155,17 +155,37 @@ def gap_lifecycle(gap: Event, bars_1m: pd.DataFrame, until: pd.Timestamp | None 
     return st
 
 
-def inversions(gaps: Iterable[Event], bars_1m: pd.DataFrame, min_size: float = 0.0) -> list[Event]:
-    """IFVGs: each FVG whose body-close inversion happened becomes a gap of the opposite polarity."""
+def inversions(gaps: Iterable[Event], bars_1m: pd.DataFrame, min_size: float = 0.0,
+               tf_bars: dict[str, pd.DataFrame] | None = None) -> list[Event]:
+    """IFVGs: each FVG whose body-close inversion happened becomes a gap of the opposite polarity.
+
+    By default the inversion is the first **1m** body close beyond the far edge. With ``tf_bars`` ({tf: bars of
+    that timeframe, with ``close_ts``}), a FVG of a listed timeframe inverts only on a close of **its own
+    timeframe** beyond the far edge (a daily FVG fails on a daily close; Sharif 2026-11-14, ICT rulings §10), and
+    the IFVG becomes known at that candle's ``close_ts`` (no look-ahead)."""
     out = []
     for g in gaps:
-        if g.kind != "fvg":
+        if g.kind != "fvg" or (g.top - g.bottom) <= min_size:
             continue
-        st = gap_lifecycle(g, bars_1m)
-        if st.inverted is not None and (g.top - g.bottom) > min_size:
-            out.append(Event("ifvg", g.tf, "bear" if g.direction == "bull" else "bull", st.inverted,
+        if tf_bars is not None and g.tf in tf_bars:
+            when = _tf_close_beyond(g, tf_bars[g.tf])
+        else:
+            when = gap_lifecycle(g, bars_1m).inverted
+        if when is not None:
+            out.append(Event("ifvg", g.tf, "bear" if g.direction == "bull" else "bull", when,
                              g.origin_ts, g.top, g.bottom, {"from_fvg_ts": g.ts}))
     return out
+
+
+def _tf_close_beyond(g: Event, bars: pd.DataFrame) -> pd.Timestamp | None:
+    """close_ts of the first bar after the gap formed whose close is beyond the gap's far edge."""
+    cts = _close_ts(bars)
+    after = bars[cts > g.ts]
+    if after.empty:
+        return None
+    c = _arr(after, "close")
+    hit = c < g.bottom if g.direction == "bull" else c > g.top
+    return pd.Timestamp(_close_ts(after).to_numpy()[np.argmax(hit)]) if hit.any() else None
 
 
 # --- order blocks, breakers, mitigation blocks (ICT Bible pp.16-26) ---------------

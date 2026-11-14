@@ -110,3 +110,25 @@ def test_equal_lows_found_where_sharif_drew_them_nq_april_2024():
     eql = [lv for lv in equal_levels(d, swings(d, "1d"), tol=18000 * 2 / 1e4) if lv.side == "low"]
     hit = [lv for lv in eql if 18040 <= lv.price <= 18056 and "eql3" in lv.name]
     assert hit and hit[0].valid_from < pd.Timestamp("2024-04-15", tz="America/New_York")
+
+
+@pytest.mark.parametrize("start,end,tfs,fvg_bottom,origin,own_tf_day,one_min_day", [
+    # Sharif's daily NQ narrative (2024): Mar 20 daily FVG fails on the Apr 4 daily close (US100 CFD prices)
+    ("2024-02-15", "2024-04-12", ("1d",), 18041.0, "2024-03-19", "2024-04-04", "2024-04-02"),
+    # Sharif's weekly example (2026): week-of-Sep-21 FVG fails on the weekly close of Oct 16
+    ("2026-07-01", "2026-11-13", ("1w",), 29703.7, "2026-09-20", "2026-10-16", "2026-10-14"),
+])
+def test_htf_ifvg_inverts_on_its_own_timeframe_close_sharifs_examples(start, end, tfs, fvg_bottom, origin,
+                                                                     own_tf_day, one_min_day):
+    """Sharif (2026-11-14): an HTF FVG fails on a close of ITS timeframe, not the first 1m close through it."""
+    from datetime import date
+    from ict_engine.data import dukascopy as d
+    from ict_engine.models.model_pd_return import htf_arrays
+    try:
+        h = d.load("US100", date.fromisoformat(start), date.fromisoformat(end))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    pick = lambda mode: [e for e in htf_arrays(h, tfs, ("ifvg",), ifvg_close=mode)
+                         if e.direction == "bear" and abs(e.bottom - fvg_bottom) < 1 and str(e.origin_ts.date()) == origin]
+    (tf_close,), (m1,) = pick("tf"), pick("1m")
+    assert str(tf_close.ts.date()) == own_tf_day and str(m1.ts.date()) == one_min_day

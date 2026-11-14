@@ -7,6 +7,8 @@ untaken liquidity) → hold 106 → 08:00–08:40 pullback into the 1h FVG (low 
 
 from datetime import date
 
+from dataclasses import replace
+
 import pandas as pd
 import pytest
 
@@ -184,3 +186,29 @@ def test_htf_arrays_ob_confirm_open_and_body_measure():
     assert rng[0].ts == idx[3] and (rng[0].top, rng[0].bottom) == (18518.75, 18088.0)
     assert body[0].ts == idx[2] and (body[0].top, body[0].bottom) == (18485.5, 18184.0)
     assert fail_level(body[0]) == 18334.75                      # mean threshold on the body
+
+
+# --- IFVG arrays (research/preregistered-htf-ifvg-2026-11-14.md) ------------------------------------
+
+def test_htf_arrays_ifvg_kind_and_close_mode_validation():
+    got = pr.htf_arrays(bars(fail=True), ("15m", "1h"), ("ifvg",))
+    assert got and {g.kind for g in got} == {"ifvg"}
+    for g in got:                                   # own-TF mode: known at a close of that timeframe
+        tfb = resample(bars(fail=True), g.tf)
+        assert g.ts in set(tfb.close_ts)
+    with pytest.raises(ValueError):
+        pr.htf_arrays(bars(), ("1h",), ("ifvg",), ifvg_close="5m")
+
+
+def test_ifvg_bias_override_only_lifts_the_bias_gate_for_ifvg_arrays(monkeypatch):
+    monkeypatch.setattr(pr, "bias_gate", lambda *a, **k: pr.Gate("bias", False, "daily bias bull"))
+    day = day_bars()
+    ifvg = pr.Event("ifvg", "1d", "bear", ts("02:00"), ts("01:00"), 104.0, 102.0)
+    fvg = replace(ifvg, kind="fvg")
+    gate = lambda g, p: next(x for x in pr._evaluate(g, ts("09:40"), None, DAY, "US100", p, day, [], []).gates
+                             if x.name == "bias")
+    over = pr.Params(arrays=("ifvg",), ifvg_bias="override")
+    assert gate(ifvg, over).passed and "overrides" in gate(ifvg, over).detail
+    assert not gate(ifvg, pr.Params(arrays=("ifvg",))).passed      # default: the bias still gates
+    assert not gate(fvg, over).passed                               # only IFVG arrays may go against the bias
+    assert "ifvg_bias=override" in over.variant

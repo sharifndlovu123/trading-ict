@@ -29,21 +29,27 @@ import pandas as pd
 
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import DayContext, build_context
-from ict_engine.concepts.events import BLOCK_KINDS, Event, breaker_blocks, fvgs, gap_lifecycle, order_blocks, swings
+from ict_engine.concepts.events import (BLOCK_KINDS, Event, breaker_blocks, fvgs, gap_lifecycle, inversions,
+                                       order_blocks, swings)
 from ict_engine.data.instruments import cost_at
 from ict_engine.models.base import Gate, Setup, TradePlan
 from ict_engine.models.model_2022 import _targets, _ts, _window_at, _window_end, bias_gate
 
 MODEL = "pd_return"
 NAMES = ("pd_return", "pd_array_return")          # reference cases label it pd_array_return
-TF_RANK = {"15m": 1, "1h": 2, "4h": 3}
+TF_RANK = {"15m": 1, "1h": 2, "4h": 3, "1d": 4, "1w": 5, "1M": 6}
+# extra history so a weekly/monthly FVG (3 candles) can form before the lookback starts; the first, partial
+# weekly/monthly bar of the history is dropped
+HIST_EXTRA_DAYS = {"1w": 21, "1M": 93}
 
 
 @dataclass(frozen=True)
 class Params:
     windows: tuple[str, ...] = ("london_kz", "ny_premarket", "ny_am_kz", "ny_pm_kz")
     htf_tfs: tuple[str, ...] = ("15m", "1h", "4h")
-    arrays: tuple[str, ...] = ("fvg",)    # fvg | ob | breaker | mitigation (models.md §6 variants)
+    arrays: tuple[str, ...] = ("fvg",)    # fvg | ifvg | ob | breaker | mitigation (models.md §6 variants)
+    ifvg_close: str = "tf"               # an HTF FVG inverts on a close of its own TF ("tf") | first 1m close ("1m")
+    ifvg_bias: str = "gate"              # "override": an IFVG trade may go against the daily bias (sellers' turn)
     ob_confirm: str = "extreme"          # OB known on a close beyond its extreme (Bible p.16) | "open" (close through its open)
     ob_measure: str = "range"            # OB zone + 50% on the full range | "body" (ICT Month 04: open to close, no wicks)
     lookback_days: int = 5
@@ -71,7 +77,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ob_confirm", "ob_measure", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
             if getattr(self, name) != getattr(d, name):
@@ -82,15 +88,22 @@ class Params:
 # --- pieces (pure, unit-tested) ---------------------------------------------------------------
 
 def htf_arrays(hist_1m: pd.DataFrame, tfs: tuple[str, ...], kinds: tuple[str, ...] = ("fvg",),
-               ob_confirm: str = "extreme", ob_measure: str = "range") -> list[Event]:
-    """PD arrays on each higher timeframe of the history (each known from its ``ts``): FVGs, order blocks,
-    breakers and/or mitigation blocks. ``ob_measure="body"`` turns each OB into its body (open-to-close range
-    of its candles), so the zone, the 50% (mean threshold) and the fail level ignore wicks."""
+               ob_confirm: str = "extreme", ob_measure: str = "range", ifvg_close: str = "tf") -> list[Event]:
+    """PD arrays on each higher timeframe of the history (each known from its ``ts``): FVGs, IFVGs (failed FVGs,
+    inverted on a close of their own timeframe with ``ifvg_close="tf"``, else on the first 1m close), order
+    blocks, breakers and/or mitigation blocks. ``ob_measure="body"`` turns each OB into its body (open-to-close
+    range of its candles), so the zone, the 50% (mean threshold) and the fail level ignore wicks."""
+    if ifvg_close not in ("tf", "1m"):
+        raise ValueError(f"ifvg_close must be 'tf' or '1m', got {ifvg_close!r}")
     out = []
     for tf in tfs:
         bars = resample(hist_1m, tf)
+        if tf in HIST_EXTRA_DAYS:
+            bars = bars.iloc[1:]                     # the history starts mid-week/month: that bar is partial
         if "fvg" in kinds:
             out += fvgs(bars, tf)
+        if "ifvg" in kinds:
+            out += inversions(fvgs(bars, tf), hist_1m, tf_bars={tf: bars} if ifvg_close == "tf" else None)
         if "ob" in kinds:
             obs = order_blocks(bars, tf, confirm=ob_confirm)
             if ob_measure == "body":
@@ -152,8 +165,10 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     day_1m = bars_1m[(bars_1m.index >= d0) & (bars_1m.index < d1)]
     if day_1m.empty:
         return []
-    hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=p.lookback_days + 2)) & (bars_1m.index < d1)]
-    arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays, p.ob_confirm, p.ob_measure) if g.ts >= d0 - timedelta(days=p.lookback_days)]
+    extra = max((HIST_EXTRA_DAYS.get(tf, 0) for tf in p.htf_tfs), default=0)
+    hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=p.lookback_days + 2 + extra)) & (bars_1m.index < d1)]
+    arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays, p.ob_confirm, p.ob_measure, p.ifvg_close)
+              if g.ts >= d0 - timedelta(days=p.lookback_days)]
     ref = float(day_1m.close.iloc[0])
     ltf = fvgs(resample(day_1m, p.trigger_tf), p.trigger_tf, min_size=ref * p.min_trigger_gap_bp / 1e4)
     swing_pts = swings(resample(day_1m, "5m"), "5m") + swings(resample(day_1m, "15m"), "15m")
@@ -185,7 +200,10 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
     w = _window_at(decided, p.windows)
     setup.tags["window"] = w.name if w else None
     setup.gates.append(Gate("time", w is not None, w.name if w else f"{decided:%H:%M} outside {p.windows}"))
-    setup.gates.append(bias_gate(ctx, long, decided, day_1m, p))
+    bias = bias_gate(ctx, long, decided, day_1m, p)
+    if g.kind == "ifvg" and p.ifvg_bias == "override" and not bias.passed:
+        bias = Gate("bias", True, f"IFVG overrides the bias (counter-bias leg); {bias.detail}")
+    setup.gates.append(bias)
     if trig is None:
         setup.gates.append(Gate("trigger", False, f"no {p.trigger_tf} FVG within {p.trigger_wait_min}m of the "
                                                   f"return to the {g.tf} {name} (or the array failed first)"))

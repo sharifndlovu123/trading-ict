@@ -58,3 +58,11 @@ def test_1m_passthrough_and_bad_tf():
     assert (resample(b, "1m").close_ts == b.index).all()
     with pytest.raises(ValueError):
         resample(b, "7m")
+
+
+def test_monthly_bar_is_the_trading_month_and_the_1st_opens_1800_the_day_before():
+    b = minute_bars("2024-01-31 16:00", "2024-01-31 19:59")
+    m = resample(b, "1M")
+    assert list(m.index) == [pd.Timestamp("2024-01-31 16:00", tz=NY), pd.Timestamp("2024-01-31 18:00", tz=NY)]
+    assert m.iloc[0].close_ts == pd.Timestamp("2024-01-31 17:59", tz=NY)    # January ends at the 18:00 roll
+    assert m.iloc[1].close_ts == pd.Timestamp("2024-01-31 19:59", tz=NY)    # February's first session

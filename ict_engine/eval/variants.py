@@ -136,6 +136,17 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
     "HTF FVG + OB 15m-1d (open, body)": replace(PR, htf_tfs=("15m", "1h", "4h", "1d"), arrays=("fvg", "ob"),
                                                 ob_confirm="open", ob_measure="body"),
     "HTF daily FVGs added": replace(PR, htf_tfs=("15m", "1h", "4h", "1d")),
+    # failed HTF FVGs (IFVGs) inverted on their own timeframe's close (research/preregistered-htf-ifvg-2026-11-14.md)
+    "HTF IFVG 4h+1d (tf close)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ifvg",), lookback_days=10),
+    "HTF IFVG 4h+1d (1m close)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ifvg",), ifvg_close="1m", lookback_days=10),
+    "HTF IFVG + OB 4h+1d (tf close; OB open, body)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ifvg", "ob"),
+                                                             ob_confirm="open", ob_measure="body", lookback_days=10),
+    "HTF FVG + IFVG 15m-1d (tf close)": replace(PR, htf_tfs=("15m", "1h", "4h", "1d"), arrays=("fvg", "ifvg"),
+                                                lookback_days=10),
+    "HTF IFVG 4h+1d (tf close, overrides bias)": replace(PR, htf_tfs=("4h", "1d"), arrays=("ifvg",), ifvg_bias="override",
+                                                         lookback_days=10),
+    "HTF IFVG + OB 1d+1w+1M (tf close; OB open, body)": replace(PR, htf_tfs=("1d", "1w", "1M"), arrays=("ifvg", "ob"),
+                                                                ob_confirm="open", ob_measure="body", lookback_days=60),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}
