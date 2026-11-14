@@ -23,7 +23,8 @@ Name files `NN-firstauthor-short-title.pdf` so they sort in reading order. Extra
 | 14 | 14-zhang-deeplob.pdf (arXiv 1808.03668) | ✅ |
 | 15 | 15-prata-lobcast.pdf (arXiv 2308.01915) | ✅ |
 | 16 | 16-how-smart-institutional-trading.pdf (ABFER 2017) | ✅ |
-| 17 | 17-carmona-hf-markets-notes.pdf | ☐ Princeton page and archive copy both fail: download in a browser |
+| 17 | 17-carmona-tales-and-woes-hft.pdf (Carmona, "Tales and Woes of High Frequency Trading: an Introduction", Princeton 2014, 53 pp) | ✅ stands in for the 2013 summer-school notes (same author and scope: LOB mechanics §1.2, LOB accounting §1.3); added by Sharif 2026-11-14 |
+| 17b | 17b-carmona-webster-hf-market-making.pdf (Carmona & Webster, "High Frequency Market Making", 2012, 23 pp) | ✅ companion: the market-maker equilibrium model summarised in 17 §1.4; added by Sharif 2026-11-14 |
 
 ## books/ (paid, from orderflow.md §6)
 | # | Book | Status |
