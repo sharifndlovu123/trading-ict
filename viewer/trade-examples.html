@@ -102,7 +102,7 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
 
 <header>
   <h1>NQ Trade Review</h1>
-  <p class="lede">Trades the engine took on CME NQ futures in 2024, in batches of ten: for each model, one win (TP1 hit) and one stop-out. <strong>Batch 2</strong> is new: every stop-out also shows the <em>flip</em>, the opposite trade from the failure (the entry FVG closed through on its own timeframe and became an IFVG; a limit at its edge for 90 minutes). Switch timeframes (now up to weekly and monthly) to see the context above the entry. Tick <em>Only what was known</em> to hide everything after the decision. Then tell me what I missed in the form below the chart; your notes come straight back to me.</p>
+  <p class="lede">Trades the engine took on CME NQ futures in 2024, in batches of ten. <strong>Batch 3</strong> is new: the entry gates you suggested (a sweep then an aggressive move; no chop in the zone) did not change results across 2022–24, so for each model here is one trade the gate <em>dropped</em> and one it <em>kept</em>, with its reason. Is the gate right? 2022 model and PD return trades also show the <em>hold</em> runner (half off at TP1, the rest held toward the higher-timeframe draw until 16:55). <strong>Batch 2</strong>: every stop-out also shows the <em>flip</em>, the opposite trade from the failure (the entry FVG closed through on its own timeframe and became an IFVG; a limit at its edge for 90 minutes). Switch timeframes (now up to weekly and monthly) to see the context above the entry. Tick <em>Only what was known</em> to hide everything after the decision. Then tell me what I missed in the form below the chart; your notes come straight back to me.</p>
 </header>
 
 <div class="app">
@@ -139,6 +139,8 @@ textarea { min-height: 80px; font-family: var(--f-body); resize: vertical; }
         <fieldset id="verdict"><legend>Verdict</legend></fieldset>
         <fieldset id="missed"><legend>What did the engine miss?</legend></fieldset>
         <fieldset id="flipq" hidden><legend>The flip (the opposite trade from this failure)</legend></fieldset>
+        <fieldset id="gateq" hidden><legend>The entry gate's call (sweep then displacement, no chop)</legend></fieldset>
+        <fieldset id="holdq" hidden><legend>The runner (half off at TP1, rest held to the HTF draw until 16:55)</legend></fieldset>
         <div class="nums">
           <label for="f-entry">Better entry<input type="number" step="0.25" id="f-entry"></label>
           <label for="f-stop">Better stop<input type="number" step="0.25" id="f-stop"></label>
@@ -161,6 +163,8 @@ const VERDICTS = [["good", "Good trade"], ["ok_wrong_mgmt", "Right idea, wrong e
 const MISSES = [["htf_bias", "Higher-TF bias"], ["dealing_range", "Premium/discount"], ["poi", "Wrong or missing POI"], ["liquidity", "Liquidity / draw"],
   ["entry_early", "Entry too early"], ["entry_late", "Entry too late"], ["stop", "Stop placement"], ["target", "Target"], ["time", "Time of day / news"], ["smt", "SMT / correlated market"]];
 const state = { i: 0, tf: "5m", blind: false, saved: {}, rows: [] };
+const GATE_VERDICTS = [["right", "Gate is right"], ["wrong", "Gate is wrong"], ["depends", "Depends (say on what)"]];
+const HOLD_VERDICTS = [["hold", "Hold the runner like this"], ["tp1", "Take it all at TP1"], ["other_target", "Different target (enter it below)"]];
 const FLIP_VERDICTS = [["take", "I'd take the flip"], ["different", "Flip, but differently (say how)"], ["no", "No flip here"]];
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const $ = id => document.getElementById(id);
@@ -179,7 +183,7 @@ function rail() {
     const b = document.createElement("button");
     b.setAttribute("aria-current", i === state.i);
     b.innerHTML = `<span class="m"></span><span class="r ${t.r > 0 ? "pos" : "neg"}">${t.r > 0 ? "+" : ""}${t.r.toFixed(2)}R</span>
-      <span class="d">${t.day} · ${t.side}${(t.flip || []).length ? " · flip" : ""}</span><span class="saved">${state.saved[t.id] ? "✓ noted" : ""}</span>`;
+      <span class="d">${t.day} · ${t.side}${(t.flip || []).length ? " · flip" : ""}${t.gate ? (t.gate.ok ? " · gate kept" : " · gate dropped") : ""}</span><span class="saved">${state.saved[t.id] ? "✓ noted" : ""}</span>`;
     b.querySelector(".m").textContent = t.model;
     b.onclick = () => { state.i = i; render(); };
     $("rail").append(b);
@@ -192,7 +196,7 @@ $("blind").onchange = e => { state.blind = e.target.checked; draw(); };
 // chart layers: everything optional, minimal by default; remembered per viewer
 const LAYERS = [["trade", "Entry / stop / TP1", true], ["marks", "Decided / filled / exit", true], ["pools", "Liquidity pools", true], ["levels", "Day & week levels", false],
   ["eq", "20-day EQ", false], ["gaps", "HTF FVGs", false], ["obs", "HTF order blocks (25/50/75%)", false], ["delta", "Order flow", true],
-  ["flip", "Flip (opposite trade after the failure)", true]];
+  ["flip", "Flip (opposite trade after the failure)", true], ["hold", "Hold runner target", true]];
 try { Object.assign(state, { layers: JSON.parse(localStorage.getItem("tr-layers") || "null") }); } catch {}
 if (!state.layers) state.layers = Object.fromEntries(LAYERS.map(([k, , on]) => [k, on]));
 for (const [k, , on] of LAYERS) if (!(k in state.layers)) state.layers[k] = on;
@@ -266,6 +270,7 @@ function draw() {
     if (fx.filled) add(fx.filled, "flip fill", css("--accent"), fl ? "belowBar" : "aboveBar", fl ? "arrowUp" : "arrowDown");
     if (fx.filled && fx.exit_at) add(fx.exit_at, fx.exit === "tp1" ? "flip TP1" : "flip " + fx.exit, fx.exit === "tp1" ? css("--tp") : css("--stop"), fl ? "aboveBar" : "belowBar", "square");
   }
+  if (L.hold && t.hold && t.hold.final != null) line(t.hold.final, css("--tp"), `hold runner → ${t.hold.final_name || "HTF draw"}`, 2, 1);
   add(t.decided, "decided", css("--accent"), long ? "belowBar" : "aboveBar", "circle");
   if (!state.blind) { add(t.filled, "filled", css("--entry"), long ? "belowBar" : "aboveBar", long ? "arrowUp" : "arrowDown");
     add(t.exit_at, t.exit === "tp1" ? "TP1" : "stopped", t.exit === "tp1" ? css("--tp") : css("--stop"), long ? "aboveBar" : "belowBar", "square"); }
@@ -291,6 +296,8 @@ function cards() {
     ["Result", `${t.r > 0 ? "+" : ""}${t.r.toFixed(2)} R`],
     ...(t.flip || []).map(f => [f.rule === "failed_extreme" ? "Flip (stop beyond failed move)" : "Flip (stop at IFVG edge)",
       `${f.side} ${f.entry}, stop ${f.stop}, TP1 ${f.tp1} → ${f.filled ? `${f.exit}, ${f.r > 0 ? "+" : ""}${(f.r ?? 0).toFixed(2)} R` : f.exit === "missed" ? "missed (TP1 before the retest)" : "no retest within 90 min"}`]),
+    ...(t.gate ? [["Entry gate", `${t.gate.ok ? "kept" : "dropped"}: ${t.gate.why}`]] : []),
+    ...(t.hold ? [["Hold runner", `→ ${t.hold.final} (${t.hold.final_name || ""}), flat ${t.hold.time_exit ? fmtT(t.hold.time_exit).slice(11) : "16:55"}: ${state.blind ? "hidden" : `${t.hold.runner_r > 0 ? "+" : ""}${(t.hold.runner_r ?? 0).toFixed(2)} R with the runner (today's runner ${t.hold.base_runner_r > 0 ? "+" : ""}${(t.hold.base_runner_r ?? 0).toFixed(2)} R)`}`]] : []),
     ...(t.I5 != null ? [["Flow, 5 min before", `${(t.I5 * 100).toFixed(0)}% ${t.I5 >= 0 ? "with" : "against"} the trade`]] : [])]);
   const tb = $("bias"); tb.innerHTML = "";
   for (const [k, [b, why]] of Object.entries(t.biases)) {
@@ -307,6 +314,9 @@ VERDICTS.forEach(([v, l]) => { const lab = document.createElement("label"); lab.
   lab.innerHTML = `<input type="radio" name="verdict" id="v-${v}" value="${v}"> `; lab.append(l); $("verdict").append(lab); });
 FLIP_VERDICTS.forEach(([v, l]) => { const lab = document.createElement("label"); lab.className = "tog";
   lab.innerHTML = `<input type="radio" name="flipv" id="fv-${v}" value="${v}"> `; lab.append(l); $("flipq").append(lab); });
+[["gateq", "gatev", GATE_VERDICTS], ["holdq", "holdv", HOLD_VERDICTS]].forEach(([fs, nm, list]) => list.forEach(([v, l]) => {
+  const lab = document.createElement("label"); lab.className = "tog";
+  lab.innerHTML = `<input type="radio" name="${nm}" id="${nm}-${v}" value="${v}"> `; lab.append(l); $(fs).append(lab); }));
 MISSES.forEach(([v, l]) => { const lab = document.createElement("label"); lab.className = "tog";
   lab.innerHTML = `<input type="checkbox" name="missed" id="m-${v}" value="${v}"> `; lab.append(l); $("missed").append(lab); });
 
@@ -316,6 +326,9 @@ function fillForm() {
   document.querySelectorAll("input[name=missed]").forEach(x => x.checked = (s.missed || []).includes(x.value));
   $("flipq").hidden = !(T().flip || []).length;
   document.querySelectorAll("input[name=flipv]").forEach(x => x.checked = x.value === s.flip_verdict);
+  $("gateq").hidden = !T().gate; $("holdq").hidden = !T().hold;
+  document.querySelectorAll("input[name=gatev]").forEach(x => x.checked = x.value === s.gate_verdict);
+  document.querySelectorAll("input[name=holdv]").forEach(x => x.checked = x.value === s.hold_verdict);
   $("f-entry").value = s.entry ?? ""; $("f-stop").value = s.stop ?? ""; $("f-target").value = s.target ?? ""; $("f-notes").value = s.notes ?? "";
   $("status").textContent = s.updated ? "Saved " + new Date(s.updated).toLocaleString() : "";
 }
@@ -329,6 +342,8 @@ $("form").addEventListener("submit", async e => {
     verdict: document.querySelector("input[name=verdict]:checked")?.value || null,
     missed: [...document.querySelectorAll("input[name=missed]:checked")].map(x => x.value),
     flip_verdict: document.querySelector("input[name=flipv]:checked")?.value || null,
+    gate_verdict: document.querySelector("input[name=gatev]:checked")?.value || null,
+    hold_verdict: document.querySelector("input[name=holdv]:checked")?.value || null,
     entry: num($("f-entry").value), stop: num($("f-stop").value), target: num($("f-target").value),
     notes: $("f-notes").value.trim(), updated: Date.now() };
   $("save").disabled = true; $("status").textContent = "Saving…";

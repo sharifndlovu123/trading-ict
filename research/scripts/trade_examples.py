@@ -5,10 +5,15 @@ decision, and the higher-timeframe FVGs still open at that moment.
 Batch 1 (2026-11-14): wins nearest 2024-04-15, stop-outs nearest 2024-09-16 (ids unchanged: corrections key on them).
 Batch 2 (2026-11-14): wins nearest 2024-06-12, stop-outs nearest 2024-11-13 **that produce a flip**
 (research/preregistered-ifvg-flip-2026-11-14.md), so each stop-out also shows the opposite trade from the failure.
+Batch 3 (2026-11-14, after the entry-quality and targets pre-regs failed on futures): per model one trade the entry gate
+"both" (sweep then displacement + no chop) would have **dropped** (nearest 2024-03-15) and one it **kept** (nearest
+2024-08-15), whatever the outcome, with the gate's reason; 2022 model / PD return trades also carry the hold-mode runner
+(50% at TP1, runner to the HTF draw, flat 16:55).
 
     uv run python research/scripts/trade_examples.py      # → out/trade-examples/index.html (+ data.json)
 """
 import json
+from dataclasses import replace
 import math
 import os
 from datetime import date, datetime, time, timedelta
@@ -36,6 +41,8 @@ SPAN = {"1m": timedelta(hours=10), "5m": timedelta(days=1.5), "15m": timedelta(d
         "4h": timedelta(days=60), "1d": timedelta(days=180), "1w": timedelta(days=400), "1M": timedelta(days=800)}
 BATCHES = {1: (pd.Timestamp("2024-04-15", tz=NY), pd.Timestamp("2024-09-16", tz=NY), False),
            2: (pd.Timestamp("2024-06-12", tz=NY), pd.Timestamp("2024-11-13", tz=NY), True)}
+GATE_BATCH = (3, pd.Timestamp("2024-03-15", tz=NY), pd.Timestamp("2024-08-15", tz=NY))   # dropped, kept
+HOLD_MODELS = ("2022_model", "pd_return")
 HTF_GAPS = ("15m", "1h", "4h", "1d")
 
 
@@ -54,12 +61,32 @@ def candles(df):
             zip(df.index, df.open, df.high, df.low, df.close)]
 
 
-def setup_for(model: str, allbars: pd.DataFrame, day: date, decided: pd.Timestamp):
-    """Re-run the model on that day to get the Setup object behind a report row (for the flip)."""
-    for st in run_day(allbars, day, "NQCME", modules()[model].Params()):
-        if st.decided_at == decided and st.plan is not None:
+def setup_for(model: str, allbars: pd.DataFrame, day: date, decided: pd.Timestamp, params=None, need_plan=True):
+    """Re-run the model on that day to get the Setup object behind a report row (for the flip, gate, hold)."""
+    for st in run_day(allbars, day, "NQCME", params or modules()[model].Params()):
+        if st.decided_at == decided and (st.plan is not None or not need_plan):
             return st
     return None
+
+
+def gate_for(model: str, allbars: pd.DataFrame, r) -> dict | None:
+    """The entry-quality gate "both" on this trade, as the variants sweep ran it (Params.entry_gate)."""
+    st = setup_for(model, allbars, pd.Timestamp(r.day).date(), pd.Timestamp(r.decided_at),
+                   replace(modules()[model].Params(), entry_gate="both"), need_plan=False)
+    g = next((g for g in (st.gates if st else []) if g.name == "entry_quality"), None)
+    return None if g is None else {"ok": bool(g.passed), "why": g.detail}
+
+
+def hold_for(model: str, allbars: pd.DataFrame, r) -> dict | None:
+    if model not in HOLD_MODELS:
+        return None
+    st = setup_for(model, allbars, pd.Timestamp(r.day).date(), pd.Timestamp(r.decided_at),
+                   replace(modules()[model].Params(), target_mode="hold"))
+    if st is None or st.result is None or st.result.filled_at is None:
+        return None
+    p, res = st.plan, st.result
+    return {"final": num(p.final_target), "final_name": p.final_name, "time_exit": wall(p.time_exit) if p.time_exit is not None else None,
+            "runner_r": num(res.runner_r), "final_reached": res.final_reached, "base_runner_r": num(r.runner_r)}
 
 
 def flips_for(model: str, allbars: pd.DataFrame, r) -> list:
@@ -105,6 +132,21 @@ def pick(runs: dict, allbars: pd.DataFrame) -> list:
                     out.append((b, m, r, flips))
                     used.add(r.id)
                     break
+    b, drop_t, keep_t = GATE_BATCH
+    for m in MODELS:
+        d = runs[m]
+        t = d[(d.status == "traded") & d.exit.isin(["tp1", "stop"])].copy()
+        t["dt"] = pd.to_datetime(t.decided_at)
+        t["id"] = [f"{m}-{x:%Y%m%d-%H%M}" for x in t.dt]
+        t = t[~t.id.isin(used)]
+        for want_ok, target in ((False, drop_t), (True, keep_t)):
+            for _, r in t.loc[(t.dt - target).abs().sort_values().index].iterrows():
+                g = gate_for(m, allbars, r)
+                if g is None or g["ok"] != want_ok:
+                    continue
+                out.append((b, m, r, [], g))
+                used.add(r.id)
+                break
     return out
 
 
@@ -202,7 +244,7 @@ def main():
     flow = of.OUT / "NQ-flow1m-2024.parquet"
     flow = pd.read_parquet(flow) if flow.exists() else None
     trades = []
-    for b, m, r, flips in pick(runs, allbars):
+    for b, m, r, flips, *gate in pick(runs, allbars):
         day = pd.Timestamp(r.day).date()
         dec = pd.Timestamp(r.decided_at)
         end = pd.Timestamp(datetime.combine(day, time(16, 30)), tz=NY)
@@ -230,13 +272,16 @@ def main():
             "htf_obs": open_htf_obs(hist_at[hist_at.index >= dec - timedelta(days=90)], dec, r.entry),
             "htf_gaps": open_htf_gaps(hist_at[hist_at.index >= dec - timedelta(days=60)], dec, r.entry),
             "candles": tfs,
+            "gate": gate[0] if gate else None,
+            "hold": hold_for(m, allbars, r) if gate else None,
+            "runner_r": num(r.runner_r), "final_name": r.get("final_name") if hasattr(r, "get") else None,
         }
         if flow is not None:
             f = flow[(flow.index >= dec - timedelta(hours=2)) & (flow.index < end)]
             item["delta"] = [[wall(t), int(v)] for t, v in zip(f.index, f.delta)]
             item["I5"] = num(of.imbalance(flow, dec, 5, r.side))
         trades.append(item)
-        print(b, item["id"], r.exit, item["r"], [(f["rule"], f["exit"], f["r"]) for f in flips], flush=True)
+        print(b, item["id"], r.exit, item["r"], [(f["rule"], f["exit"], f["r"]) for f in flips], item["gate"], item["hold"], flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
     trades.sort(key=lambda x: -x["batch"])                # newest batch first in the rail
     data = json.dumps({"generated": str(date.today()), "trades": trades}, separators=(",", ":"))
