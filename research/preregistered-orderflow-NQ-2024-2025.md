@@ -65,3 +65,9 @@ made before any order-flow data existed:
   (no rule is fitted, so there is no hold-out to protect). **2025 order flow is reserved, unbought**: if any of
   H1–H3 passes, buying 2025 and re-running the identical test is its confirmation.
 - Hypotheses, measures, thresholds (z ≥ 2.4 one-sided, day-clustered) and models are **unchanged**.
+
+## Amendment 2 (2026-11-14, before any flow data was analysed): delivery
+Streaming the windowed requests ran at ~25 KB/s (days for one year). January 2024 stays as streamed (01:30–16:30
+NY). February–December 2024 come from one Databento batch job (`trades`, whole days, $108.82), so the total stays
+under the $125 credit. More hours on disk change nothing in the tests: every measure reads only the minutes
+around a decision or a stop-out, which all fall inside 01:30–16:30 NY.

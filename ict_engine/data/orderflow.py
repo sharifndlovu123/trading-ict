@@ -98,6 +98,39 @@ def fetch(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT, max_usd
     return paths
 
 
+def batch_state(job_id: str) -> dict:
+    c = client()
+    for j in c.batch.list_jobs(states=["queued", "processing", "done"]):
+        if j["id"] == job_id:
+            return j
+    return {}
+
+
+def batch_to_monthly(job_id: str, out: Path = OUT, symbol: str = SYMBOL) -> list[Path]:
+    """Download a finished batch job (DBN, zstd, split by month) and write the same monthly parquet files that
+    ``fetch`` writes. Whole days, not just ``SESSION``: the tests only read flow near decisions and exits."""
+    import databento as db
+    raw = out / "batch" / job_id
+    raw.mkdir(parents=True, exist_ok=True)
+    files = client().batch.download(job_id=job_id, output_dir=raw)
+    paths = []
+    for f in sorted(Path(x) for x in files):
+        if not f.name.endswith(".dbn.zst"):
+            continue
+        df = db.DBNStore.from_file(f).to_df()
+        if df.empty:
+            continue
+        t = tidy(df)
+        for month, g in t.groupby(t.index.tz_convert("UTC").strftime("%Y-%m")):
+            p = path_for(symbol, SCHEMA, month, out)
+            if p.exists():
+                continue                                   # a streamed (windowed) month already on disk wins
+            g.to_parquet(p)
+            paths.append(p)
+            print(p.name, len(g), flush=True)
+    return paths
+
+
 def fetch_bars(start: date, end: date, symbol: str = SYMBOL, out: Path = OUT) -> list[Path]:
     """CME 1m OHLCV bars (built by the exchange feed from trades), all hours, monthly files."""
     c = client()
@@ -214,6 +247,8 @@ def main(argv=None):
         x.add_argument("--symbol", default=SYMBOL)
         x.add_argument("--schema", default=SCHEMA)
         x.add_argument("--max-usd", type=float, default=125.0)
+    bj = sub.add_parser("batch")
+    bj.add_argument("job_id")
     c = sub.add_parser("sidecheck")
     c.add_argument("day", type=date.fromisoformat)
     a = ap.parse_args(argv)
@@ -221,6 +256,11 @@ def main(argv=None):
         print(f"{a.symbol} {a.schema} {a.start} → {a.end}: ${quote(a.start, a.end, a.symbol, a.schema):.2f}")
     elif a.cmd == "fetch":
         fetch(a.start, a.end, a.symbol, max_usd=a.max_usd)
+    elif a.cmd == "batch":
+        st = batch_state(a.job_id)
+        print(st.get("state"), st.get("cost_usd"))
+        if st.get("state") == "done":
+            batch_to_monthly(a.job_id)
     elif a.cmd == "bars":
         fetch_bars(a.start, a.end, a.symbol)
     else:
