@@ -53,6 +53,9 @@ class TradePlan:
     # time exit (16:00). None = the caller's. Exit at the open of the first bar at/after it within 5 minutes, else at
     # the close of the last bar before it (CFD indices halt at 16:15).
     time_exit: pd.Timestamp | None = None
+    # Runner only: ride past the trade's time exit until this time (trailed runner, preregistered-timeframes-trail);
+    # None = the trade's time exit. The part before TP1 keeps its own time exit.
+    runner_until: pd.Timestamp | None = None
 
     @property
     def risk(self) -> float:

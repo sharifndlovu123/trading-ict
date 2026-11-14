@@ -58,6 +58,10 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "entry: sweep then displacement": replace(BASE, entry_gate="sweep_disp"),
     "entry: no chop in the zone": replace(BASE, entry_gate="no_chop"),
     "entry: both": replace(BASE, entry_gate="both"),
+    # higher timeframes + trailed runner (research/preregistered-timeframes-trail-2026-11-14.md; score with --metric runner_r)
+    "tf: entry 5m": replace(BASE, entry_tf="5m", sweep_lookback_min=180, tp1_swing_tfs=("15m",)),
+    "tf: entry 15m": replace(BASE, entry_tf="15m", sweep_lookback_min=360, tp1_swing_tfs=("1h",)),
+    "runner: trailed on 5m": replace(BASE, runner_stop="trail_5m"),
 }
 
 
@@ -88,6 +92,10 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "entry: sweep then displacement": replace(MB, entry_gate="sweep_disp"),
     "entry: no chop in the zone": replace(MB, entry_gate="no_chop"),
     "entry: both": replace(MB, entry_gate="both"),
+    # higher timeframes + trailed runner (research/preregistered-timeframes-trail-2026-11-14.md; score with --metric runner_r)
+    "tf: frame 1h > entry 15m": replace(MB, frame_tf="1h", entry_tf="15m", curve_max_h=48.0, low_lookback_min=480),
+    "tf: frame 4h > entry 1h": replace(MB, frame_tf="4h", entry_tf="1h", curve_max_h=192.0, low_lookback_min=1440),
+    "runner: trailed on 5m": replace(MB, runner_stop="trail_5m"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

@@ -160,7 +160,11 @@ def _fill_bar_reaches_tp(row, plan: TradePlan, long: bool) -> bool:
     return False
 
 
-RUNNER_STOPS = ("entry", "lock_half", "original")
+RUNNER_STOPS = ("entry", "lock_half", "original", "trail_5m", "trail_15m")
+
+
+def _trail_tf(runner_stop: str) -> int | None:
+    return _tf_minutes(runner_stop[6:]) if runner_stop.startswith("trail_") else None
 
 
 def _runner(plan, after, tp1_at, time_exit, bars, cost_r, res):
@@ -171,6 +175,9 @@ def _runner(plan, after, tp1_at, time_exit, bars, cost_r, res):
     long = plan.side == "long"
     f = plan.partial_frac
     banked = f * plan.r_at(plan.tp1)
+    trail = _trail_tf(plan.runner_stop)
+    if trail:
+        return _trailed(plan, after, tp1_at, time_exit, bars, cost_r, res, trail, banked)
     stop_px = {"entry": plan.entry, "original": plan.stop,
                "lock_half": plan.entry + (plan.tp1 - plan.entry) / 2}[plan.runner_stop]
     for j in range(tp1_at + 1, len(after)):
@@ -183,6 +190,38 @@ def _runner(plan, after, tp1_at, time_exit, bars, cost_r, res):
             return banked + (1 - f) * plan.r_at(plan.final_target) - cost_r, True
     last = _exit_bars(bars, time_exit, plan)
     px = float(last.open.iloc[0]) if not last.empty else float(after.close.iloc[-1])
+    return banked + (1 - f) * plan.r_at(px) - cost_r, False
+
+
+def _trailed(plan, after, tp1_at, time_exit, bars, cost_r, res, tf_min, banked):
+    """Runner with no fixed target: stop at entry, then after every finished ``tf_min`` candle it moves to the newest
+    confirmed swing (a candle low with a higher low on each side; highs for shorts), never back. Rides until stopped
+    or ``plan.runner_until`` (else the trade's time exit). Swings come from candles formed since the fill."""
+    long = plan.side == "long"
+    f = plan.partial_frac
+    until = plan.runner_until or time_exit
+    seg = bars[(bars.index >= res.filled_at) & (bars.index < until)]
+    tp_ts = after.index[tp1_at]
+    stop_px, swing = plan.entry, None
+    hi = lo = None
+    ext = []                                    # finished candles' lows (long) or highs (short)
+    for j in range(len(seg)):
+        ts, row = seg.index[j], seg.iloc[j]
+        if ts > tp_ts and (row.low <= stop_px if long else row.high >= stop_px):
+            return banked + (1 - f) * plan.r_at(stop_px) - cost_r, False
+        hi = row.high if hi is None else max(hi, row.high)
+        lo = row.low if lo is None else min(lo, row.low)
+        if _bucket_ends(seg.index, j, tf_min):
+            ext.append(lo if long else hi)
+            hi = lo = None
+            if len(ext) >= 3:
+                a, b, c = ext[-3:]
+                if (b < a and b < c) if long else (b > a and b > c):
+                    swing = b
+        if ts >= tp_ts and swing is not None and ((swing > stop_px) if long else (swing < stop_px)):
+            stop_px = swing
+    last = bars[(bars.index >= until) & (bars.index < until + pd.Timedelta(minutes=5))]
+    px = float(last.open.iloc[0]) if not last.empty else float(seg.close.iloc[-1])
     return banked + (1 - f) * plan.r_at(px) - cost_r, False
 
 

@@ -208,3 +208,40 @@ def test_hold_targets_and_entry_gates_on_real_bars_without_lookahead():
                 n += 1
         d += timedelta(days=1)
     assert n > 0
+
+
+def test_higher_timeframes_and_trailed_runner_on_real_bars():
+    """Timeframes/trail pre-registration on real US100 bars (March 2023): higher-timeframe entries decide only when
+    their entry candle has finished; plans are well-formed; the trailed runner carries the session close and its
+    result does not change when bars after that close are removed."""
+    from dataclasses import replace
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.eval.variants import MMXM_VARIANTS, VARIANTS
+    from ict_engine.models import targets as tg
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 2, 20), date(2023, 3, 17))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    days = [d for d in pd.date_range("2023-03-06", "2023-03-17").date if d.weekday() < 5]
+    for name, tf in (("tf: entry 15m", 15), ("tf: entry 5m", 5)):
+        plans = [s for d in days for s in run_day(bars, d, "US100", VARIANTS[name]) if s.plan is not None]
+        assert plans, name
+        for s in plans:
+            assert (s.decided_at.minute + 1) % tf == 0, (name, s.decided_at)      # the entry candle had closed
+            p = s.plan
+            assert (p.stop < p.entry < p.tp1) if s.side == "long" else (p.tp1 < p.entry < p.stop)
+    mm = [s for d in days for s in run_day(bars, d, "US100", MMXM_VARIANTS["tf: frame 1h > entry 15m"]) if s.plan is not None]
+    assert all((s.decided_at.minute + 1) % 15 == 0 for s in mm)
+    trail = VARIANTS["runner: trailed on 5m"]
+    n = 0
+    for d in days:
+        for s in run_day(bars, d, "US100", trail):
+            if s.plan is None or s.result is None or s.result.runner_r is None or s.result.exit_reason != "tp1":
+                continue
+            assert s.plan.runner_until == tg.session_close(d)
+            cut = bars[bars.index < s.plan.runner_until + pd.Timedelta(minutes=5)]
+            again = [x for x in run_day(cut, d, "US100", trail) if x.decided_at == s.decided_at][0]
+            assert again.result.runner_r == pytest.approx(s.result.runner_r)
+            n += 1
+    assert n > 0

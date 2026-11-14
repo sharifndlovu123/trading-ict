@@ -32,8 +32,12 @@ def manage(plan, params):
     """Attach the model's trade management (partial at TP1, runner stop) to a frozen plan."""
     if plan is None:
         return None
-    return replace(plan, partial_frac=getattr(params, "partial_frac", 0.5),
-                   runner_stop=getattr(params, "runner_stop", "entry"))
+    runner_stop = getattr(params, "runner_stop", "entry")
+    until = None
+    if runner_stop.startswith("trail_"):                     # the trailed runner rides to the session close
+        from ict_engine.models.targets import session_close
+        until = session_close(plan.placed_at.date())
+    return replace(plan, partial_frac=getattr(params, "partial_frac", 0.5), runner_stop=runner_stop, runner_until=until)
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),
