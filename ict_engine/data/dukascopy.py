@@ -96,8 +96,15 @@ def fetch(asset_name: str, start: date, end: date, *, price: str = "bid",
 
 def load(asset_name: str, start: date, end: date, *, price: str = "bid",
          root: Path = DATA_DIR) -> pd.DataFrame:
-    """Bars for [start, end] (NY dates, inclusive), indexed by NY time."""
+    """Bars for [start, end] (NY dates, inclusive), indexed by NY time. CME assets (source "cme") come from the
+    Databento 1m OHLCV cache instead (``ict_engine.data.orderflow``)."""
     asset = get(asset_name)
+    if asset.source == "cme":
+        from ict_engine.data import orderflow
+        df = orderflow.load(start, end + timedelta(days=1), root=orderflow.OUT, schema=orderflow.BARS)
+        if df.empty:
+            raise FileNotFoundError(f"no CME bars for {asset_name} {start}..{end} — run orderflow bars first")
+        return df
     parts = []
     required = months(start, end)
     # NY is behind UTC, so the last NY day spills into the next UTC day (maybe next month).

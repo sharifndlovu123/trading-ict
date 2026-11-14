@@ -193,8 +193,13 @@ def side_check(trades: pd.DataFrame) -> dict:
 
 def load(start: date, end: date, symbol: str = SYMBOL, root: Path = OUT, schema: str = SCHEMA) -> pd.DataFrame:
     """Cached trades (or ``schema=BARS`` bars) for [start, end) (NY dates)."""
-    files = [path_for(symbol, schema, a[:7], root) for a, _ in months(start, end)]
-    df = pd.concat([pd.read_parquet(f) for f in files if f.exists()])
+    # files are split at UTC month starts, so a NY evening at month end sits in the next month's file
+    ms = [a[:7] for a, _ in months(start, end)] + [(pd.Timestamp(end) + pd.offsets.MonthBegin(0)).strftime("%Y-%m")]
+    parts = [pd.read_parquet(f) for f in dict.fromkeys(path_for(symbol, schema, m, root) for m in ms) if f.exists()]
+    if not parts:
+        return pd.DataFrame()
+    df = pd.concat(parts)
+    df = df[~df.index.duplicated()].sort_index()
     lo, hi = pd.Timestamp(start, tz=NY), pd.Timestamp(end, tz=NY)
     return df[(df.index >= lo) & (df.index < hi)]
 

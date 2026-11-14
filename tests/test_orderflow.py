@@ -77,3 +77,19 @@ def test_tidy_bars_and_empty_tidy():
     assert b.index[0] == pd.Timestamp("2024-01-09 10:00", tz=NY) and list(b.columns) == ["open", "high", "low", "close", "volume"]
     e = of.tidy(pd.DataFrame())
     assert e.empty and list(e.columns) == of.KEEP
+
+
+def test_load_reads_the_next_month_file_for_month_end_evenings(tmp_path):
+    idx = pd.to_datetime(["2024-01-31 15:00", "2024-01-31 19:30", "2024-02-01 10:00"]).tz_localize(NY)
+    bars = pd.DataFrame({"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}, index=idx)
+    bars.iloc[:1].to_parquet(of.path_for("NQ.v.0", of.BARS, "2024-01", tmp_path))
+    bars.iloc[1:].to_parquet(of.path_for("NQ.v.0", of.BARS, "2024-02", tmp_path))       # 19:30 NY = Feb UTC
+    got = of.load(date(2024, 1, 1), date(2024, 2, 1), root=tmp_path, schema=of.BARS)
+    assert list(got.index) == list(idx[:2])
+    assert of.load(date(2023, 1, 1), date(2023, 2, 1), root=tmp_path).empty
+
+
+def test_nqcme_is_a_cme_asset_and_nq_root_still_means_us100():
+    from ict_engine.data.instruments import get, futures_cost
+    assert get("NQCME").source == "cme" and get("NQ").name == "US100"
+    assert futures_cost("NQCME") == futures_cost("US100")

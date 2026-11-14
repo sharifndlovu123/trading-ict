@@ -19,6 +19,7 @@ class Asset:
     futures_root: str    # what ICT trades / reference cases use
     clock: ClockSet
     tick: float          # display/rounding unit
+    source: str = "dukascopy"   # "dukascopy" (CFD/spot 1m) | "cme" (Databento CME 1m OHLCV, ict_engine.data.orderflow)
 
 
 ASSETS: dict[str, Asset] = {
@@ -31,10 +32,13 @@ ASSETS: dict[str, Asset] = {
         Asset("XAGUSD", "xagusd", "SI", "fx", 0.005),
         Asset("DXY", "dollaridxusd", "DX", "fx", 0.005),
         Asset("EURUSD", "eurusd", "6E", "fx", 0.00005),   # Euro index proxy
+        # real CME futures (Databento NQ.v.0, continuous front month): order-flow tests. Not the root lookup
+        # for "NQ" (that stays US100, which the reference cases use).
+        Asset("NQCME", "", "NQ", "futures", 0.25, source="cme"),
     ]
 }
 
-BY_FUTURES_ROOT = {a.futures_root: a for a in ASSETS.values()}
+BY_FUTURES_ROOT = {a.futures_root: a for a in ASSETS.values() if a.source == "dukascopy"}
 
 
 def get(name_or_root: str) -> Asset:
@@ -50,14 +54,14 @@ def get(name_or_root: str) -> Asset:
 # Round-trip spread + slippage in basis points of price (v1 guesses). Set from the old fixed costs
 # (US100 1.0, US500 0.5, US30 2.0, gold 0.4, silver 0.03 price units) at typical 2023 prices. Basis
 # points keep the cost gate meaning the same thing when price doubles (gold ~$1,900 → $3,500+).
-COST_BPS: dict[str, float] = {"US100": 0.71, "US500": 1.16, "US30": 0.59, "XAUUSD": 2.05, "XAGUSD": 12.8}
+COST_BPS: dict[str, float] = {"NQCME": 0.71, "US100": 0.71, "US500": 1.16, "US30": 0.59, "XAUUSD": 2.05, "XAGUSD": 12.8}
 
 
 # Futures round trip in the CFD's price units (US100≈NQ, US500≈ES, US30≈YM, XAUUSD≈GC, XAGUSD≈SI points):
 # 1 tick of spread + commission/fees of ~$4.50 per contract round trip ÷ the contract's $ per point.
 # Assumption (2026-11-13): a retail/prop futures account; 1 tick even pre-market; no extra slippage.
-FUTURES_TICK = {"US100": 0.25, "US500": 0.25, "US30": 1.0, "XAUUSD": 0.10, "XAGUSD": 0.005}
-FUTURES_POINT_VALUE = {"US100": 20.0, "US500": 50.0, "US30": 5.0, "XAUUSD": 100.0, "XAGUSD": 5000.0}
+FUTURES_TICK = {"NQCME": 0.25, "US100": 0.25, "US500": 0.25, "US30": 1.0, "XAUUSD": 0.10, "XAGUSD": 0.005}
+FUTURES_POINT_VALUE = {"NQCME": 20.0, "US100": 20.0, "US500": 50.0, "US30": 5.0, "XAUUSD": 100.0, "XAGUSD": 5000.0}
 FUTURES_FEE_USD = 4.5
 COST_BASES = ("cfd", "futures")
 
