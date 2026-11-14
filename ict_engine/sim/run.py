@@ -58,6 +58,14 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.gates.append(Gate("news", False, why))
             s.plan = None
             continue
+        gate = getattr(params, "entry_gate", None)
+        if gate:
+            from ict_engine.models import entry_quality
+            ok, why = entry_quality.check(s, bars_1m, ctx, gate)
+            s.gates.append(Gate("entry_quality", ok, why))
+            if not ok:
+                s.plan = None
+                continue
         scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
         # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).
         if prev is not None and s.decided_at < busy_until and (

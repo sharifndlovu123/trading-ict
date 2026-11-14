@@ -49,6 +49,10 @@ class TradePlan:
     # "limit": rest at ``entry`` until filled. "market": fill at the open of the first bar after ``placed_at``
     # (``entry`` is then the decision price, for reference); R and costs use the actual fill.
     order: str = "limit"
+    # Session-close exit for a day trade held for hours (liquidity-targets amendment 1): overrides the caller's
+    # time exit (16:00). None = the caller's. Exit at the open of the first bar at/after it within 5 minutes, else at
+    # the close of the last bar before it (CFD indices halt at 16:15).
+    time_exit: pd.Timestamp | None = None
 
     @property
     def risk(self) -> float:

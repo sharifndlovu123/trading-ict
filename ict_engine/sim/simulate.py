@@ -31,6 +31,8 @@ from ict_engine.models.base import Result, TradePlan
 
 def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost: float = 0.0) -> Result:
     long = plan.side == "long"
+    if plan.time_exit is not None:
+        time_exit = plan.time_exit
     after = bars[(bars.index > plan.placed_at) & (bars.index < time_exit)]
     res = Result()
     if plan.order == "market":
@@ -126,7 +128,7 @@ def _after_fill(plan: TradePlan, after: pd.DataFrame, bars: pd.DataFrame, time_e
         if tf_min and _bucket_ends(after.index, j, tf_min):
             exit_next = row.close < plan.invalid_level if long else row.close > plan.invalid_level
     else:
-        last = bars[bars.index >= time_exit]
+        last = _exit_bars(bars, time_exit, plan)
         px = float(last.open.iloc[0]) if not last.empty else float(after.close.iloc[-1])
         res.exit_at = last.index[0] if not last.empty else after.index[-1]
         res.exit_reason, res.r = "time_exit", plan.r_at(px) - cost_r
@@ -179,6 +181,14 @@ def _runner(plan, after, tp1_at, time_exit, bars, cost_r, res):
             return banked + (1 - f) * plan.r_at(stop_px) - cost_r, False
         if reach_final:
             return banked + (1 - f) * plan.r_at(plan.final_target) - cost_r, True
-    last = bars[bars.index >= time_exit]
+    last = _exit_bars(bars, time_exit, plan)
     px = float(last.open.iloc[0]) if not last.empty else float(after.close.iloc[-1])
     return banked + (1 - f) * plan.r_at(px) - cost_r, False
+
+
+def _exit_bars(bars: pd.DataFrame, time_exit: pd.Timestamp, plan: TradePlan) -> pd.DataFrame:
+    """Bars from the time exit on. A session-close exit (``plan.time_exit``) only uses a bar within 5 minutes of it,
+    so a market that halted earlier exits at its last bar, not at the next session's open."""
+    if plan.time_exit is None:
+        return bars[bars.index >= time_exit]
+    return bars[(bars.index >= time_exit) & (bars.index < time_exit + pd.Timedelta(minutes=5))]

@@ -171,3 +171,40 @@ def test_flip_after_failed_trade_on_real_bars_us100_march_2023():
                     assert fl.flip_plan(s, cut, ctx, P, rule) == p
         d += timedelta(days=1)
     assert seen > 0
+
+
+def test_hold_targets_and_entry_gates_on_real_bars_without_lookahead():
+    """Liquidity-targets amendment 1 (hold to the session close) and the entry-quality gates on real US100 bars: the
+    hold plan carries the session close; the target modes and the gate verdicts are identical when the bars after the
+    decision are removed. (Whole find_setups plans are not compared on truncated bars: cutting mid-candle lets a
+    partial 5m candle confirm a swing early, e.g. 2023-03-07 12:23; the full backtest correctly waits for the close.)"""
+    from datetime import date, timedelta
+    from ict_engine.concepts.context import build_context
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models import entry_quality as eq, model_pd_return as pr, targets as tg
+    try:
+        bars = load_range("US100", date(2023, 3, 1), date(2023, 3, 17))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    p = pr.Params(target_mode="hold")
+    n = 0
+    d = date(2023, 3, 6)
+    while d <= date(2023, 3, 17):
+        if d.weekday() < 5:
+            ctx = build_context(bars, d)
+            for s in pr.find_setups(bars, d, "US100", p, ctx):
+                w = s.would_plan
+                if w is None:
+                    continue
+                assert w.time_exit == tg.session_close(d)
+                cut = bars[bars.index <= s.decided_at]
+                for mode in tg.MODES:
+                    kw = dict(entry=w.entry, stop=w.stop, long=s.side == "long", tp1=w.tp1, tp1_name=w.tp1_name,
+                              final=w.final_target, final_name=w.final_name, decided=s.decided_at, ctx=ctx, day=d,
+                              min_tp1=w.risk)
+                    assert tg.apply(mode, bars_1m=bars, **kw) == tg.apply(mode, bars_1m=cut, **kw)
+                for gate in eq.GATES:
+                    assert eq.check(s, bars, ctx, gate) == eq.check(s, cut, ctx, gate)
+                n += 1
+        d += timedelta(days=1)
+    assert n > 0

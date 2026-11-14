@@ -57,6 +57,7 @@ class Params:
     cap_scope: str = "day"               # one trade per day (Cameron rules, ruling #1)
     invalidate_tf: str | None = None
     news_blackout: tuple[int, int] | None = None
+    entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5
     runner_stop: str = "entry"
@@ -68,7 +69,7 @@ class Params:
         parts = [f"cam-{self.trigger_tf}>{self.entry_tf}-draw{self.draw_tf}"]
         for name in ("windows", "require_running", "draw_lookback_h", "fvg_wait_min", "entry_level", "min_tp1_r",
                      "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
-                     "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
+                     "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

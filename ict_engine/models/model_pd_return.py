@@ -68,6 +68,8 @@ class Params:
     cap_scope: str = "window"           # not stated for this model → the engine default (one per window)
     invalidate_tf: str | None = None
     news_blackout: tuple[int, int] | None = None
+    target_mode: str = "default"         # targets.MODES (liquidity-targets pre-registration)
+    entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5
     runner_stop: str = "entry"
@@ -79,7 +81,7 @@ class Params:
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
         for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
-                     "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
+                     "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)
@@ -175,7 +177,7 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     out, seen = [], set()
     # bigger timeframes first, so one reaction is credited to the largest array it came from
     for g, touch in sorted(returns(arrays, day_1m, d0), key=lambda x: (x[1], -TF_RANK.get(x[0].tf, 0))):
-        s = _evaluate(g, touch, ctx, day, asset, p, day_1m, ltf, swing_pts)
+        s = _evaluate(g, touch, ctx, day, asset, p, day_1m, ltf, swing_pts, bars_1m=bars_1m)
         key = (s.side, s.decided_at)
         if key in seen:
             continue
@@ -184,7 +186,7 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     return out
 
 
-def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pts) -> Setup:
+def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pts, bars_1m=None) -> Setup:
     long = g.direction == "bull"
     side = "long" if long else "short"
     name = g.kind.upper() if g.kind != "mitigation" else "MB"
@@ -226,6 +228,10 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
         return setup
     if p.tp1_cap_r is not None and abs(tp1 - entry) > p.tp1_cap_r * risk:
         tp1, tp1_name = entry + (1 if long else -1) * p.tp1_cap_r * risk, f"cap {p.tp1_cap_r:g}R"
+    from ict_engine.models import targets
+    tp1, tp1_name, final, final_name, t_exit = targets.apply(
+        p.target_mode, entry=entry, stop=stop, long=long, tp1=tp1, tp1_name=tp1_name, final=final, final_name=final_name,
+        bars_1m=day_1m if bars_1m is None else bars_1m, decided=decided, ctx=ctx, day=day, min_tp1=p.min_tp1_r * risk)
     setup.tags["dol"] = final_name
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1:.2f}, final {final_name} {final:.2f}"))
     if p.max_cost_r is not None:
@@ -233,7 +239,7 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
-                                 invalid_level=fail_level(g), invalid_tf=p.invalidate_tf)
+                                 invalid_level=fail_level(g), invalid_tf=p.invalidate_tf, time_exit=t_exit)
     if all(x.passed for x in setup.gates):
         setup.plan = setup.would_plan
     return setup

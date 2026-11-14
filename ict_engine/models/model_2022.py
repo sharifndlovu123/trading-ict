@@ -75,6 +75,8 @@ class Params:
     # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
     # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
     news_blackout: tuple[int, int] | None = None
+    target_mode: str = "default"         # targets.MODES (liquidity-targets pre-registration)
+    entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -93,6 +95,10 @@ class Params:
             extra.append(f"cost<={self.max_cost_r:g}R" if self.max_cost_r is not None else "nocostgate")
         if self.use_bias and (self.bias_rule, self.neutral_bias) != ("prev_day_dol", "opening_range"):
             extra.append(f"bias_{self.bias_rule}_{self.neutral_bias}")
+        if self.target_mode != "default":
+            extra.append(f"targets_{self.target_mode}")
+        if self.entry_gate:
+            extra.append(f"gate_{self.entry_gate}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:
@@ -147,11 +153,11 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
 
     out = []
     for mss in shifts:
-        out.append(_evaluate(mss, ctx, day, asset, p, day_1m, taken, gaps, htf_gaps, swing_highs_lows))
+        out.append(_evaluate(mss, ctx, day, asset, p, day_1m, taken, gaps, htf_gaps, swing_highs_lows, bars_1m=bars_1m))
     return out
 
 
-def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_gaps, swing_pts) -> Setup:
+def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_gaps, swing_pts, bars_1m=None) -> Setup:
     long = mss.direction == "bull"
     side = "long" if long else "short"
     decided = mss.ts
@@ -240,6 +246,11 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
             setup.gates.append(Gate("target", False, f"TP1 cap {p.tp1_cap_r:g}R {capped:.2f} not beyond arm {arm:.2f}"))
             return setup
         tp1, tp1_name = capped, f"cap {p.tp1_cap_r:g}R"
+    from ict_engine.models import targets
+    tp1, tp1_name, final, final_name, t_exit = targets.apply(
+        p.target_mode, entry=entry, stop=stop, long=long, tp1=tp1, tp1_name=tp1_name, final=final, final_name=final_name,
+        bars_1m=day_1m if bars_1m is None else bars_1m, decided=decided, ctx=ctx, day=day, min_tp1=p.min_tp1_r * risk,
+        edge=arm if needs_arm else None)
     potential = abs(final - entry)
     setup.gates.append(Gate("target", potential >= p.min_potential and abs(entry - stop) > 0,
                             f"TP1 {tp1_name} {tp1:.2f}, final {final_name} {final:.2f}, potential {potential:.1f}"))
@@ -260,7 +271,7 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
                                  arm=arm if needs_arm else None,
                                  invalid_level=fvg.bottom if long else fvg.top, invalid_tf=p.invalidate_tf,
-                                 order=p.entry_mode)
+                                 order=p.entry_mode, time_exit=t_exit)
     if all(g.passed for g in setup.gates):
         setup.plan = setup.would_plan
     setup.tags["window"] = w.name if w else None

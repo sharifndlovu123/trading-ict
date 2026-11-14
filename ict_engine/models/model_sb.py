@@ -66,6 +66,7 @@ class Params:
     # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
     # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
     news_blackout: tuple[int, int] | None = None
+    entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -80,7 +81,7 @@ class Params:
         d = Params()
         parts = ["sb", self.entry_level]
         for name in ("late_window", "strict_fvg_in_hour", "min_framework_ticks", "framework_adr_frac", "min_tp1_r",
-                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
+                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

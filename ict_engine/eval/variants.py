@@ -49,6 +49,15 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "partial 75% + runner trail (lock half)": replace(BASE, partial_frac=0.75, runner_stop="lock_half"),
     "partial 50% + runner trail (lock half)": replace(BASE, runner_stop="lock_half"),
     "entry at market (next open)": replace(BASE, entry_mode="market"),
+    # targets and holding (research/preregistered-liquidity-targets-2026-11-14.md + amendment 1; score with --metric runner_r)
+    "targets: runner to strongest pool": replace(BASE, target_mode="pool"),
+    "targets: FVGs ahead as TP1 candidates": replace(BASE, target_mode="fvg_tp1"),
+    "targets: both": replace(BASE, target_mode="both"),
+    "hold: runner to the HTF draw": replace(BASE, target_mode="hold"),
+    # entry quality (research/preregistered-entry-quality-2026-11-14.md)
+    "entry: sweep then displacement": replace(BASE, entry_gate="sweep_disp"),
+    "entry: no chop in the zone": replace(BASE, entry_gate="no_chop"),
+    "entry: both": replace(BASE, entry_gate="both"),
 }
 
 
@@ -75,6 +84,10 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "partial 80% + runner at breakeven": replace(MB, partial_frac=0.8),
     "partial 75% + runner trail (lock half)": replace(MB, partial_frac=0.75, runner_stop="lock_half"),
     "partial 50% + runner trail (lock half)": replace(MB, runner_stop="lock_half"),
+    # entry quality (research/preregistered-entry-quality-2026-11-14.md)
+    "entry: sweep then displacement": replace(MB, entry_gate="sweep_disp"),
+    "entry: no chop in the zone": replace(MB, entry_gate="no_chop"),
+    "entry: both": replace(MB, entry_gate="both"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
@@ -96,6 +109,10 @@ SB_VARIANTS: dict[str, model_sb.Params] = {
     "partial 80% + runner at breakeven": replace(SB, partial_frac=0.8),
     "partial 75% + runner trail (lock half)": replace(SB, partial_frac=0.75, runner_stop="lock_half"),
     "partial 50% + runner trail (lock half)": replace(SB, runner_stop="lock_half"),
+    # entry quality (research/preregistered-entry-quality-2026-11-14.md)
+    "entry: sweep then displacement": replace(SB, entry_gate="sweep_disp"),
+    "entry: no chop in the zone": replace(SB, entry_gate="no_chop"),
+    "entry: both": replace(SB, entry_gate="both"),
 }
 CB = model_cameron.Params()
 CAMERON_VARIANTS: dict[str, model_cameron.Params] = {
@@ -108,6 +125,10 @@ CAMERON_VARIANTS: dict[str, model_cameron.Params] = {
     "one trade per window": replace(CB, cap_scope="window"),
     "partial 80% + runner at breakeven": replace(CB, partial_frac=0.8),
     "partial 75% + runner trail (lock half)": replace(CB, partial_frac=0.75, runner_stop="lock_half"),
+    # entry quality (research/preregistered-entry-quality-2026-11-14.md)
+    "entry: sweep then displacement": replace(CB, entry_gate="sweep_disp"),
+    "entry: no chop in the zone": replace(CB, entry_gate="no_chop"),
+    "entry: both": replace(CB, entry_gate="both"),
 }
 PR = model_pd_return.Params()
 # Windows are ICT's documented ones only (clock.py). ICT's 2023-11-28 trade at 11:11 lies just after macro_1050;
@@ -147,6 +168,15 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
                                                          lookback_days=10),
     "HTF IFVG + OB 1d+1w+1M (tf close; OB open, body)": replace(PR, htf_tfs=("1d", "1w", "1M"), arrays=("ifvg", "ob"),
                                                                 ob_confirm="open", ob_measure="body", lookback_days=60),
+    # targets and holding (research/preregistered-liquidity-targets-2026-11-14.md + amendment 1; score with --metric runner_r)
+    "targets: runner to strongest pool": replace(PR, target_mode="pool"),
+    "targets: FVGs ahead as TP1 candidates": replace(PR, target_mode="fvg_tp1"),
+    "targets: both": replace(PR, target_mode="both"),
+    "hold: runner to the HTF draw": replace(PR, target_mode="hold"),
+    # entry quality (research/preregistered-entry-quality-2026-11-14.md)
+    "entry: sweep then displacement": replace(PR, entry_gate="sweep_disp"),
+    "entry: no chop in the zone": replace(PR, entry_gate="no_chop"),
+    "entry: both": replace(PR, entry_gate="both"),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}
@@ -213,6 +243,8 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=8, help="process cap (CPU heat: 16 cores hit 96 °C)")
     ap.add_argument("--only", nargs="+", help="run only these variants (names start with; baseline always runs)")
     ap.add_argument("--cost", choices=("cfd", "futures"), default=None, help="cost basis (sets ICT_COST_BASIS)")
+    ap.add_argument("--metric", choices=("r", "runner_r"), default="r",
+                    help="r = all out at TP1 (the vote measure); runner_r = partial at TP1 + the runner")
     a = ap.parse_args(argv)
     if a.cost:
         import os
@@ -222,9 +254,11 @@ def main(argv=None):
         vs = {k: v for k, v in vs.items() if k == "baseline" or any(k.startswith(o) for o in a.only)}
     df = sweep(a.start, a.end, tuple(a.assets), vs, workers=a.workers)
     cut = split_day(a.start, a.end, a.holdout)
-    text = render(compare(df, cut), cut, f"{a.model} {'+'.join(a.assets)} {a.start} → {a.end}")
+    scored = df.assign(r=df.runner_r.fillna(df.r)) if a.metric == "runner_r" else df
+    text = render(compare(scored, cut), cut, f"{a.model} {'+'.join(a.assets)} {a.start} → {a.end}"
+                  + (" (runner R)" if a.metric == "runner_r" else ""))
     out = ROOT / "reports" / (f"variants{'' if a.model == '2022_model' else '-' + a.model}-{a.start}-{a.end}"
-                              f"{'-futures' if a.cost == 'futures' else ''}{'-only' if a.only else ''}")
+                              f"{'-futures' if a.cost == 'futures' else ''}{'-only' if a.only else ''}{'-runner' if a.metric == 'runner_r' else ''}")
     out.parent.mkdir(exist_ok=True)
     df.to_parquet(out.with_suffix(".parquet"))
     out.with_suffix(".md").write_text(text)
