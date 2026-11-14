@@ -18,7 +18,10 @@ on any period**, so these tests are fresh. The engine's setups are fixed by code
   - `cameron`, `mmxm`, `silver_bullet`, `pd_return`.
 
 ## Measures (fixed now)
-- Signed volume: aggressor buy = +size, aggressor sell = −size (TBBO `side`: A = buy, B = sell; N = dropped).
+- Signed volume: aggressor buy = +size, aggressor sell = −size. Databento's trade `side` is the initiating side:
+  **B = buy aggressor, A = sell aggressor**, N = dropped. (Corrected 2026-11-14, still before any data. The first
+  draft had it reversed.) A data check runs before any test: buy-aggressor trades must print at the ask far more
+  often than at the bid.
 - **Aligned imbalance** over a window W: I = (buy − sell) / (buy + sell), with the sign flipped for shorts, so
   I > 0 means flow in the trade's direction.
 - **Trigger window:** W = the 5 minutes ending at the decision (`decided_at`).
