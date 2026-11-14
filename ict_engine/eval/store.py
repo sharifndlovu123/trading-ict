@@ -113,6 +113,19 @@ def load(root: Path = STORE, traded_only: bool = False, **filters) -> pd.DataFra
     return df[df.status == "traded"] if traded_only else df
 
 
+def latest(df: pd.DataFrame) -> pd.DataFrame:
+    """Per model family × cost basis, keep only the runs from the most recently added commit, so models built at
+    different commits can sit side by side without mixing rule versions within one model."""
+    if df.empty:
+        return df
+    basis = df["cost_basis"].fillna("cfd") if "cost_basis" in df else pd.Series("cfd", index=df.index)
+    key = df["family"].astype(str) + "|" + basis.astype(str)
+    newest = df.assign(_k=key).groupby(["_k", "commit"]).added_at.max().reset_index()
+    keep = newest.sort_values("added_at").groupby("_k").tail(1)
+    pairs = set(zip(keep._k, keep.commit))
+    return df[[(k, c) in pairs for k, c in zip(key, df["commit"])]]
+
+
 def runs(root: Path = STORE) -> pd.DataFrame:
     df = load(root)
     if df.empty:

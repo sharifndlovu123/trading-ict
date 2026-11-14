@@ -111,7 +111,7 @@ def test_write_links_examples_to_created_packs(tmp_path):
 
     path = rp.write(both(), tmp_path / "review.html", export=fake_export)
     page = path.read_text()
-    hrefs = set(re.findall(r'href="([^"#]+\.html)"', page)) - {"index.html"}
+    hrefs = set(re.findall(r'href="([^"#]+\.html)"', page)) - {"index.html", "review.html", "review-futures.html"}
     assert hrefs and hrefs <= set(made)
 
 

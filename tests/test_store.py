@@ -109,3 +109,13 @@ def test_cost_basis_separates_runs(root):
     got = st.load(root=root, cost_basis="futures")
     assert set(got.run_id) == {b}
     assert set(st.load(root=root, cost_basis="cfd").run_id) >= {a}
+
+
+def test_latest_keeps_each_family_and_basis_at_its_newest_commit(root):
+    import time
+    store.add_run(table(), root=root, **meta(commit="old"))
+    store.add_run(table(model="2022_model"), root=root, **meta(commit="old"))
+    time.sleep(0.01)
+    store.add_run(table(r=(1, 1, 1, 1)), root=root, **meta(commit="new"))      # only mmxm re-run
+    got = store.latest(store.load(root=root))
+    assert set(zip(got.family, got.commit)) == {("mmxm", "new"), ("2022_model", "old")}

@@ -2,6 +2,7 @@
 
     uv run python -m ict_engine.viz.review_page reports/backtest-*.parquet   # → out/review.html
     uv run python -m ict_engine.viz.review_page --store --commit <sha>         # from the trade store
+    uv run python -m ict_engine.viz.review_page --store --latest --cost cfd    # every model, its newest run
 
 One self-contained HTML page (viewer/review.html template, no build step, no chart
 library) built from backtest tables (``ict_engine.eval.backtest``) with the
@@ -44,7 +45,7 @@ CROSS_MIN_N = 30
 BUCKET_DIMS = ("window", "weekday", "hour", "side")
 CROSS_DIMS = ("window", "weekday", "hour")
 FAMILY_LABEL = {"2022_model": "2022 model", "mmxm": "MMxM (MMBM + MMSM)", "silver_bullet": "Silver Bullet",
-                "cameron": "Cameron's Model"}
+                "cameron": "Cameron's Model", "pd_return": "PD array return"}
 SPLIT = pd.Timestamp("2024-06-28")        # last day of the selection period; later = unseen
 RESEARCH = ROOT / "research"
 CAUSE_TEXT = {
@@ -160,6 +161,7 @@ def ensure_daypacks(ex: dict, out_dir: Path = OUT, cap: int = MAX_EXPORTS, expor
 
 def build(df: pd.DataFrame, ex: dict | None = None) -> dict:
     """Everything the page shows, as plain JSON-able data."""
+    label = df.attrs.get("label", "")
     df = rv.prepare(df)
     t = rv.trades(df)
     fams = _families(df)
@@ -167,7 +169,7 @@ def build(df: pd.DataFrame, ex: dict | None = None) -> dict:
         "range": [f"{df.day.min():%Y-%m-%d}", f"{df.day.max():%Y-%m-%d}"],
         "assets": sorted(df.asset.unique()), "families": fams, "tips": rv.tips(df),
         "overview": {}, "diagnose": {}, "gates": {}, "buckets": {}, "cross": {},
-        "examples": ex if ex is not None else examples(df),
+        "examples": ex if ex is not None else examples(df), "label": label,
     }
     for fam in fams:
         d, tf = df[df.family == fam], t[t.family == fam]
@@ -413,10 +415,12 @@ def _research(d: dict) -> str:
 def render(d: dict) -> str:
     """Full HTML page for ``build()`` output."""
     header = (f'<header><h1>ICT Model Review</h1><span class="chip">{E(d["range"][0])} → {E(d["range"][1])}</span>'
-              f'<span class="chip">{E(", ".join(d["assets"]))}</span><nav>'
+              f'<span class="chip">{E(", ".join(d["assets"]))}</span>'
+              + (f'<span class="chip">{E(d["label"])}</span>' if d.get("label") else "") + '<nav>'
               '<a href="#overview">overview</a><a href="#tips">tips</a><a href="#wrong">what went wrong</a>'
               '<a href="#periods">two periods</a><a href="#gates">gates</a><a href="#cross">cross-model</a>'
               '<a href="#buckets">buckets</a><a href="#research">research</a>'
+              '<a href="review.html">CFD</a><a href="review-futures.html">futures</a>'
               '<a href="index.html">day packs</a><button id="theme" title="toggle theme" aria-label="toggle theme">◐</button></nav></header>')
     body = (header + "<main>" + _overview(d) + _periods(d) + _tips(d) + _wrong(d) + _gates(d) + _cross(d)
             + _buckets(d) + _research(d) + "</main>")
@@ -440,11 +444,23 @@ def main(argv=None):
     ap.add_argument("--store", action="store_true", help="read the trade store (ict_engine.eval.store) instead of tables")
     ap.add_argument("--commit", help="with --store: only runs made at this commit")
     ap.add_argument("--out", type=Path, default=OUT / "review.html")
+    ap.add_argument("--latest", action="store_true",
+                    help="with --store: every model family's newest commit (models side by side)")
+    ap.add_argument("--cost", choices=("cfd", "futures"), help="with --store: only runs on this cost basis")
     ap.add_argument("--max-exports", type=int, default=MAX_EXPORTS, help="cap on new day packs to export")
     a = ap.parse_args(argv)
     if a.store:
         from ict_engine.eval import store
         df = store.load(**({"commit": a.commit} if a.commit else {}))
+        if a.cost and not df.empty:
+            df = df[df["cost_basis"].fillna("cfd") == a.cost]
+        if a.latest:
+            df = store.latest(df)
+        if df.empty:
+            ap.error("no runs match")
+        df = df.copy()
+        df.attrs["label"] = " · ".join(x for x in (f"{a.cost} costs" if a.cost else "",
+                                                     "latest run per model" if a.latest else "") if x)
         df = df.drop(columns=[c for c in ("family", "run_id", "commit", "extras", "period_start", "period_end",
                                           "added_at") if c in df])
     elif a.tables:
