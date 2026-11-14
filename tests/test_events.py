@@ -179,3 +179,65 @@ def test_ifvg_inherits_gap_lifecycle_and_min_size():
     st = gap_lifecycle(ifvg, bars)
     assert st.inverted == t(4) and not st.valid_at(t(4))
     assert inversions([_bull_gap()], bars, min_size=5) == []
+
+
+# --- order blocks, breakers, mitigation blocks (ICT Bible pp.16-26) -------------------
+
+from ict_engine.concepts.events import breaker_blocks, order_blocks  # noqa: E402
+
+
+def test_bullish_ob_is_last_down_candles_validated_by_close_above_their_high():
+    # up, down, down (the OB: 99.0-101.5), then a close above 101.5 validates it; a FVG forms in the move
+    df = candles([(100, 101, 99.5, 100.8), (100.8, 101.5, 99.6, 100.0), (100.0, 100.2, 99.0, 99.4),
+                  (99.4, 101.0, 99.3, 100.9), (100.9, 103.0, 100.8, 102.8), (102.8, 104.0, 102.5, 103.8)])
+    obs = [e for e in order_blocks(df, "1m") if e.direction == "bull"]
+    assert len(obs) == 1
+    ob = obs[0]
+    assert (ob.top, ob.bottom) == (101.5, 99.0) and ob.origin_ts == t(1)
+    assert ob.ts == t(4)                      # bar 3 closes 100.9 < 101.5; bar 4 closes above → known then
+    assert ob.meta["candles"] == 2 and ob.meta["fvg"]   # bar 4 low 100.8 > bar 2 high 100.2
+
+
+def test_ob_needs_the_close_within_max_wait_and_mirrors_for_bears():
+    rows = [(100, 100.5, 99, 99.2)] + [(99.2, 99.4, 99.0, 99.2)] * 6 + [(99.2, 101, 99.1, 100.8)]
+    assert not [e for e in order_blocks(candles(rows), "1m", max_wait=3) if e.direction == "bull"]
+    bear = candles([(100, 100.5, 99.5, 100.4), (100.4, 100.6, 99.0, 99.1), (99.1, 99.2, 97.0, 97.2)])
+    obs = [e for e in order_blocks(bear, "1m") if e.direction == "bear"]
+    assert len(obs) == 1 and (obs[0].top, obs[0].bottom) == (100.5, 99.5) and obs[0].ts == t(1)
+
+
+def _three_swings(second_low):
+    """L1 at 95 (bar 1) → H 103 (bar 4, up-close candles bars 3-4) → L2 at ``second_low`` (bar 7) → close above 103."""
+    return candles([(98, 98, 96, 97), (97, 97, 95, 96), (96, 98, 96, 97.5), (97.5, 101, 97, 100.5),
+                    (100.5, 103, 100, 102), (102, 102, 99, 99.5), (99.5, 99.5, second_low + 1, 98),
+                    (98, 98.5, second_low, 98.2), (98.2, 101, 98, 100.5), (100.5, 104, 100, 103.6),
+                    (103.6, 104.5, 103, 104)])
+
+
+def test_bullish_breaker_after_lower_low_and_mitigation_after_higher_low():
+    br = [e for e in breaker_blocks(_three_swings(94.0), "1m") if e.direction == "bull"]
+    assert [e.kind for e in br] == ["breaker"] and br[0].meta["swept"]
+    b = br[0]
+    assert b.origin_ts == t(2) and (b.top, b.bottom) == (103.0, 96.0)  # up-close candles bars 2-4 in the high
+    assert b.ts == t(9)                                                  # bar 9 closes 103.6 > 103
+    mb = [e for e in breaker_blocks(_three_swings(96.5), "1m") if e.direction == "bull"]
+    assert [e.kind for e in mb] == ["mitigation"]
+
+
+def test_blocks_retire_on_a_body_close_beyond_their_50pct():
+    ob = Event("ob", "1m", "bull", t(0), t(0), 102.0, 100.0)
+    after = candles([(103, 103, 101.5, 102.5), (102.5, 102.6, 100.8, 101.2), (101.2, 101.3, 100.5, 100.7)],
+                    start="2024-01-09 10:01")
+    st = gap_lifecycle(ob, after)
+    assert st.touched == t(1) and st.retired == t(3) and st.inverted is None
+    assert st.valid_at(t(2)) and not st.valid_at(t(3))
+
+
+def test_blocks_have_no_lookahead():
+    df = _three_swings(94.0)
+    full = breaker_blocks(df, "1m") + order_blocks(df, "1m")
+    for e in full:
+        cut = df[df.index <= e.ts]
+        again = breaker_blocks(cut, "1m") + order_blocks(cut, "1m")
+        assert any((x.kind, x.direction, x.top, x.bottom, x.ts) == (e.kind, e.direction, e.top, e.bottom, e.ts)
+                   for x in again), e

@@ -137,3 +137,38 @@ def test_bias_gate_is_applied_by_default():
 def test_registered():
     from ict_engine.models.registry import modules
     assert modules()["pd_return"] is pr
+
+
+# --- OB / breaker / mitigation variants (models.md §6) --------------------------------------------
+
+def test_htf_arrays_returns_only_the_asked_kinds_and_blocks_fail_at_their_50pct():
+    for kinds in (("ob",), ("breaker", "mitigation"), ("fvg", "ob")):
+        got = pr.htf_arrays(bars(), ("15m", "1h"), kinds)
+        assert got and {g.kind for g in got} <= set(kinds)
+    ob = pr.Event("ob", "1h", "bull", ts("05:00"), ts("02:00"), 104.0, 102.0)
+    fvg = pr.Event("fvg", "1h", "bull", ts("05:00"), ts("02:00"), 104.0, 102.0)
+    assert pr.fail_level(ob) == 103.0 and pr.fail_level(fvg) == 102.0
+
+
+def ob_bars():
+    """02:00–02:45 dip 100 → 98.9 (down-close 15m candles = the OB ≈ 98.9–100), 02:45–05:00 rally to 106.5 (a 15m
+    close above the OB's high validates it), 08:00–08:40 pullback into the OB above its 50% (low 99.6), a sharp 1m
+    reaction (1m FVG), a retrace that fills it, then the rally through 106.5."""
+    pts = [("2024-01-08 18:00", 100.0), ("2024-01-09 02:00", 100.0), ("2024-01-09 02:45", 98.9),
+           ("2024-01-09 05:00", 106.5), ("2024-01-09 05:20", 106.0), ("2024-01-09 08:00", 106.0),
+           ("2024-01-09 08:40", 99.6), ("2024-01-09 08:44", 100.8), ("2024-01-09 08:50", 99.7),
+           ("2024-01-09 10:00", 107.5), ("2024-01-09 16:00", 107.0)]
+    return pd.concat([history(), path_bars(pts, "2024-01-08 18:00", "2024-01-09 16:30")])
+
+
+def test_ob_variant_trades_the_return_to_the_overnight_order_block_without_lookahead():
+    p = pr.Params(use_bias=False, arrays=("ob",), htf_tfs=("15m",), lookback_days=0)
+    assert "arrays=" in p.variant
+    ss = planned(pr.find_setups(ob_bars(), DAY, "US100", p))
+    assert ss, [(s.tags, [str(g) for g in s.gates]) for s in pr.find_setups(ob_bars(), DAY, "US100", p)]
+    s = ss[0]
+    assert s.tags["array_kind"] == "ob" and s.tags["poi"] == "15m OB" and 98.8 < s.plan.stop < s.plan.entry < 101
+    cut = ob_bars()
+    cut = cut[cut.index <= s.decided_at]
+    b = planned(pr.find_setups(cut, DAY, "US100", p))[0]
+    assert (b.plan.entry, b.plan.stop, b.plan.tp1, b.decided_at) == (s.plan.entry, s.plan.stop, s.plan.tp1, s.decided_at)

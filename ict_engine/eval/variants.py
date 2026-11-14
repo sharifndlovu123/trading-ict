@@ -122,6 +122,11 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
     "lookback 2 days": replace(PR, lookback_days=2),
     "tp1 cap 2R": replace(PR, tp1_cap_r=2.0),
     "no cost gate": replace(PR, max_cost_r=None),
+    # models.md §6 array variants (ICT Bible pp.16-26)
+    "array: order block": replace(PR, arrays=("ob",)),
+    "array: breaker": replace(PR, arrays=("breaker",)),
+    "array: mitigation block": replace(PR, arrays=("mitigation",)),
+    "array: FVG + OB + breaker + MB": replace(PR, arrays=("fvg", "ob", "breaker", "mitigation")),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}
@@ -186,16 +191,20 @@ def main(argv=None):
     ap.add_argument("--holdout", type=float, default=0.3)
     ap.add_argument("--model", default="2022_model", choices=tuple(SETS))
     ap.add_argument("--workers", type=int, default=8, help="process cap (CPU heat: 16 cores hit 96 °C)")
+    ap.add_argument("--only", nargs="+", help="run only these variants (names start with; baseline always runs)")
     ap.add_argument("--cost", choices=("cfd", "futures"), default=None, help="cost basis (sets ICT_COST_BASIS)")
     a = ap.parse_args(argv)
     if a.cost:
         import os
         os.environ["ICT_COST_BASIS"] = a.cost
-    df = sweep(a.start, a.end, tuple(a.assets), SETS[a.model], workers=a.workers)
+    vs = SETS[a.model]
+    if a.only:
+        vs = {k: v for k, v in vs.items() if k == "baseline" or any(k.startswith(o) for o in a.only)}
+    df = sweep(a.start, a.end, tuple(a.assets), vs, workers=a.workers)
     cut = split_day(a.start, a.end, a.holdout)
     text = render(compare(df, cut), cut, f"{a.model} {'+'.join(a.assets)} {a.start} → {a.end}")
     out = ROOT / "reports" / (f"variants{'' if a.model == '2022_model' else '-' + a.model}-{a.start}-{a.end}"
-                              f"{'-futures' if a.cost == 'futures' else ''}")
+                              f"{'-futures' if a.cost == 'futures' else ''}{'-only' if a.only else ''}")
     out.parent.mkdir(exist_ok=True)
     df.to_parquet(out.with_suffix(".parquet"))
     out.with_suffix(".md").write_text(text)

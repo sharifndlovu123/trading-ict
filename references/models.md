@@ -111,7 +111,8 @@ Three variants of one model: price returns to a PD array and reacts.
   4. Stop at the reaction extreme (variant: beyond the array).
   5. TP1 = nearest untaken liquidity ≥ 1R.
   6. One trade per window.
-  The OB / breaker / mitigation variants above are still to build.
+  The OB / breaker / mitigation variants above are built as `arrays=` (detectors: `concepts/events.py`
+  `order_blocks`, `breaker_blocks`; a block retires on a body close beyond its 50%).
 
 ---
 

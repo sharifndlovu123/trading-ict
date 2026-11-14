@@ -6,7 +6,8 @@ timing and/or price levels to enter on" (framework.md §5). In his six live exam
 references/models.md §6 (OB / breaker / mitigation variants) are later variants of this card.
 
 Mechanical version (bullish; bearish is the mirror):
-    array      an FVG on ``htf_tfs`` (15m / 1h / 4h) in the trade direction, formed within ``lookback_days``,
+    array      an FVG (``arrays``; or OB / breaker / mitigation block, models.md §6) on ``htf_tfs`` (15m / 1h / 4h)
+               in the trade direction, formed within ``lookback_days``,
                still valid (no body close beyond its far edge, framework.md §9) when price returns to it.
     return     inside a trading window, price trades into the array (reaches its near edge).
     trigger    a ``trigger_tf`` (1m) FVG in the trade direction forms in the reaction, within ``trigger_wait_min``
@@ -28,7 +29,7 @@ import pandas as pd
 
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import DayContext, build_context
-from ict_engine.concepts.events import Event, fvgs, gap_lifecycle, swings
+from ict_engine.concepts.events import BLOCK_KINDS, Event, breaker_blocks, fvgs, gap_lifecycle, order_blocks, swings
 from ict_engine.data.instruments import cost_at
 from ict_engine.models.base import Gate, Setup, TradePlan
 from ict_engine.models.model_2022 import _targets, _ts, _window_at, _window_end, bias_gate
@@ -42,6 +43,7 @@ TF_RANK = {"15m": 1, "1h": 2, "4h": 3}
 class Params:
     windows: tuple[str, ...] = ("london_kz", "ny_premarket", "ny_am_kz", "ny_pm_kz")
     htf_tfs: tuple[str, ...] = ("15m", "1h", "4h")
+    arrays: tuple[str, ...] = ("fvg",)    # fvg | ob | breaker | mitigation (models.md §6 variants)
     lookback_days: int = 5
     trigger_tf: str = "1m"
     trigger_wait_min: int = 30
@@ -67,7 +69,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop"):
             if getattr(self, name) != getattr(d, name):
@@ -77,9 +79,26 @@ class Params:
 
 # --- pieces (pure, unit-tested) ---------------------------------------------------------------
 
-def htf_arrays(hist_1m: pd.DataFrame, tfs: tuple[str, ...]) -> list[Event]:
-    """FVGs on each higher timeframe of the history (each known from its completion ``ts``)."""
-    return [g for tf in tfs for g in fvgs(resample(hist_1m, tf), tf)]
+def htf_arrays(hist_1m: pd.DataFrame, tfs: tuple[str, ...], kinds: tuple[str, ...] = ("fvg",)) -> list[Event]:
+    """PD arrays on each higher timeframe of the history (each known from its ``ts``): FVGs, order blocks,
+    breakers and/or mitigation blocks."""
+    out = []
+    for tf in tfs:
+        bars = resample(hist_1m, tf)
+        if "fvg" in kinds:
+            out += fvgs(bars, tf)
+        if "ob" in kinds:
+            out += order_blocks(bars, tf)
+        if "breaker" in kinds or "mitigation" in kinds:
+            out += [b for b in breaker_blocks(bars, tf) if b.kind in kinds]
+    return out
+
+
+def fail_level(array: Event) -> float:
+    """Where the array has failed: a body close beyond its far edge (FVG) or its 50% (blocks, Bible p.17)."""
+    if array.kind in BLOCK_KINDS:
+        return array.ce
+    return array.bottom if array.direction == "bull" else array.top
 
 
 def returns(arrays: list[Event], day_1m: pd.DataFrame, window_start: pd.Timestamp) -> list[tuple[Event, pd.Timestamp]]:
@@ -108,7 +127,8 @@ def reaction_trigger(array: Event, touch: pd.Timestamp, day_1m: pd.DataFrame, lt
         seg = day_1m[(day_1m.index >= touch) & (day_1m.index <= f.ts)]
         if seg.empty:
             continue
-        broke = (seg.close < array.bottom).any() if long else (seg.close > array.top).any()
+        lvl = fail_level(array)
+        broke = (seg.close < lvl).any() if long else (seg.close > lvl).any()
         if broke:
             return None                       # the array failed before the reaction showed up
         ext = float(seg.low.min()) if long else float(seg.high.max())
@@ -126,7 +146,7 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     if day_1m.empty:
         return []
     hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=p.lookback_days + 2)) & (bars_1m.index < d1)]
-    arrays = [g for g in htf_arrays(hist, p.htf_tfs) if g.ts >= d0 - timedelta(days=p.lookback_days)]
+    arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays) if g.ts >= d0 - timedelta(days=p.lookback_days)]
     ref = float(day_1m.close.iloc[0])
     ltf = fvgs(resample(day_1m, p.trigger_tf), p.trigger_tf, min_size=ref * p.min_trigger_gap_bp / 1e4)
     swing_pts = swings(resample(day_1m, "5m"), "5m") + swings(resample(day_1m, "15m"), "15m")
@@ -145,11 +165,13 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
 def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pts) -> Setup:
     long = g.direction == "bull"
     side = "long" if long else "short"
+    name = g.kind.upper() if g.kind != "mitigation" else "MB"
     ret = Event("return", g.tf, g.direction, touch, g.origin_ts, g.top, g.bottom,
-                {"level": f"{g.tf} FVG {g.bottom:.2f}-{g.top:.2f}"})
+                {"level": f"{g.tf} {name} {g.bottom:.2f}-{g.top:.2f}"})
     setup = Setup(MODEL, p.variant, asset, "day", day, side, touch, {"poi": g, "liquidity": ret},
                   pd_array="fvg", pd_array_tf=p.trigger_tf)
-    setup.tags.update({"array_tf": g.tf, "array": f"{g.bottom:.2f}-{g.top:.2f}", "poi": f"{g.tf} FVG"})
+    setup.tags.update({"array_tf": g.tf, "array_kind": g.kind, "array": f"{g.bottom:.2f}-{g.top:.2f}",
+                       "poi": f"{g.tf} {name}"})
     trig = reaction_trigger(g, touch, day_1m, ltf, p.trigger_wait_min)
     decided = trig[0].ts if trig else touch
     setup.decided_at = decided
@@ -159,18 +181,18 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
     setup.gates.append(bias_gate(ctx, long, decided, day_1m, p))
     if trig is None:
         setup.gates.append(Gate("trigger", False, f"no {p.trigger_tf} FVG within {p.trigger_wait_min}m of the "
-                                                  f"return to the {g.tf} FVG (or the array failed first)"))
+                                                  f"return to the {g.tf} {name} (or the array failed first)"))
         return setup
     f, ext = trig
     setup.evidence["fvg"] = f
     entry = {"proximal": f.top if long else f.bottom, "ce": f.ce}[p.entry_level]
-    anchor = ext if p.stop_mode == "reaction" else (g.bottom if long else g.top)
+    anchor = ext if p.stop_mode == "reaction" else (g.bottom if long else g.top)   # array: beyond the whole zone
     stop = anchor - p.stop_buffer if long else anchor + p.stop_buffer
     if (long and not stop < entry) or (not long and not stop > entry):
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
         return setup
     risk = abs(entry - stop)
-    setup.gates.append(Gate("trigger", True, f"returned to {g.tf} FVG {g.bottom:.2f}-{g.top:.2f} at {touch:%H:%M}; "
+    setup.gates.append(Gate("trigger", True, f"returned to {g.tf} {name} {g.bottom:.2f}-{g.top:.2f} at {touch:%H:%M}; "
                                              f"{p.trigger_tf} FVG {f.bottom:.2f}-{f.top:.2f}"))
     tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts,
                                                 min_dist=p.min_tp1_r * risk)
@@ -186,7 +208,7 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
         setup.gates.append(Gate("risk", cost_r <= p.max_cost_r, f"cost {cost_r:.2f}R (max {p.max_cost_r:g}R)"))
     expires = _window_end(decided, w) if w else decided
     setup.would_plan = TradePlan(side, decided, expires, entry, stop, tp1, final, tp1_name, final_name,
-                                 invalid_level=g.bottom if long else g.top, invalid_tf=p.invalidate_tf)
+                                 invalid_level=fail_level(g), invalid_tf=p.invalidate_tf)
     if all(x.passed for x in setup.gates):
         setup.plan = setup.would_plan
     return setup

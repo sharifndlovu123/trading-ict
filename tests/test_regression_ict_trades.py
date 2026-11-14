@@ -76,3 +76,22 @@ def test_jan9_buyside_targets_are_run_after_entry(jan9):
     runs = {e.meta["level"] for e in sweeps(day, ctx.liquidity) if e.origin_ts > ny("2024-01-09 11:04")
             and e.direction == "bull"}
     assert {"asia_high", "pdh"} <= runs
+
+
+def test_blocks_on_real_data_are_known_after_they_form_and_retire_on_their_50pct():
+    """OB / breaker / mitigation blocks on real US100 1h bars (Dec 2023–Jan 2024): every block is known only after
+    it formed, its zone is a real price range, all three kinds appear, and the lifecycle's retirement is a body
+    close beyond the 50%."""
+    from ict_engine.concepts.bars import resample
+    from ict_engine.concepts.events import breaker_blocks, order_blocks
+    bars = _bars(date(2024, 1, 10))
+    h1 = resample(bars[bars.index >= ny("2023-12-01 00:00")], "1h")
+    blocks = order_blocks(h1, "1h") + breaker_blocks(h1, "1h")
+    assert {b.kind for b in blocks} == {"ob", "breaker", "mitigation"}
+    for b in blocks:
+        assert b.ts > b.origin_ts and b.top > b.bottom
+    b = next(x for x in blocks if x.kind == "ob")
+    st = gap_lifecycle(b, bars)
+    if st.retired is not None:
+        c = bars.loc[st.retired].close
+        assert (c < b.ce) if b.direction == "bull" else (c > b.ce)
