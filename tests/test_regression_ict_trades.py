@@ -95,3 +95,18 @@ def test_blocks_on_real_data_are_known_after_they_form_and_retire_on_their_50pct
     if st.retired is not None:
         c = bars.loc[st.retired].close
         assert (c < b.ce) if b.direction == "bull" else (c > b.ce)
+
+
+def test_equal_lows_found_where_sharif_drew_them_nq_april_2024():
+    """Sharif's trade-review drawing (2026-11-14): sellside liquidity line ~18046–18050 from the 18 Mar 2024
+    session (daily NQ). The equal-lows detector must find it, with ≥3 touches, before the 15 Apr run below it."""
+    from datetime import date
+    from ict_engine.data import orderflow as of
+    from ict_engine.concepts.bars import resample
+    from ict_engine.concepts.events import equal_levels, swings
+    if not of.path_for(of.SYMBOL, of.BARS, "2024-04").exists():
+        pytest.skip("CME NQ bars not downloaded (ict_engine.data.orderflow bars)")
+    d = resample(of.load(date(2024, 2, 15), date(2024, 4, 15), schema=of.BARS), "1d")
+    eql = [lv for lv in equal_levels(d, swings(d, "1d"), tol=18000 * 2 / 1e4) if lv.side == "low"]
+    hit = [lv for lv in eql if 18040 <= lv.price <= 18056 and "eql3" in lv.name]
+    assert hit and hit[0].valid_from < pd.Timestamp("2024-04-15", tz="America/New_York")

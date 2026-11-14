@@ -184,10 +184,11 @@ TFS.forEach(tf => { const b = document.createElement("button"); b.textContent = 
   b.onclick = () => { state.tf = tf; draw(); }; $("tfs").append(b); });
 $("blind").onchange = e => { state.blind = e.target.checked; draw(); };
 // chart layers: everything optional, minimal by default; remembered per viewer
-const LAYERS = [["trade", "Entry / stop / TP1", true], ["marks", "Decided / filled / exit", true], ["levels", "Day & week levels", false],
+const LAYERS = [["trade", "Entry / stop / TP1", true], ["marks", "Decided / filled / exit", true], ["pools", "Liquidity pools", true], ["levels", "Day & week levels", false],
   ["eq", "20-day EQ", false], ["gaps", "HTF FVGs", false], ["obs", "HTF order blocks (25/50/75%)", false], ["delta", "Order flow", true]];
 try { Object.assign(state, { layers: JSON.parse(localStorage.getItem("tr-layers") || "null") }); } catch {}
 if (!state.layers) state.layers = Object.fromEntries(LAYERS.map(([k, , on]) => [k, on]));
+for (const [k, , on] of LAYERS) if (!(k in state.layers)) state.layers[k] = on;
 LAYERS.forEach(([k, l]) => { const lab = document.createElement("label"); lab.className = "tog";
   lab.innerHTML = `<input type="checkbox" id="ly-${k}"> `; lab.append(l); $("layers").append(lab);
   const c = lab.querySelector("input"); c.checked = state.layers[k] ?? false;
@@ -236,6 +237,8 @@ function draw() {
   if (L.trade) { line(t.entry, css("--entry"), "entry"); line(t.stop, css("--stop"), "stop"); line(t.tp1, css("--tp"), "TP1 " + (t.tp1_name || "")); }
   if (L.levels) for (const [k, v] of Object.entries(t.levels)) line(v, css("--level"), k.toUpperCase(), 2, 1);
   if (L.eq) line(t.eq20, css("--eq"), "20D EQ", 1, 1);
+  if (L.pools) for (const p of t.pools || []) line(p.price, css("--level"),
+    `${p.side === "high" ? "BSL" : "SSL"} ${p.members.join(" + ")}${p.strength > 1 ? " ·" + p.strength : ""}`, p.strength > 1 ? 0 : 2, p.strength > 1 ? 2 : 1);
   if (L.obs) for (const o of t.htf_obs || []) { const c = o.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
     for (const [q, p] of Object.entries(o.levels)) line(p, c, q === "50%" ? `${TF_LABEL[o.tf]} OB 50%` : (q === "0%" || q === "100%" ? `${TF_LABEL[o.tf]} OB` : ""),
       q === "50%" ? 0 : (q === "25%" || q === "75%" ? 1 : 2), q === "50%" ? 2 : 1); }

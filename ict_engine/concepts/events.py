@@ -295,6 +295,88 @@ def swing_levels(swing_events: Iterable[Event]) -> list[Level]:
     return out
 
 
+def equal_levels(bars: pd.DataFrame, swing_events: Iterable[Event], tol: float) -> list[Level]:
+    """Relative equal highs/lows: two or more swing highs (lows) within ``tol`` of each other, with no trade beyond
+    the cluster in between. Buy stops rest above equal highs, sell stops below equal lows; ICT calls them a larger
+    pool and a stronger draw than a single high (Jan 12 2026; rulings §12). Each cluster becomes a Level from the
+    moment its second swing is confirmed; a further touch emits an updated level (name ``eqh3@…``).
+    ``bars`` = the bars the swings came from (to check nothing traded through the cluster between touches)."""
+    h, l = _arr(bars, "high"), _arr(bars, "low")
+    idx = bars.index
+    out = []
+    for side, kind in (("high", "swing_high"), ("low", "swing_low")):
+        sw = sorted((e for e in swing_events if e.kind == kind), key=lambda e: e.origin_ts)
+        clusters = []          # [extreme, touches, last_origin_pos, first_origin]
+        for e in sw:
+            pos = int(idx.searchsorted(e.origin_ts))
+            price = e.top if side == "high" else e.bottom
+            alive = []
+            for c in clusters:
+                between = slice(c[2] + 1, pos)
+                if side == "high":
+                    taken = h[between].size and h[between].max() > c[0] + tol
+                else:
+                    taken = l[between].size and l[between].min() < c[0] - tol
+                if not taken:
+                    alive.append(c)
+            clusters = alive
+            match = next((c for c in clusters if abs(price - c[0]) <= tol), None)
+            if match is None:
+                clusters.append([price, 1, pos, e.origin_ts])
+                continue
+            match[0] = max(match[0], price) if side == "high" else min(match[0], price)
+            match[1] += 1
+            match[2] = pos
+            tag = ("eqh" if side == "high" else "eql") + (str(match[1]) if match[1] > 2 else "")
+            out.append(Level(f"{e.tf}_{tag}@{match[3]:%m-%d %H:%M}", float(match[0]), side, e.ts))
+    return sorted(out, key=lambda lv: lv.valid_from)
+
+
+@dataclass(frozen=True)
+class Pool:
+    """Liquidity levels on one side that sit within ``tol`` of each other (e.g. equal highs just under the PDH):
+    one pool, priced at its outermost member (where all the stops are taken)."""
+    side: str
+    price: float
+    inner: float
+    members: tuple[str, ...]
+    prices: tuple[float, ...] = ()
+
+    @property
+    def strength(self) -> int:
+        """How many stops the pool likely holds: each distinct single level counts 1, plus the touches of the
+        best equal-highs/lows cluster in it (eqh = 2, eqh3 = 3). The same highs seen again on another timeframe
+        or re-emitted after an extra touch are not counted twice."""
+        singles, eq = set(), 0
+        prices = self.prices or (None,) * len(self.members)
+        for m, px in zip(self.members, prices):
+            k = m.split("@")[0].split("_")[-1]
+            if k.startswith(("eqh", "eql")):
+                eq = max(eq, int(k[3:] or 2))
+            else:
+                singles.add(px if px is not None else m)     # one high named PDH, D high and 4H high = one level
+        return len(singles) + eq
+
+
+def liquidity_pools(levels: Iterable[Level], tol: float) -> list[Pool]:
+    """Group same-side levels whose prices lie within ``tol`` of the next one (single-linkage). Pass only levels
+    that exist and are still untaken at the moment of use."""
+    out = []
+    for side in ("high", "low"):
+        lv = sorted((x for x in levels if x.side == side), key=lambda x: x.price)
+        group = []
+        for x in lv + [None]:
+            if x is not None and (not group or x.price - group[-1].price <= tol):
+                group.append(x)
+                continue
+            if group:
+                prices = [g.price for g in group]
+                outer, inner = (max(prices), min(prices)) if side == "high" else (min(prices), max(prices))
+                out.append(Pool(side, outer, inner, tuple(g.name for g in group), tuple(g.price for g in group)))
+            group = [x] if x is not None else []
+    return out
+
+
 def sweeps(bars: pd.DataFrame, levels: Iterable[Level], tf: str = "1m", reclaim: int = 3,
            until: pd.Timestamp | None = None) -> list[Event]:
     """First trade through each level → ``sweep`` (closed back inside within ``reclaim`` bars) or ``run``."""

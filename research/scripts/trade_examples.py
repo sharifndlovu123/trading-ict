@@ -14,7 +14,8 @@ import pandas as pd
 
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import build_context
-from ict_engine.concepts.events import fvgs, gap_lifecycle, order_blocks, quadrants
+from ict_engine.concepts.events import (equal_levels, fvgs, gap_lifecycle, liquidity_pools, order_blocks, quadrants,
+                                       swing_levels, swings)
 from ict_engine.data import orderflow as of
 
 NY = "America/New_York"
@@ -104,6 +105,45 @@ def open_htf_obs(hist: pd.DataFrame, at: pd.Timestamp, price: float) -> list:
     return keep
 
 
+def short_name(m: str) -> str:
+    if "_swing_" in m:
+        tf, rest = m.split("_swing_")
+        return f"{tf.upper().replace('1D', 'D')} {rest.split('@')[0]}"
+    if "_eq" in m:
+        tf, rest = m.split("_", 1)
+        k = rest.split("@")[0]
+        return f"{tf.upper().replace('1D', 'D')} {k[:3].upper()}" + (f"x{k[3:]}" if k[3:] else "")
+    return m.upper().replace("_", " ")
+
+
+def pools_at(hist: pd.DataFrame, at: pd.Timestamp, ctx, price: float) -> list:
+    """Untaken liquidity at ``at``: the day's reference levels (PDH/PDL, PWH/PWL, Asia, …) plus equal highs/lows
+    on D/4H/1H, merged into pools (levels within 2 bp). Nearest 3 per side."""
+    levels = [lv for lv in ctx.liquidity]
+    for tf in ("1d", "4h", "1h"):
+        bars = resample(hist, tf)
+        sw = swings(bars, tf)
+        levels += equal_levels(bars, sw, tol=price * 2 / 1e4)
+        if tf in ("1d", "4h"):                       # every old HTF high/low holds stops (single pools)
+            levels += swing_levels(sw)
+    live = []
+    for lv in levels:
+        if lv.valid_from > at:
+            continue
+        seg = hist[(hist.index > lv.valid_from) & (hist.index <= at)]
+        taken = (seg.high > lv.price).any() if lv.side == "high" else (seg.low < lv.price).any()
+        if not taken:
+            live.append(lv)
+    out = []
+    for side in ("high", "low"):
+        ps = [p for p in liquidity_pools(live, tol=price * 2 / 1e4) if p.side == side]
+        ps = [p for p in ps if (p.price > price if side == "high" else p.price < price)]
+        ps.sort(key=lambda p: abs(p.price - price))
+        out += [{"side": side, "price": num(p.price), "inner": num(p.inner), "strength": p.strength,
+                 "members": [short_name(m) for m in p.members]} for p in ps[:3]]
+    return out
+
+
 def main():
     runs = {p.stem: pd.read_parquet(p) for p in Path("reports/nqcme").glob("*.parquet") if p.stem in MODELS}
     allbars = of.load(date(2023, 10, 1), date(2025, 1, 1), schema=of.BARS)
@@ -134,6 +174,7 @@ def main():
             "levels": {k: num(v) for k, v in ctx.levels.items()},
             "range20": [num(lo20), num(hi20)], "eq20": num((lo20 + hi20) / 2),
             "pricing20": "premium" if r.entry > (lo20 + hi20) / 2 else "discount",
+            "pools": pools_at(hist_at[hist_at.index >= dec - timedelta(days=45)], dec, ctx, r.entry),
             "htf_obs": open_htf_obs(hist_at[hist_at.index >= dec - timedelta(days=90)], dec, r.entry),
             "htf_gaps": open_htf_gaps(hist_at[hist_at.index >= dec - timedelta(days=60)], dec, r.entry),
             "candles": tfs,

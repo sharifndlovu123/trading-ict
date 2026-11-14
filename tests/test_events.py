@@ -255,3 +255,49 @@ def test_order_block_open_confirmation_validates_earlier_and_keeps_the_body():
     assert opn[0].origin_ts == idx[1] and opn[0].meta["body"] == (18485.5, 18184.0)
     q = quadrants(*opn[0].meta["body"])
     assert q["50%"] == pytest.approx(18334.75) and q["0%"] == 18184.0
+
+
+def _bars(highs, lows, start="2024-01-09 09:30"):
+    idx = pd.date_range(start, periods=len(highs), freq="1min", tz="America/New_York")
+    return pd.DataFrame({"open": lows, "high": highs, "low": lows, "close": highs}, index=idx)
+
+
+def test_equal_highs_need_two_swings_within_tolerance_and_nothing_through_them():
+    from ict_engine.concepts.events import equal_levels, swings
+    #          0    1    2    3    4    5    6    7    8    9   10
+    highs = [100, 105, 101, 102, 105.5, 101, 103, 104, 108, 103, 102]
+    lows = [h - 1 for h in highs]
+    b = _bars(highs, lows)
+    eq = [lv for lv in equal_levels(b, swings(b, "1m"), tol=1.0) if lv.side == "high"]
+    assert len(eq) == 1 and eq[0].price == 105.5 and eq[0].name.startswith("1m_eqh@")
+    assert eq[0].valid_from == b.index[5]                        # 2nd swing (bar 4) is confirmed when bar 5 closes
+    # the 108 high (bar 8) is no partner: too far; and it trades through 105.5, so later highs can't join that cluster
+    assert all(lv.valid_from <= b.index[5] for lv in eq)
+
+
+def test_equal_lows_broken_in_between_do_not_count():
+    from ict_engine.concepts.events import equal_levels, swings
+    lows = [100, 95, 99, 90, 99, 95.2, 99]                      # 95 … 90 (trades through) … 95.2
+    highs = [l + 1 for l in lows]
+    b = _bars(highs, lows)
+    assert [lv for lv in equal_levels(b, swings(b, "1m"), tol=0.5) if lv.side == "low"] == []
+
+
+def test_liquidity_pools_merge_nearby_levels_and_score_them():
+    from ict_engine.concepts.events import Level, liquidity_pools
+    t = pd.Timestamp("2024-01-09 09:30", tz="America/New_York")
+    lv = [Level("pdh", 18010.0, "high", t), Level("15m_eqh@01-08 10:00", 18006.0, "high", t),
+          Level("pwh", 18100.0, "high", t), Level("pdl", 17900.0, "low", t)]
+    pools = {(p.side, p.price): p for p in liquidity_pools(lv, tol=5.0)}
+    p = pools[("high", 18010.0)]
+    assert p.inner == 18006.0 and set(p.members) == {"pdh", "15m_eqh@01-08 10:00"} and p.strength == 3
+    assert pools[("high", 18100.0)].strength == 1 and pools[("low", 17900.0)].members == ("pdl",)
+
+
+def test_pool_strength_counts_one_price_once():
+    from ict_engine.concepts.events import Level, liquidity_pools
+    t = pd.Timestamp("2024-01-09 09:30", tz="America/New_York")
+    lv = [Level("pwh", 18518.75, "high", t), Level("1d_swing_high@04-10 18:00", 18518.75, "high", t),
+          Level("4h_eqh3@04-05 10:00", 18515.0, "high", t)]
+    (p,) = liquidity_pools(lv, tol=5.0)
+    assert p.strength == 1 + 3
