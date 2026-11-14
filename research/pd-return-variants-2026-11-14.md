@@ -27,3 +27,14 @@
   forward log, not a default. It isn't a forward-test candidate either: candidates were fixed in
   `forward-test-protocol.md` before this sweep.
 - ICT's 2023-11-28 trade at 11:11 stays outside every documented window. No window was invented for it.
+
+## Array types (models.md §6: OB / breaker / mitigation block; commit 62c1cd7)
+| Variant | Δ OOS vs FVG baseline, CFD (z) | Δ OOS, futures (z) | In-sample exp R (CFD / futures) |
+|---|---|---|---|
+| order block | −0.065 (−0.5) | −0.065 (−0.8) | −0.117 / −0.088 |
+| breaker | +0.138 (+0.6, n 119) | −0.008 (−0.1) | −0.122 / −0.084 |
+| mitigation block | +0.260 (+1.3, n 161) | +0.009 (+0.1) | −0.081 / −0.103 |
+| FVG + OB + breaker + MB | −0.019 (−0.1) | −0.025 (−0.3) | −0.106 / −0.047 |
+
+No array type beats the FVG baseline out-of-sample, and all of them lose in-sample on both bases. ICT's own live
+examples used FVG-family arrays only, so FVG stays the default. The array is not the lever.
