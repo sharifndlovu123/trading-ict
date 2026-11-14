@@ -17,7 +17,7 @@ Sharif: "after the backtest we will choose and dim to 2 models. i already have a
 
 ## What changes
 - Next work: **exits** on these two (Sharif: "very limited points"): TP1 placement, partial size, runner trailing,
-  holding into the PM session (flat 16:55). Pre-registered as usual; 2 models → fewer cells → bar z ≥ 2.3 for a
-  2-model × ≤ 3-variant test (was 2.6 for 15 cells).
+  holding into the PM session (flat 16:55). Pre-registered as usual; 2 models → fewer cells → bar z ≥ 2.4 for a
+  2-model × 3-variant test (6 cells; was 2.6 for 15 cells).
 - Review batches focus on these two models.
 - Pending pre-registration `preregistered-news-2026-11-14.md` (5 models) is amended to these two (amendment below).
