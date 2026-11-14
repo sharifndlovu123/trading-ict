@@ -317,3 +317,39 @@ def test_range_in_play_entries_on_real_bars():
                         assert (new.entry <= orig.entry if long else new.entry >= orig.entry)
                         assert (new.entry > orig.stop if long else new.entry < orig.stop)
         assert seen > 0
+
+
+def test_counter_bias_on_real_bars_us100_sep_2023():
+    """Review log #22 / counter-bias pre-reg on real US100 bars. Sep 25 2023: the 10:02 short reached TP1 (Sharif's same
+    sell); his 11:00 long (engine 11:05) fails the bias AND the POI gate (no sweep — it added liquidity), so the rule,
+    which admits only setups whose sole failed gate is the bias, rightly leaves it out. Over September every admitted
+    setup has all other gates passed and its trigger (an earlier bias-side TP1) known before its decision."""
+    from dataclasses import replace
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models import model_2022
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 8, 1), date(2023, 9, 29))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    d = date(2023, 9, 25)
+    base = [s for s in run_day(bars, d, "US100", model_2022.Params()) if s.plan and 9 <= s.decided_at.hour < 12]
+    assert [(f"{s.decided_at:%H:%M}", s.side) for s in base] == [("10:02", "short")] and base[0].result.vote
+    s1105 = next(s for s in run_day(bars, d, "US100", replace(model_2022.Params(), counter_after="tp1"))
+                 if f"{s.decided_at:%H:%M}" == "11:05")
+    assert s1105.plan is None and {g.name for g in s1105.gates if not g.passed} == {"bias", "poi"}
+    admitted = 0
+    for mode in ("tp1", "draw"):
+        p = replace(model_2022.Params(), counter_after=mode)
+        for day in pd.date_range("2023-09-01", "2023-09-28").date:
+            if day.weekday() >= 5:
+                continue
+            for s in run_day(bars, day, "US100", p):
+                g = next((g for g in s.gates if g.name == "bias"), None)
+                if g is None or "counter-bias admitted" not in g.detail:
+                    continue
+                admitted += 1
+                assert all(x.passed for x in s.gates if x.name not in ("cap",))
+                hhmm = g.detail.rsplit(" at ", 1)[1][:5]
+                assert hhmm < f"{s.decided_at:%H:%M}" or s.decided_at.hour < 18 <= int(hhmm[:2])
+    assert admitted > 0

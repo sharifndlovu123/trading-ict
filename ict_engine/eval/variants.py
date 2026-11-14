@@ -70,6 +70,9 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "range: entry in the cheap half": replace(BASE, range_entry="cheap_half"),
     "range: limit at the 50%": replace(BASE, range_entry="eq_limit"),
     "leg: limit at OTE 70.5%": replace(BASE, range_entry="leg_ote"),
+    # counter-bias second trade (research/preregistered-counter-bias-2026-11-15.md; scored per day by counter_bias_eval)
+    "counter: after a bias trade's TP1": replace(BASE, counter_after="tp1"),
+    "counter: after the daily draw": replace(BASE, counter_after="draw"),
 }
 
 
@@ -112,6 +115,9 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "range: entry in the cheap half": replace(MB, range_entry="cheap_half"),
     "range: limit at the 50%": replace(MB, range_entry="eq_limit"),
     "leg: limit at OTE 70.5%": replace(MB, range_entry="leg_ote"),
+    # counter-bias second trade (research/preregistered-counter-bias-2026-11-15.md; scored per day by counter_bias_eval)
+    "counter: after a bias trade's TP1": replace(MB, counter_after="tp1"),
+    "counter: after the daily draw": replace(MB, counter_after="draw"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

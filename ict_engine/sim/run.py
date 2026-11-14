@@ -53,7 +53,11 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
     setups = sorted(module_for(params).find_setups(bars_1m, day, asset, params, ctx), key=lambda s: s.decided_at)
     close = pd.Timestamp(datetime.combine(day, time(16)), tz=NY)
     busy_until, filled, prev = None, {}, None
+    counter = getattr(params, "counter_after", None)
+    tp1_hits: list[tuple[str, pd.Timestamp]] = []      # (side, when TP1 traded) of today's filled trades
     for s in setups:
+        if s.plan is None and counter and s.would_plan is not None:
+            admit_counter(s, counter, bars_1m, ctx, tp1_hits)
         if s.plan is None:
             continue
         why = news_cal.news_block(s.decided_at, getattr(params, "news_blackout", None),
@@ -103,7 +107,52 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
         prev, prev_scope = s, scope
         if s.result.filled_at is not None:
             filled[scope] = filled.get(scope, 0) + 1
+            if s.result.vote:
+                t = tp1_time(s.plan, bars_1m, s.result.filled_at)
+                if t is not None:
+                    tp1_hits.append((s.side, t))
     return setups
+
+
+COUNTER_MODES = ("tp1", "draw")
+
+
+def tp1_time(plan, bars_1m: pd.DataFrame, filled_at: pd.Timestamp) -> pd.Timestamp | None:
+    """First 1m bar at or after the fill that trades to TP1."""
+    seg = bars_1m[(bars_1m.index >= filled_at) & (bars_1m.index <= plan.expires_at + timedelta(hours=8))]
+    hit = seg.index[seg.high >= plan.tp1] if plan.side == "long" else seg.index[seg.low <= plan.tp1]
+    return hit[0] if len(hit) else None
+
+
+def admit_counter(s: Setup, mode: str, bars_1m: pd.DataFrame, ctx, tp1_hits) -> None:
+    """Counter-bias second trade (research/preregistered-counter-bias-2026-11-15.md): a setup whose ONLY failed gate is
+    the daily bias is admitted once the day's bias-direction move is delivered — ``tp1``: a same-model trade in the bias
+    direction reached TP1 before this decision; ``draw``: price traded through the previous day's level on the bias
+    side (bear → below PDL, bull → above PDH) since 18:00 the evening before. Bars before the decision only."""
+    if mode not in COUNTER_MODES:
+        raise ValueError(f"counter_after must be one of {COUNTER_MODES}, got {mode!r}")
+    failed = [i for i, g in enumerate(s.gates) if not g.passed]
+    if len(failed) != 1 or s.gates[failed[0]].name != "bias":
+        return
+    bias_side = "short" if s.side == "long" else "long"
+    if mode == "tp1":
+        when = [t for side, t in tp1_hits if side == bias_side and t < s.decided_at]
+        if not when:
+            return
+        why = f"bias-side trade reached TP1 at {when[0]:%H:%M}"
+    else:
+        lvl = ctx.levels.get("pdl" if bias_side == "short" else "pdh")
+        if lvl is None:
+            return
+        start = pd.Timestamp(datetime.combine(s.day - timedelta(days=1), time(18)), tz=NY)
+        seg = bars_1m[(bars_1m.index >= start) & (bars_1m.index < s.decided_at)]
+        through = seg.index[seg.low < lvl] if bias_side == "short" else seg.index[seg.high > lvl]
+        if not len(through):
+            return
+        why = f"daily draw {'PDL' if bias_side == 'short' else 'PDH'} {lvl:.2f} traded at {through[0]:%H:%M}"
+    i = failed[0]
+    s.gates[i] = Gate("bias", True, f"{s.gates[i].detail}; counter-bias admitted: {why}")
+    s.plan = s.would_plan
 
 
 def run_range(bars_1m: pd.DataFrame, start: date, end: date, asset: str, params=model_2022.Params(),
