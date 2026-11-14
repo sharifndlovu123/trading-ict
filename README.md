@@ -33,11 +33,15 @@ See [`references/pipeline.md`](references/pipeline.md). Rules live in [`framewor
 
 | Stage | Module | Status |
 | --- | --- | --- |
-| 0 Data | `ict_engine/data/` | Dukascopy 1m download → Parquet, NY-time bars, quality check |
+| 0 Data | `ict_engine/data/` | Dukascopy 1m download → Parquet, NY-time bars, quality check, cost model; optional Databento NQ order flow |
 | 1–3 Context, clock, events | `ict_engine/concepts/` | levels, ranges, pricing, killzones, swings, displacement, FVG / IFVG / VI lifecycle, sweeps, BOS / MSS |
-| 4–7 Model, gates, plan, sim | `ict_engine/models/`, `ict_engine/sim/` | 2022 model in progress |
-| 8–9 Record, measure | `ict_engine/eval/` | similarity scoring, reference cases, feed-basis anchors |
-| Viewer | OpenCharts | planned: day packs → chart overlays |
+| 4–6 Model, gates, plan | `ict_engine/models/` | `2022_model`, `mmxm` (MMBM/MMSM), `silver_bullet`, `cameron` |
+| 7 Simulate | `ict_engine/sim/` | fill / stop / TP1 / partials, day runner |
+| 8–10 Record, measure, review | `ict_engine/eval/` | backtests, trade store, leaderboard, variant sweeps with hold-out, similarity to reference trades, per-trade "what went wrong" review |
+| News | `ict_engine/news/` | scheduled US release calendar (tags + optional gates; no look-ahead) |
+| Viewer | `ict_engine/viz/`, `viewer/` | static HTML day packs and review page; OpenCharts integration planned |
+
+Research notes and pre-registered tests live in [`research/`](research/). Results so far are mostly negative (no edge that survives out-of-sample); they are kept on purpose.
 
 ## Quick start
 
@@ -48,9 +52,13 @@ uv run pytest -q -rs                       # -rs shows skipped real-data tests (
 # download 1-minute data (US100 US500 US30 XAUUSD XAGUSD DXY EURUSD, or `all`)
 uv run python -m ict_engine.data.dukascopy fetch US100 2023-11-01 2024-01-31
 uv run python -m ict_engine.data.dukascopy check US100 2023-11-01 2024-01-31
+
+# backtest a model, then review it
+uv run python -m ict_engine.eval.backtest US100 2023-02-01 2024-06-28 --model 2022_model
+uv run python -m ict_engine.eval.review reports/backtest-*.parquet
 ```
 
-Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and Node.js (for `npx dukascopy-node`).
+Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and Node.js (for `npx dukascopy-node`). Order-flow data (optional) needs a Databento key in `DATABENTO_API_KEY` or a git-ignored `.env`.
 
 ## Data
 
@@ -70,4 +78,4 @@ Requires Python 3.11+, [uv](https://docs.astral.sh/uv/) and Node.js (for `npx du
 
 ## License
 
-Not yet chosen. Private repository for now; pick a license before making it public.
+[MIT](LICENSE) for the code. The license does not cover ICT's methodology or any third-party material; the PDFs and notes the engine was built from are not distributed here.

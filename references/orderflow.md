@@ -1,7 +1,7 @@
 # Order flow & market microstructure: must-knows
 
 Local copy of Sharif's doc **"Order Flow & Market Microstructure: Institutional Reading List"**
-(claude.ai doc, rev 11, 2026-11-13: https://claude.ai/artifact/MxKuJcyxBvYbQ6dqrgsL1X). Sections 1–9 below keep
+(private doc, rev 11, 2026-11-13). Sections 1–9 below keep
 that doc's content. **§10 "What this engine can use"** is new: it maps each idea to our data and our layers.
 If the doc changes, re-read it and update this file. The full texts (free papers and books) go in
 `references/microstructure/` (see its README).

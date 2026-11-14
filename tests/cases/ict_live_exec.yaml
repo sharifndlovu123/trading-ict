@@ -1,4 +1,4 @@
-# Reference trades from ICT's live executions (Sharif's Notion → references/personal/notion/live-exec.md).
+# Reference trades from ICT's live executions (Sharif's Notion → references/personal/notion/live-exec.md, local-only).
 # Prices were read off chart screenshots by eye: ±0.25–0.5 pt ES, ±0.5–2 pt NQ. Times are New York.
 # Most charts are Sharif's TradingView redraws of ICT's trades; 2023-12-01 looks like ICT's own screen.
 # null = not shown on the chart. The comparison drops missing traits instead of penalising them.

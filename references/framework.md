@@ -114,7 +114,7 @@ Every cycle splits into four quarters following **AMDX**: Q1 accumulation, Q2 ma
 
 Index futures killzones (2022 Content slide "index future kill zones"): **London 02:00–05:00, NY AM 08:30–11:00, NY PM 13:30–16:00.** The ICT Bible gives 08:30–12:00 for the AM session; the narrower window is the default and the wider one a param. FX killzones: ICT Bible p. 9. Silver Bullet hours and macros: see `models.md` and `patterns.md`.
 
-From Sharif's Notion notes (`personal/notion/`):
+From Sharif's Notion notes (`personal/notion/`, local-only, not in the repo):
 - **London sweet spot 02:00–04:00** inside the 02:00–05:00 killzone; expect a Judas swing (Twitter Spaces).
 - **NY lunch 12:00–13:00 = no new trades** (2022 Mentorship). At 13:30 wait for a swing high/low before the PM program starts.
 - 15:40 / 15:50 / 16:00 — price accelerates into the close (2022 Mentorship EP 5).

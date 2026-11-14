@@ -8,7 +8,7 @@ Windows are half-open: start ≤ t < end. A window whose end is before its start
 wraps past midnight (Asia 20:00–00:00).
 
 Sources: framework.md §6/§10, models.md (Silver Bullet), patterns.md (macros),
-references/personal/ictindex-rulings.md.
+references/personal/ictindex-rulings.md (local-only, git-ignored).
 """
 
 from __future__ import annotations

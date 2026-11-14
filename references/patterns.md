@@ -75,7 +75,7 @@ Card fields: **When** · **What happens** · **Detect** · **Expect next** · **
 
 ## From Sharif's Notion notes
 
-Cleaned sources in `personal/notion/` (each section links its Notion page and screenshots). Third-party patterns are marked; they're tracked, not trusted.
+Cleaned sources in `personal/notion/` (local-only, not in the repo) (each section links its Notion page and screenshots). Third-party patterns are marked; they're tracked, not trusted.
 
 ### Three drives vs single run-up (ICT, 2022 Mentorship EP 5)
 - **When:** pre-08:30 swings on 15m, read on 5m.

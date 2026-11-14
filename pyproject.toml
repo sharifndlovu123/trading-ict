@@ -3,6 +3,7 @@ name = "ict-engine"
 version = "0.0.1"
 description = "ICT model engine: opens/closes simulated trades per model and ranks models by expectancy"
 requires-python = ">=3.11"
+license = "MIT"
 dependencies = [
     "duckdb>=2.0.0",
     "pandas>=3.1.1",
