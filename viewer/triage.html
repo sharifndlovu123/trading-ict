@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup Triage</title>
+<style>
+:root {
+  --bg: #f2f3f0; --panel: #fff; --ink: #1b1f1d; --muted: #646b66; --line: #d9ddd7; --accent: #2f5d50;
+  --long: #1f7a55; --short: #b23b3b; --entry: #2b4f8a; --stop: #b23b3b; --tp: #1f7a55; --fvg: #7a5ea8;
+  --sweep: #b07a12; --level: #8a6d1f; --gap-bull: rgba(31,122,85,.6); --gap-bear: rgba(178,59,59,.6); --grid: #eceee9;
+  --chip: #e8ebe5; --key: #fff;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #111513; --panel: #181d1a; --ink: #e5e8e4; --muted: #9aa39d; --line: #2c3330; --accent: #7fbfa9;
+  --long: #4cc28c; --short: #e0706f; --entry: #7ea6e8; --stop: #e0706f; --tp: #4cc28c; --fvg: #b49ce0;
+  --sweep: #e0b44e; --level: #d6b45a; --gap-bull: rgba(76,194,140,.55); --gap-bear: rgba(224,112,111,.55); --grid: #1e2421;
+  --chip: #232a26; --key: #232a26; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header .t { font-weight: 600; font-size: 15px; }
+.pill { padding: 1px 8px; border-radius: 999px; background: var(--chip); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.long { color: var(--long); } .short { color: var(--short); } .muted { color: var(--muted); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; padding: 6px; height: calc(100vh - 128px); min-height: 520px; }
+.cell { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.cell .lab { position: absolute; top: 4px; left: 8px; z-index: 3; font-weight: 600; font-family: ui-monospace, monospace; color: var(--muted); }
+.cell .chart { position: absolute; inset: 0; }
+footer { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--key); font: 12px ui-monospace, monospace; text-align: center; }
+.tag { cursor: pointer; user-select: none; padding: 2px 8px; border-radius: 5px; border: 1px solid var(--line); }
+.tag.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.verdict { font-weight: 700; }
+#note { flex: 1 1 220px; min-width: 160px; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); }
+#result { font-family: ui-monospace, monospace; font-weight: 600; }
+#status { margin-left: auto; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, 300px); height: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="t" id="title">Setup Triage</span>
+  <span id="meta" class="muted"></span>
+  <span id="bias"></span>
+  <span id="result"></span>
+  <span id="status" class="muted"></span>
+</header>
+<div class="grid">
+  <div class="cell"><span class="lab">4H</span><div class="chart" id="c4h"></div></div>
+  <div class="cell"><span class="lab">1H</span><div class="chart" id="c1h"></div></div>
+  <div class="cell"><span class="lab">15m</span><div class="chart" id="c15m"></div></div>
+  <div class="cell"><span class="lab">5m</span><div class="chart" id="c5m"></div></div>
+</div>
+<footer>
+  <span><kbd>T</kbd> take <kbd>S</kbd> skip <kbd>O</kbd> opposite</span>
+  <span id="tags"></span>
+  <input id="note" placeholder="N: note (Enter to leave)" aria-label="Note">
+  <span class="muted"><kbd>→</kbd>/<kbd>Space</kbd> next <kbd>←</kbd> back <kbd>R</kbd> reveal</span>
+</footer>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+<script>
+const TFS = ["4h", "1h", "15m", "5m"];
+const SHOW = { "4h": 60, "1h": 72, "15m": 96, "5m": 100 };
+const TAGS = [["nested", "inside HTF FVG"], ["in_daily", "inside daily FVG"], ["no_sweep", "no real sweep"], ["chop", "chop / consolidation"],
+  ["bias", "wrong bias"], ["room", "good room to target"], ["no_room", "target too close / blocked"], ["time", "bad time / news"], ["late", "late / chased"]];
+const VERDICT = { t: "take", s: "skip", o: "opposite" };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const $ = id => document.getElementById(id);
+const st = { ids: [], i: 0, answers: {}, item: null, tags: new Set(), reveal: false, shownAt: 0, cache: {} };
+const charts = {};
+
+TAGS.forEach(([k, l], n) => { const s = document.createElement("span"); s.className = "tag"; s.dataset.k = k;
+  s.innerHTML = `<kbd>${n + 1}</kbd> `; s.append(l); s.onclick = () => toggle(k); $("tags").append(s); });
+
+function makeCharts() {
+  for (const tf of TFS) {
+    const c = LightweightCharts.createChart($("c" + tf), { autoSize: true,
+      layout: { background: { color: css("--panel") }, textColor: css("--muted"), fontSize: 11 },
+      grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } },
+      rightPriceScale: { borderColor: css("--line") }, timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },
+      crosshair: { mode: 0 } });
+    const s = c.addCandlestickSeries({ upColor: css("--long"), downColor: css("--short"), borderVisible: false,
+      wickUpColor: css("--long"), wickDownColor: css("--short") });
+    charts[tf] = { chart: c, series: s, lines: [] };
+  }
+}
+
+async function load(id) {
+  if (!st.cache[id]) st.cache[id] = await (await fetch(`s/${id}.json`)).json();
+  return st.cache[id];
+}
+
+function line(tf, price, color, title, style = 0, width = 1) {
+  if (price == null) return;
+  charts[tf].lines.push(charts[tf].series.createPriceLine({ price, color, lineWidth: width, lineStyle: style, axisLabelVisible: !!title, title }));
+}
+
+function draw() {
+  const t = st.item, done = !!st.answers[t.id], show = st.reveal || done;
+  for (const tf of TFS) {
+    const { chart, series } = charts[tf];
+    charts[tf].lines.forEach(l => series.removePriceLine(l)); charts[tf].lines = [];
+    const rows = show ? t.panels[tf] : t.live[tf];
+    series.setData(rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close })));
+    line(tf, t.entry, css("--entry"), "entry", 0, 2); line(tf, t.stop, css("--stop"), "stop", 0, 1); line(tf, t.tp1, css("--tp"), "TP1", 0, 1);
+    if (t.final != null && t.final !== t.tp1) line(tf, t.final, css("--tp"), "final", 2, 1);
+    if (t.fvg) { line(tf, t.fvg[0], css("--fvg"), "", 1, 1); line(tf, t.fvg[1], css("--fvg"), "entry FVG", 1, 1); }
+    line(tf, t.sweep, css("--sweep"), "swept", 2, 1);
+    for (const [k, v] of Object.entries(t.levels)) if (tf !== "5m" || k !== "pwh" && k !== "pwl") line(tf, v, css("--level"), k.toUpperCase(), 3, 1);
+    if (tf === "4h" || tf === "1h") for (const g of t.htf_gaps) { const c = g.dir === "bull" ? css("--gap-bull") : css("--gap-bear");
+      line(tf, g.top, c, `${g.tf.toUpperCase()} FVG`, 1, 1); line(tf, g.bottom, c, "", 1, 1); }
+    const snap = ts => { let b = null; for (const r of rows) { if (r[0] <= ts) b = r[0]; else break; } return b; };
+    const mk = [], long = t.side === "long";
+    const d = snap(t.decided); if (d) mk.push({ time: d, position: long ? "belowBar" : "aboveBar", color: css("--accent"), shape: "circle", text: "now" });
+    if (show && t.outcome.filled) { const f = snap(t.outcome.filled); if (f) mk.push({ time: f, position: long ? "belowBar" : "aboveBar", color: css("--entry"), shape: long ? "arrowUp" : "arrowDown", text: "fill" }); }
+    if (show && t.outcome.exit_at) { const x = snap(t.outcome.exit_at); if (x) mk.push({ time: x, position: long ? "aboveBar" : "belowBar",
+      color: t.outcome.exit === "tp1" ? css("--tp") : css("--stop"), shape: "square", text: t.outcome.exit }); }
+    mk.sort((a, b) => a.time - b.time); series.setMarkers(mk);
+    const idx = rows.findIndex(r => r[0] >= (d || 0));
+    const n = SHOW[tf];
+    chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, idx - n * 0.8), to: (idx < 0 ? rows.length : idx) + n * (show ? 0.5 : 0.2) });
+  }
+  const a = st.answers[t.id];
+  $("result").innerHTML = show ? `<span class="${t.outcome.r > 0 ? "long" : "short"}">${t.outcome.exit} ${t.outcome.r > 0 ? "+" : ""}${(t.outcome.r ?? 0).toFixed(2)}R</span>`
+    + (t.outcome.runner_r != null ? ` <span class="muted">runner ${t.outcome.runner_r > 0 ? "+" : ""}${t.outcome.runner_r.toFixed(2)}R</span>` : "")
+    + (a ? ` · you: <span class="verdict">${a.verdict}</span>` : "") : `<span class="muted">result hidden until you answer</span>`;
+  document.querySelectorAll(".tag").forEach(e => e.classList.toggle("on", st.tags.has(e.dataset.k)));
+}
+
+function header() {
+  const t = st.item, n = Object.keys(st.answers).filter(k => st.ids.includes(k)).length;
+  $("title").innerHTML = `${t.model} <span class="pill ${t.side}">${t.side}</span>`;
+  $("meta").textContent = `${t.asset} · ${t.weekday} ${t.day} · ${t.window} · POI ${t.poi || "—"} · swept ${t.liquidity || "—"}${t.news && t.news !== "none" ? " · news " + t.news : ""}`;
+  $("bias").innerHTML = Object.entries(t.biases).filter(([k]) => ["prev_day_dol", "dol", "dol_weekly", "htf20"].includes(k))
+    .map(([k, v]) => `<span class="pill ${v === "bull" ? "long" : v === "bear" ? "short" : ""}" title="${k}">${k.replace("_dol", "+dol")}: ${v}</span>`).join(" ");
+  $("status").textContent = `${st.i + 1} / ${st.ids.length} · answered ${n}`;
+}
+
+async function show(i) {
+  st.i = Math.max(0, Math.min(st.ids.length - 1, i));
+  st.item = await load(st.ids[st.i]);
+  const a = st.answers[st.item.id];
+  st.tags = new Set(a ? a.tags : []); $("note").value = a ? a.note || "" : ""; st.reveal = false; st.shownAt = performance.now();
+  header(); draw();
+  for (const j of [st.i + 1, st.i + 2]) if (st.ids[j]) load(st.ids[j]);       // prefetch
+}
+
+function toggle(k) { st.tags.has(k) ? st.tags.delete(k) : st.tags.add(k); draw(); }
+
+async function answer(v) {
+  const t = st.item;
+  const a = { id: t.id, verdict: v, tags: [...st.tags], note: $("note").value.trim(), model: t.family, asset: t.asset, side: t.side,
+    day: t.day, decided: t.decided, seconds: Math.round((performance.now() - st.shownAt) / 1000), revealed_before: st.reveal };
+  $("status").textContent = "saving…";
+  const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
+  if (!r.ok) { $("status").textContent = "NOT SAVED — is the server running?"; return; }
+  st.answers[t.id] = a; header(); draw();
+}
+
+function next() { let j = st.i + 1; while (j < st.ids.length && st.answers[st.ids[j]]) j++; show(j < st.ids.length ? j : st.i + 1); }
+
+document.addEventListener("keydown", e => {
+  if (document.activeElement === $("note")) { if (e.key === "Enter" || e.key === "Escape") $("note").blur(); return; }
+  const k = e.key.toLowerCase();
+  if (VERDICT[k]) answer(VERDICT[k]);
+  else if (k >= "1" && k <= "9") toggle(TAGS[+k - 1][0]);
+  else if (k === "n") { e.preventDefault(); $("note").focus(); }
+  else if (k === "r") { st.reveal = !st.reveal; draw(); }
+  else if (k === "arrowright" || k === " " || k === "enter") { e.preventDefault(); next(); }
+  else if (k === "arrowleft") show(st.i - 1);
+});
+
+(async () => {
+  makeCharts();
+  const idx = await (await fetch("index.json")).json();
+  st.ids = idx.ids;
+  st.answers = await (await fetch("api/answers")).json();
+  const first = st.ids.findIndex(id => !st.answers[id]);
+  show(first < 0 ? 0 : first);
+})();
+</script>
+</body>
+</html>
