@@ -233,6 +233,8 @@ def test_higher_timeframes_and_trailed_runner_on_real_bars():
             assert (p.stop < p.entry < p.tp1) if s.side == "long" else (p.tp1 < p.entry < p.stop)
     mm = [s for d in days for s in run_day(bars, d, "US100", MMXM_VARIANTS["tf: frame 1h > entry 15m"]) if s.plan is not None]
     assert all((s.decided_at.minute + 1) % 15 == 0 for s in mm)
+    mm4 = [s for d in days for s in run_day(bars, d, "US100", MMXM_VARIANTS["tf: frame 4h > entry 1h"])]   # 1h entry runs
+    assert all(s.decided_at.minute == 59 for s in mm4 if s.plan is not None)
     trail = VARIANTS["runner: trailed on 5m"]
     n = 0
     for d in days:

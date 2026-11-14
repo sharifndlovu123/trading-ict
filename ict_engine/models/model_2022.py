@@ -318,7 +318,7 @@ def _side_of(e: Event) -> str:
 
 
 def _tf_minutes(tf: str) -> int:
-    return {"1m": 1, "2m": 2, "3m": 3, "5m": 5, "15m": 15}[tf]
+    return {"1m": 1, "2m": 2, "3m": 3, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240}[tf]
 
 
 def _poi(liquidity: Event, long: bool, htf_gaps: list[Event], day_1m) -> str | None:
