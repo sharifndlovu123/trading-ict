@@ -56,7 +56,7 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
 <footer>
   <span><kbd>T</kbd> take <kbd>S</kbd> skip <kbd>O</kbd> opposite</span>
   <span id="tags"></span>
-  <input id="note" placeholder="N: note (Enter to leave)" aria-label="Note">
+  <input id="note" placeholder="N: note (Enter to leave)" aria-label="Note"> <span id="saved"></span>
   <span class="muted"><kbd>→</kbd>/<kbd>Space</kbd> next <kbd>←</kbd> back <kbd>R</kbd> reveal</span>
 </footer>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
@@ -74,6 +74,20 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const $ = id => document.getElementById(id);
 const st = { ids: [], i: 0, answers: {}, item: null, tags: new Set(), reveal: false, shownAt: 0, cache: {} };
 const charts = {};
+let drafts = {};
+try { drafts = JSON.parse(localStorage.getItem("triage-drafts") || "{}"); } catch (e) {}
+let resaveTimer = null;
+function touched() {                       // a note or tag changed: keep a draft; if already answered, re-save the answer
+  const id = st.item.id; drafts[id] = { tags: [...st.tags], note: $("note").value };
+  try { localStorage.setItem("triage-drafts", JSON.stringify(drafts)); } catch (e) {}
+  if (st.answers[id]) { clearTimeout(resaveTimer); resaveTimer = setTimeout(() => answer(st.answers[id].verdict), 600); }
+  else noteStatus();
+}
+function noteStatus() {
+  const id = st.item && st.item.id, d = drafts[id], a = st.answers[id];
+  const draft = d && (d.note || d.tags.length) && !a;
+  $("saved").innerHTML = a ? '<span class="long">saved ✓</span>' : draft ? '<span class="short">draft — press T / S / O to save</span>' : "";
+}
 
 TAGS.forEach(([k, l], n) => { const s = document.createElement("span"); s.className = "tag"; s.dataset.k = k;
   s.innerHTML = `<kbd>${n + 1}</kbd> `; s.append(l); s.onclick = () => toggle(k); $("tags").append(s); });
@@ -154,28 +168,32 @@ function header() {
 async function show(i) {
   st.i = Math.max(0, Math.min(st.ids.length - 1, i));
   st.item = await load(st.ids[st.i]);
-  const a = st.answers[st.item.id];
+  const a = st.answers[st.item.id] || drafts[st.item.id];
   st.tags = new Set(a ? a.tags : []); $("note").value = a ? a.note || "" : ""; st.reveal = false; st.shownAt = performance.now();
-  header(); draw();
+  header(); draw(); noteStatus();
   for (const j of [st.i + 1, st.i + 2]) if (st.ids[j]) load(st.ids[j]);       // prefetch
 }
 
-function toggle(k) { st.tags.has(k) ? st.tags.delete(k) : st.tags.add(k); draw(); }
+function toggle(k) { st.tags.has(k) ? st.tags.delete(k) : st.tags.add(k); draw(); touched(); }
 
 async function answer(v) {
   const t = st.item;
   const a = { id: t.id, verdict: v, tags: [...st.tags], note: $("note").value.trim(), model: t.family, asset: t.asset, side: t.side,
     day: t.day, decided: t.decided, seconds: Math.round((performance.now() - st.shownAt) / 1000), revealed_before: st.reveal };
+  const old = st.answers[t.id];
+  if (old) { a.seconds = old.seconds; a.revealed_before = old.revealed_before; if (old.verdict !== v) a.changed_from = old.verdict; }
   $("status").textContent = "saving…";
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
   if (!r.ok) { $("status").textContent = "NOT SAVED — is the server running?"; return; }
-  st.answers[t.id] = a; header(); draw();
+  st.answers[t.id] = a; delete drafts[t.id];
+  try { localStorage.setItem("triage-drafts", JSON.stringify(drafts)); } catch (e) {}
+  header(); draw(); noteStatus();
 }
 
 function next() { let j = st.i + 1; while (j < st.ids.length && st.answers[st.ids[j]]) j++; show(j < st.ids.length ? j : st.i + 1); }
 
 document.addEventListener("keydown", e => {
-  if (document.activeElement === $("note")) { if (e.key === "Enter" || e.key === "Escape") $("note").blur(); return; }
+  if (document.activeElement === $("note")) { if (e.key === "Enter" || e.key === "Escape") touched(); if (e.key === "Enter" || e.key === "Escape") $("note").blur(); return; }
   const k = e.key.toLowerCase();
   if (VERDICT[k]) answer(VERDICT[k]);
   else if (k >= "1" && k <= "9") toggle(TAGS[+k - 1][0]);
@@ -187,6 +205,7 @@ document.addEventListener("keydown", e => {
   else if (k === "arrowleft") show(st.i - 1);
 });
 
+$("note").addEventListener("input", touched);
 (async () => {
   makeCharts();
   const idx = await (await fetch("index.json")).json();
