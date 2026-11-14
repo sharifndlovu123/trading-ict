@@ -26,3 +26,20 @@ both cost bases. Pass (per model, per basis) needs both:
 Also reported, not tested: how often a stopped trade produces a flip, and the flip's vote rate. A pass makes
 "model + flip" a forward-v2 candidate. 2024-07+ unused. Sharif's Apr 2024 and Oct 2026 examples inspired it and are
 not used to score it.
+
+## Amendment 1 (2026-11-14, before the full run): the flip's stop
+A feasibility check on US100 2023-03/04 (in-sample; filter counts only, no performance read) showed that almost
+every stopped trade's entry FVG does close through on its own TF, but with the stop at the IFVG's far edge the
+risk is only the 1m/5m gap's height: round-trip cost is a median 26–55% of 1R, so the models' cost gate
+(≤ 0.1R) blocks ~85% of flips. (As written, the "failed trade's extreme" clause could never move the stop past the
+far edge, so the far edge was the stop.) Sharif chose (2026-11-14): **stop beyond the failed move**: for a
+failed long, the flip short's stop is the highest high between the long's fill and the inversion close (mirror for a
+failed short). Both stop rules are run and reported:
+
+| rule | flip stop |
+|---|---|
+| far edge (as first written) | the IFVG's far edge |
+| failed extreme (Sharif) | beyond the failed trade's extreme from fill to inversion |
+
+10 model × rule cells now, so the pass bar is raised to **z ≥ 2.6** (and model + flips must beat the model alone in
+OOS R per day). Everything else unchanged.
