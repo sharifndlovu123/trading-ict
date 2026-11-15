@@ -76,7 +76,7 @@ textarea { width: 100%; min-height: 60px; }
 <div class="wrap">
   <div class="chartbox">
     <div class="tabs">
-      <span class="tab" data-tf="1w">W</span><span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span><span class="tab" data-tf="5m">5m</span>
+      <span class="tab" data-tf="1M">M</span><span class="tab" data-tf="1w">W</span><span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span><span class="tab" data-tf="5m">5m</span>
       <span class="muted" style="margin-left:10px">show:</span>
       <span class="chip on" data-f="engine">engine plan</span><span class="chip" data-f="range">range (EQ / OTE)</span>
     </div>
@@ -133,7 +133,7 @@ try { Object.assign(st.filt, JSON.parse(localStorage.getItem("plan-filt") || "{}
 const saveDrafts = () => { try { localStorage.setItem("plan-drafts", JSON.stringify(drafts)); } catch (e) {} };
 const draft = () => { const d = (drafts[st.it.id] ||= { stop: null, tps: [], entry: null, be: false, notes: "", verdict: "" });
   d.marks ||= []; d.steps ||= {}; return d; };
-const TFS = [["1w", "Weekly"], ["1d", "Daily"], ["4h", "4H"], ["1h", "1H"], ["15m", "15m"], ["5m", "5m"]];
+const TFS = [["1M", "Monthly"], ["1w", "Weekly"], ["1d", "Daily"], ["4h", "4H"], ["1h", "1H"], ["15m", "15m"], ["5m", "5m"]];
 function stepsBox() {
   const d = draft();
   $("steps").innerHTML = TFS.map(([tf, nm]) => `<div class="step ${st.tf === tf ? "on" : ""}" data-tf="${tf}">
@@ -184,11 +184,12 @@ function drawLines() {
 }
 
 // re-entry review: everything after the re-entry decision stays hidden until you save (closed candles only)
-const TF_SEC = { "1w": 604800, "1d": 86400, "4h": 14400, "1h": 3600, "15m": 900, "5m": 300 };
+const TF_SEC = { "1M": 2678400, "1w": 604800, "1d": 86400, "4h": 14400, "1h": 3600, "15m": 900, "5m": 300 };
 const hidden = () => st.it && !st.answers[st.it.id];   // everything after the decision stays hidden until you save
 function setData() {
   const all = st.it.panels[st.tf] || [];
-  const rows = hidden() ? all.filter(c => c[0] + TF_SEC[st.tf] <= st.it.decided) : all;
+  const pre = st.it.panels[st.tf + "_pre"];             // monthly: the unfinished month up to the decision
+  const rows = hidden() ? (pre || all.filter(c => c[0] + TF_SEC[st.tf] <= st.it.decided)) : all;
   st.times = rows.map(c => c[0]);
   series.setData(rows.map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
   const P = null, mk = [];
@@ -371,7 +372,7 @@ $("pick").onchange = () => load(st.ids.indexOf($("pick").value));
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   if (e.key === "ArrowLeft") load(st.i - 1); else if (e.key === "ArrowRight") load(st.i + 1);
-  else if ("123456".includes(e.key)) { st.tf = ["1w", "1d", "4h", "1h", "15m", "5m"][+e.key - 1]; render(); }
+  else if ("1234567".includes(e.key)) { st.tf = ["1M", "1w", "1d", "4h", "1h", "15m", "5m"][+e.key - 1]; render(); }
   else if (e.key === "Escape") setTool(null);
   else if (e.key === "s") setTool("stop"); else if (e.key === "t") setTool("tp"); else if (e.key === "e") setTool("entry");
 });

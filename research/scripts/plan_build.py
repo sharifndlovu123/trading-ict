@@ -32,7 +32,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ict_engine.data import dukascopy  # noqa: E402
-from liqmap_build import num, panel, wall  # noqa: E402
+from ict_engine.concepts.liquidity_map import _daily  # noqa: E402
+from liqmap_build import candles, num, panel, wall  # noqa: E402
 from read_build import ASSETS, CLOSED, CUT, HIST, NY, START, read  # noqa: E402
 
 OUT = Path("out/plans")
@@ -40,6 +41,19 @@ HORIZON = {"4h": timedelta(days=5), "1h": timedelta(days=2), "1d": timedelta(day
 FAST = {"4h": 0.2, "1h": 0.1, "1d": 0.5}          # ADR per candle of the move = fast
 SPAN = {"1w": timedelta(days=730), "1d": timedelta(days=170), "4h": timedelta(days=20), "1h": timedelta(days=5),
         "15m": timedelta(hours=40), "5m": timedelta(hours=14)}
+
+
+def months(bars: pd.DataFrame, a: pd.Timestamp, b: pd.Timestamp) -> list:
+    """Monthly candles from NY trading days (a session that starts on the 31st at 18:00 belongs to the next month);
+    the last one runs only to ``b`` (the unfinished month so far)."""
+    d = _daily(bars[(bars.index >= a) & (bars.index < b)])
+    if d.empty:
+        return []
+    key = pd.DatetimeIndex(d.index).to_period("M")
+    g = d.groupby(key)
+    m = pd.DataFrame({"open": g.open.first(), "high": g.high.max(), "low": g.low.min(), "close": g.close.last()})
+    m.index = pd.DatetimeIndex([x.start_time for x in m.index]).tz_localize(NY)
+    return candles(m)
 
 
 def plan(pin: dict) -> dict:
@@ -163,6 +177,8 @@ def item(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp) -> dict | No
            "read": [s for s in it["statements"] if s["id"] in ("s_mbos", "s_1w", "s_1d", "s_4h", "s_1h", "s_play", "s_range")],
            "price": it["price"], "adr": it["adr"], "read_kind": pin["kind"],
            "panels": {tf: panel(bars, tf, at - span, end) for tf, span in SPAN.items()}}
+    out["panels"]["1M"] = months(bars, at - timedelta(days=1500), end)          # after the save: to the horizon
+    out["panels"]["1M_pre"] = months(bars, at - timedelta(days=1500), at)       # before: the current month so far
     if "wait" in p:
         out.update(side="wait", wait=p["wait"], entry=None, stop=None, tp1=None, final=None, risk=None, runner_r=None, path=[])
         return out
