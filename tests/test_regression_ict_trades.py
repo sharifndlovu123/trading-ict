@@ -489,7 +489,7 @@ def test_liquidity_map_on_real_bars_us100_mar_15_2023():
     seen = bars[bars.index < at]
     for it in m["items"]:
         if it["role"] in ("buyside", "sellside") and it["formed"]:
-            after = seen[seen.index > pd.Timestamp(it["formed"]) + pd.Timedelta(days=1 if it["tf"] == "1d" else 0.2)]
+            after = seen[seen.index > pd.Timestamp(it["formed"]) + pd.Timedelta(days={"1w": 7, "1d": 1}.get(it["tf"], 0.2))]
             if len(after):
                 assert (after.high.max() < it["price"]) if it["role"] == "buyside" else (after.low.min() > it["price"])
     assert build(bars[bars.index < at], at) == m

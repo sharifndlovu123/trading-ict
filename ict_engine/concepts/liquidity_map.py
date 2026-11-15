@@ -6,7 +6,7 @@ price currently is when we open the chart to hunt".
     price      last price
     adr        mean daily range of the last 20 days (distances are also given in ADR)
     items      every untaken level / unfilled area within ``max_adr`` ADR of price, each tagged:
-                 tf     1d | 4h | 1h | session
+                 tf     1w | 1d | 4h | 1h | session
                  kind   pdh pdl pwh pwl pmh pml asia_high asia_low london_high london_low   (context)
                         swing_high swing_low                                                (untaken swings)
                         eqh eql                                                             (equal highs / lows)
@@ -30,10 +30,11 @@ from ict_engine.concepts.context import build_context
 from ict_engine.concepts.events import equal_levels, fvgs, gap_lifecycle, swings, volume_imbalances
 
 NY = "America/New_York"
-LOOKBACK = {"1d": timedelta(days=180), "4h": timedelta(days=30), "1h": timedelta(days=7)}
-EQ_BP = {"1d": 10.0, "4h": 4.0, "1h": 2.0}
+LOOKBACK = {"1w": timedelta(days=730), "1d": timedelta(days=180), "4h": timedelta(days=30), "1h": timedelta(days=7)}
+EQ_BP = {"1w": 20.0, "1d": 10.0, "4h": 4.0, "1h": 2.0}
+REACH = {"1w": 2.0}                     # weekly levels may sit up to 2× max_adr away
 PER_SIDE = {"swing": 4, "eq": 2, "gap": 3}
-TF_ORDER = {"1d": 0, "4h": 1, "1h": 2, "session": 3}
+TF_ORDER = {"1w": -1, "1d": 0, "4h": 1, "1h": 2, "session": 3}
 
 
 @dataclass
@@ -89,9 +90,18 @@ def _merge(items: list[Item], last: float, bp: float = 0.5) -> list[Item]:
     return sorted(out, key=lambda it: (it.dist, TF_ORDER[it.tf]))
 
 
+def weekly(daily: pd.DataFrame) -> pd.DataFrame:
+    """Completed-session daily bars → weekly bars (Monday-dated; a week's Sunday evening belongs to its Monday)."""
+    if daily.empty:
+        return daily
+    wk = daily.index - pd.to_timedelta(daily.index.weekday, unit="D")
+    return daily.groupby(wk).agg(open=("open", "first"), high=("high", "max"), low=("low", "min"),
+                                 close=("close", "last"), close_ts=("close_ts", "last"))
+
+
 def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> dict:
     as_of = _ny(as_of)
-    hist = bars_1m[(bars_1m.index >= as_of - LOOKBACK["1d"]) & (bars_1m.index < as_of)]
+    hist = bars_1m[(bars_1m.index >= as_of - LOOKBACK["1w"]) & (bars_1m.index < as_of)]
     if hist.empty:
         raise ValueError("no bars before as_of")
     last = float(hist.close.iloc[-1])
@@ -104,7 +114,7 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
     def add(tf, kind, role, price, formed, label, top=None, bottom=None):
         where = "above" if price > last else "below"
         d = abs(price - last)
-        if d > max_adr * adr:
+        if d > max_adr * REACH.get(tf, 1.0) * adr:
             return
         items.append(Item(f"{tf}:{kind}:{price:.2f}", tf, kind, where, role, round(float(price), 2),
                           None if top is None else round(float(top), 2), None if bottom is None else round(float(bottom), 2),
@@ -142,9 +152,13 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
                 add("session", n, role, v, "", label)
 
     # swings, equal highs/lows, imbalances per timeframe
-    for tf in ("1d", "4h", "1h"):
+    for tf in ("1w", "1d", "4h", "1h"):
         seg = hist[hist.index >= as_of - LOOKBACK[tf]]
-        b = done.drop(columns=[]) if tf == "1d" else resample(seg, tf)
+        b = weekly(done) if tf == "1w" else done if tf == "1d" else resample(seg, tf)
+        b = b[b.index >= as_of - LOOKBACK[tf]]
+        if tf == "1w":                                       # drop the week still forming
+            sess = (as_of + pd.Timedelta(hours=6)).normalize()
+            b = b[b.index < sess - pd.Timedelta(days=sess.weekday())]
         b = b[b.close_ts < as_of]
         if len(b) < 3:
             continue
@@ -210,7 +224,7 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
 
     # key points
     key = {"nearest": {}}
-    for tf in ("1d", "4h", "1h", "session"):
+    for tf in ("1w", "1d", "4h", "1h", "session"):
         on = lambda it: it.tf == tf or any(a.startswith(f"{tf} ") for a in it.also)
         up = [it for it in items if on(it) and it.role == "buyside" and it.where == "above"]
         dn = [it for it in items if on(it) and it.role == "sellside" and it.where == "below"]

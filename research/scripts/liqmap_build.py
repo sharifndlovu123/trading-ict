@@ -18,16 +18,17 @@ from pathlib import Path
 import pandas as pd
 
 from ict_engine.concepts.bars import resample
-from ict_engine.concepts.liquidity_map import _daily, build
+from ict_engine.concepts.liquidity_map import _daily, build, weekly
 from ict_engine.data import dukascopy
 
 NY = "America/New_York"
 OUT = Path("out/liqmap")
 START, CUT = date(2022, 7, 1), date(2023, 9, 29)
 ASSETS = ("US100", "US500", "US30", "XAUUSD")
-PANELS = {"1d": timedelta(days=170), "4h": timedelta(days=25), "1h": timedelta(days=6), "15m": timedelta(days=2)}
-FWD = {"1d": timedelta(days=14), "4h": timedelta(days=6), "1h": timedelta(days=3), "15m": timedelta(hours=30)}
+PANELS = {"1w": timedelta(days=730), "1d": timedelta(days=170), "4h": timedelta(days=25), "1h": timedelta(days=6), "15m": timedelta(days=2)}
+FWD = {"1w": timedelta(days=42), "1d": timedelta(days=14), "4h": timedelta(days=6), "1h": timedelta(days=3), "15m": timedelta(hours=30)}
 HORIZON = timedelta(days=14)
+DATA_FROM = date(2021, 10, 1)            # first month on disk
 
 
 def wall(ts) -> int:
@@ -46,8 +47,9 @@ def panel(bars, tf, a, b):
     seg = bars[(bars.index >= a) & (bars.index < b)]
     if seg.empty:
         return []
-    if tf == "1d":
+    if tf in ("1d", "1w"):
         d = _daily(seg)
+        d = weekly(d) if tf == "1w" else d
         d.index = [pd.Timestamp(s).tz_localize(None).tz_localize(NY) if pd.Timestamp(s).tzinfo is None else s for s in d.index]
         return candles(d)
     return candles(resample(seg, tf))
@@ -86,7 +88,7 @@ def main():
     ids, cache = [], {}
     for asset, at in want:
         if asset not in cache:
-            cache[asset] = dukascopy.load(asset, START - timedelta(days=200), CUT + timedelta(days=20))
+            cache[asset] = dukascopy.load(asset, DATA_FROM, CUT + timedelta(days=50))
         try:
             item = moment(asset, at, cache[asset])
         except ValueError as e:

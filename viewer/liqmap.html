@@ -76,9 +76,9 @@ textarea { width: 100%; min-height: 60px; }
 <div class="wrap">
   <div class="chartbox">
     <div class="tabs">
-      <span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span>
+      <span class="tab" data-tf="1w">W</span><span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span>
       <span class="muted" style="margin-left:10px">show:</span>
-      <span class="chip on" data-f="1d">1d</span><span class="chip on" data-f="4h">4h</span><span class="chip on" data-f="1h">1h</span><span class="chip on" data-f="session">session</span><span class="chip on" data-f="area">areas</span><span class="chip" data-f="keyonly">key only</span>
+      <span class="chip on" data-f="1w">1w</span><span class="chip on" data-f="1d">1d</span><span class="chip on" data-f="4h">4h</span><span class="chip on" data-f="1h">1h</span><span class="chip on" data-f="session">session</span><span class="chip on" data-f="area">areas</span><span class="chip" data-f="keyonly">key only</span>
       <span class="legend muted" style="margin-left:auto"><span><i style="background:var(--bs)"></i>buyside</span><span><i style="background:var(--ss)"></i>sellside</span><span><i style="background:var(--area)"></i>area</span><span><i style="background:var(--mine)"></i>yours</span></span>
     </div>
     <div id="armed">click the chart to place your level</div>
@@ -106,7 +106,7 @@ textarea { width: 100%; min-height: 60px; }
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const st = { ids: [], i: 0, item: null, tf: "1d", answers: {}, sel: null, armed: false,
-             filt: { "1d": true, "4h": true, "1h": true, session: true, area: true, keyonly: false } };
+             filt: { "1w": true, "1d": true, "4h": true, "1h": true, session: true, area: true, keyonly: false } };
 let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("liqmap-drafts") || "{}"); } catch (e) {}
 try { Object.assign(st.filt, JSON.parse(localStorage.getItem("liqmap-filt") || "{}")); } catch (e) {}
@@ -178,7 +178,7 @@ function keysBox() {
     h += `<div>Daily dealing range ${fmt(r.low)}–${fmt(r.high)} (50% ${fmt(r.eq)}): price at <b>${Math.round(r.fraction * 100)}%</b> → <b>${r.zone}</b></div>`; }
   h += `<div>Daily draw (bias side): ${name(k.daily_draw)}</div>`;
   h += `<table class="near"><tr><th>tf</th><th>nearest buyside ↑</th><th>nearest sellside ↓</th></tr>`;
-  for (const tf of ["1d", "4h", "1h", "session"]) { const n = (k.nearest || {})[tf] || {};
+  for (const tf of ["1w", "1d", "4h", "1h", "session"]) { const n = (k.nearest || {})[tf] || {};
     const cell = id => { const it = id && byId(id); return it ? `${fmt(it.price)} <span class="muted">${it.dist_adr}</span>` : "–"; };
     h += `<tr><td>${tf}</td><td>${cell(n.buyside)}</td><td>${cell(n.sellside)}</td></tr>`; }
   $("keys").innerHTML = h + `</table><div class="muted" style="font-size:11px;margin-top:3px">distances in ADR (average daily range, 20 days); thick lines = key points</div>`;
@@ -296,7 +296,7 @@ $("pick").onchange = () => load(st.ids.indexOf($("pick").value));
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   if (e.key === "ArrowLeft") load(st.i - 1); else if (e.key === "ArrowRight") load(st.i + 1);
-  else if ("1234".includes(e.key)) { st.tf = ["1d", "4h", "1h", "15m"][+e.key - 1]; render(); }
+  else if ("12345".includes(e.key)) { st.tf = ["1w", "1d", "4h", "1h", "15m"][+e.key - 1]; render(); }
   else if (e.key === "Escape") { st.armed = false; $("armed").style.display = "none"; }
 });
 $("save").onclick = async () => {
