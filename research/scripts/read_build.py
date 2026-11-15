@@ -294,15 +294,23 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
             dr_t = (f" Draw: the remaining {dr['tf']} FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f})"
                     + (f", liquidity at its edge {dr['liquidity']:.2f}" if dr["liquidity"] else "") + f" — {dr['state']}." if dr else "")
             when = {"1M": f"{r['candle']:%b %Y}", "1w": f"wk {r['candle']:%d %b %Y}", "1d": f"{r['candle'] + timedelta(hours=6):%d %b %Y}"}[tf]
-            obs.append(f"{tf} {r['direction']}ish OB {when}: body "
+            live_ob = bool(ev) and pl["fits"] and not r["state"].startswith("failed")
+            why = ", ".join(w for w, bad in (("no event", not ev), ("wrong half", not pl["fits"])) if bad)
+            tag = ("tradeable" if live_ob else "not one to use: " + ", ".join(x for x in (why, r["state"] if
+                   r["state"].startswith("failed") else "") if x))
+            if not r["state"].startswith("failed"):
+                tag += f"; {r['state']}"
+            obs.append(f"{tf} {r['direction']}ish OB {when} [{tag}]: body "
                        f"{r['body'][0]:.2f}–{r['body'][1]:.2f} (MT {r['mt']:.2f}), {ev_t}; {pl['zone']} {pl['fraction']:.2f} of "
                        f"the {pl['basis']} {pl['range'][0]:.2f}–{pl['range'][1]:.2f} = {fits}.{dr_t}")
             T = {"1M": "M", "1w": "W", "1d": "D"}[tf]
-            marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "t": wall(r["candle"]),
-                          "top": r["body"][1], "bottom": r["body"][0],
-                          "label": f"{T} {'bear' if r['direction'] == 'bear' else 'bull'} OB" + ("" if ev else " (no event)")})
+            if live_ob:                           # only an OB with an event, in the right half, not failed is drawn
+                marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "t": wall(r["candle"]),
+                              "top": r["body"][1], "bottom": r["body"][0],
+                              "label": f"{T} {'bear' if r['direction'] == 'bear' else 'bull'} OB"
+                                       + ("" if r["state"] == "holding" else " (" + r["state"].split(" (")[0] + ")")})
             same = chain and chain["draw"] and dr and tuple(dr["fvg"]) == tuple(chain["draw"]["fvg"])   # drawn once below
-            if dr and dr["tf"] == tf and not same:
+            if live_ob and dr and dr["tf"] == tf and not same:
                 marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "top": dr["fvg"][1],
                               "bottom": dr["fvg"][0], "label": f"{T} draw FVG (after the OB)"})
     if obs:

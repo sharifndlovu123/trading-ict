@@ -107,7 +107,7 @@ def _place(bars: pd.DataFrame, ob, tf: str) -> dict:
           e.kind == ("swing_high" if bear else "swing_low") and ((e.top > ext) if bear else (e.bottom < ext))]
     if sw:
         e = max(sw, key=lambda x: x.origin_ts)
-        leg = bars.loc[e.origin_ts:bars.index[i]]
+        leg = bars.loc[e.origin_ts:bars.index[a]]            # up to the OB candle: the confirming candle doesn't set it
         lo, hi = (float(leg.low.min()), float(e.top)) if bear else (float(e.bottom), float(leg.high.max()))
         basis = "dealing range"
     else:
@@ -196,6 +196,30 @@ def _draw(bars: pd.DataFrame, ob, tf: str, as_of: pd.Timestamp, fine: pd.DataFra
             "liquidity": round(float(liq), 2) if liq is not None else None, "state": state + pending}
 
 
+def _state(bars: pd.DataFrame, ob, as_of: pd.Timestamp, fine: pd.DataFrame | None = None) -> str:
+    """The OB's own state since it was confirmed (bearish; bullish mirrors), on closes of its timeframe up to ``as_of``:
+    a close through its mean threshold = failed (ruling §11); price traded right through the body = gone; else holding
+    (``fine`` adds the unfinished current candle's wick)."""
+    bear = ob.direction == "bear"
+    top, bot = ob.meta["body"]
+    mt = (top + bot) / 2
+    ct = bars["close_ts"] if "close_ts" in bars else pd.Series(bars.index, index=bars.index)
+    since = bars[(ct > ob.ts) & (ct <= as_of)]
+    wick = since
+    if fine is not None:
+        last = ct[ct <= as_of].max()
+        wick = pd.concat([since[["high", "low"]], fine[(fine.index > last) & (fine.index < as_of)][["high", "low"]]])
+    failed = (since.close > mt).any() if bear else (since.close < mt).any()
+    gone = (wick.high > top).any() if bear else (wick.low < bot).any()
+    if failed and gone:
+        return "failed: closed through its MT, then traded through the body"
+    if failed:
+        return "failed: a close through its MT"
+    if gone:
+        return "body traded through (no close past MT)"
+    return "holding"
+
+
 def ob_reads(bars: pd.DataFrame, tf: str, as_of: pd.Timestamp, last: int = 3, fine: pd.DataFrame | None = None,
              htf: list | None = None) -> list[dict]:
     """The newest ``last`` OBs (single candle, close through its open) known by ``as_of``, each with event / place / draw.
@@ -206,5 +230,5 @@ def ob_reads(bars: pd.DataFrame, tf: str, as_of: pd.Timestamp, last: int = 3, fi
         top, bot = ob.meta["body"]
         out.append({"tf": tf, "direction": ob.direction, "candle": ob.origin_ts, "known": ob.ts,
                     "body": (round(bot, 2), round(top, 2)), "mt": round((top + bot) / 2, 2),
-                    "event": _event(b, ob, tf), "place": _place(b, ob, tf), "draw": _draw(b, ob, tf, as_of, fine, htf)})
+                    "event": _event(b, ob, tf), "place": _place(b, ob, tf), "draw": _draw(b, ob, tf, as_of, fine, htf), "state": _state(b, ob, as_of, fine)})
     return out

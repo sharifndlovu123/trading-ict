@@ -113,6 +113,21 @@ def test_regression_sharif_us100_monthly_september_ob(us100_daily):
     assert r["draw"]["fvg"] == pytest.approx((25208, 27408), abs=5)       # the remaining April FVG
     assert r["draw"]["liquidity"] == pytest.approx(27063, abs=5)          # July-low sellside on its edge
     assert "past its midpoint" in r["draw"]["state"]                      # November: 26,265, CE 26,308
+    assert r["state"] == "holding"                                        # no monthly close above its MT 29,954
+    jul = [x for x in ob_reads(m, "1M", at, fine=d) if x["direction"] == "bull" and x["candle"].month == 7][-1]
+    assert jul["state"].startswith("failed") and not jul["place"]["fits"]   # Oct closed 28,420 < MT 29,253; premium
     early = period_bars(d[d.close_ts < pd.Timestamp("2026-10-30", tz=NY)], "M", pd.Timestamp("2026-10-30", tz=NY))
     assert not [x for x in ob_reads(early, "1M", pd.Timestamp("2026-10-30", tz=NY))
                 if x["direction"] == "bear" and x["candle"].month == 9]  # no look-ahead
+
+
+def test_ob_state_holding_failed_on_a_close_through_mt_and_traded_through():
+    df = bars(BASE)                                       # bearish OB body 84–97 (MT 90.5), confirmed at bar 6
+    assert ob5(df, df.close_ts.iloc[7])["state"] == "holding"
+    up = bars(BASE + [(76, 96, 75, 92)])                  # closes 92 > MT 90.5 (wick 96 inside the body)
+    assert ob5(up, up.close_ts.iloc[8])["state"] == "failed: a close through its MT"
+    wick = bars(BASE + [(76, 99, 75, 80)])                # wick 99 > body top 97, close 80 below MT
+    assert ob5(wick, wick.close_ts.iloc[8])["state"] == "body traded through (no close past MT)"
+    both = bars(BASE + [(76, 99, 75, 95)])
+    assert ob5(both, both.close_ts.iloc[8])["state"].startswith("failed: closed through its MT, then")
+    assert ob5(both, both.close_ts.iloc[7])["state"] == "holding"          # no look-ahead
