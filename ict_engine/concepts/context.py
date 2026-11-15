@@ -131,6 +131,12 @@ def bias_htf20(daily: pd.DataFrame, n: int = 20) -> tuple[str, str]:
     return "bear", f"close at/below {n}-day equilibrium"
 
 
+def bias_htf40(daily: pd.DataFrame) -> tuple[str, str]:
+    """Weekly-scale trend: ``htf20`` over 40 completed days (≈ 8 weeks). Used to size the target, not to gate:
+    against it a trade takes the near liquidity only (Sharif: "you can't expect distanced areas to be reached")."""
+    return bias_htf20(daily, 40)
+
+
 def bias_draw(daily: pd.DataFrame) -> tuple[str, str]:
     """ICT's daily bias: the side of the previous day's range not yet run, in line with the HTF draw.
 
@@ -295,6 +301,7 @@ def bias_draw_dol(daily: pd.DataFrame) -> tuple[str, str]:
 BIAS_RULES: dict[str, BiasRule] = {
     "prev_day": bias_prev_day,
     "htf20": bias_htf20,
+    "htf40": bias_htf40,
     "draw": bias_draw,
     "draw_htf": bias_draw_htf,
     "dol": bias_dol,

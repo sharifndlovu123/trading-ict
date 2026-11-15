@@ -93,6 +93,8 @@ class Params:
     liquidity_hold_bp: float | None = None
     stop_tf: str | None = None           # htf_stop.TFS: structural stop + PDH/PWH draw (htf-stop pre-registration)
     reentry: str | None = None           # sim.run.REENTRY_MODES: one extra trade per window (re-entry pre-registration)
+    reentry_nochase: bool = False        # a re-entry only at the same or a better price than the stopped trade (re-entry v2)
+    counter_tp1: str | None = None       # sim.run.COUNTER_TP1: against the weekly (htf40) → whole position off at TP1
     target_mode: str = "default"         # targets.MODES (nested-FVG pre-registration: eq_hold)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
@@ -105,7 +107,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after", "liquidity_hold_bp", "stop_tf", "reentry"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after", "liquidity_hold_bp", "stop_tf", "reentry", "reentry_nochase", "counter_tp1"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

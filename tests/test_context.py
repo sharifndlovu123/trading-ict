@@ -94,7 +94,7 @@ def trend(n, start, step):
 
 
 def test_bias_rule_registry():
-    assert set(BIAS_RULES) == {"prev_day", "htf20", "draw", "draw_htf", "dol", "dol_weekly",
+    assert set(BIAS_RULES) == {"prev_day", "htf20", "htf40", "draw", "draw_htf", "dol", "dol_weekly",
                                "prev_day_dol", "draw_dol"}
     assert BIAS_RULES["prev_day"] is daily_bias
 

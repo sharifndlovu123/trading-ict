@@ -56,9 +56,15 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
     counter = getattr(params, "counter_after", None)
     tp1_hits: list[tuple[str, pd.Timestamp]] = []      # (side, when TP1 traded) of today's filled trades
     reentry = getattr(params, "reentry", None)
-    last_fill: dict[str, tuple] = {}                    # scope → (side, exit_reason, exit_at) of its last filled trade
+    nochase = getattr(params, "reentry_nochase", False)
+    counter_tp1 = getattr(params, "counter_tp1", None)
+    if counter_tp1 not in (None,) + COUNTER_TP1:
+        raise ValueError(f"counter_tp1 must be one of {COUNTER_TP1}, not {counter_tp1!r}")
+    weekly = ((getattr(ctx, "biases", None) or {}).get("htf40") or ("neutral", ""))[0]
+    last_fill: dict[str, tuple] = {}                    # scope → (side, exit_reason, exit_at, entry) of its last filled trade
     extra: dict[str, bool] = {}                         # scope → the one extra (re-entry) trade is in use
     for s in setups:
+        s.tags["weekly_trend"] = weekly
         if s.plan is None and counter and s.would_plan is not None:
             admit_counter(s, counter, bars_1m, ctx, tp1_hits)
         if s.plan is None:
@@ -112,6 +118,10 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             if (reentry and not extra.get(scope) and filled[scope] == max_trades and lf is not None
                     and (busy_until is None or s.decided_at >= busy_until)
                     and (reentry == "any" or (lf[1] == "stop" and lf[2] is not None and lf[0] == s.side and s.decided_at >= lf[2]))):
+                if nochase and s.side == lf[0] and (s.plan.entry < lf[3] if s.side == "short" else s.plan.entry > lf[3]):
+                    s.gates.append(Gate("reentry", False, f"chasing: {s.plan.entry:.2f} worse than the first entry {lf[3]:.2f}"))
+                    s.plan = None
+                    continue
                 s.tags["reentry"] = True                    # re-entry pre-registration: one extra trade in this window
                 s.gates.append(Gate("reentry", True, f"{reentry}: previous {lf[0]} trade exited by {lf[1]}"))
                 extra[scope] = True
@@ -125,13 +135,18 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.plan = None
             continue
         s.plan = manage(s.plan, params)
+        against = (s.side == "long" and weekly == "bear") or (s.side == "short" and weekly == "bull")
+        if counter_tp1 and against and (counter_tp1 == "all" or s.tags.get("reentry")):
+            s.plan = replace(s.plan, partial_frac=1.0)      # against the weekly: the near liquidity only (small grab)
+            s.tags["tp1_only"] = True
+            s.gates.append(Gate("counter_tp1", True, f"{s.side} against weekly {weekly}: all off at TP1"))
         s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry, s.plan.placed_at))
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope
         if s.result.filled_at is None and s.tags.get("reentry"):
             extra[scope] = False                            # the re-entry never filled: the slot stays available
         if s.result.filled_at is not None:
-            last_fill[scope] = (s.side, s.result.exit_reason, s.result.exit_at)
+            last_fill[scope] = (s.side, s.result.exit_reason, s.result.exit_at, s.plan.entry)
             filled[scope] = filled.get(scope, 0) + 1
             if s.result.vote:
                 t = tp1_time(s.plan, bars_1m, s.result.filled_at)
@@ -142,6 +157,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
 
 COUNTER_MODES = ("tp1", "draw")
 REENTRY_MODES = ("after_stop", "any")
+COUNTER_TP1 = ("reentry", "all")                       # re-entry v2 pre-registration: counter-trend = small grabs
 
 
 def tp1_time(plan, bars_1m: pd.DataFrame, filled_at: pd.Timestamp) -> pd.Timestamp | None:

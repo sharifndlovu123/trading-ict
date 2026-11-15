@@ -84,6 +84,8 @@ class Params:
     liquidity_hold_bp: float | None = None
     stop_tf: str | None = None           # htf_stop.TFS: structural stop + PDH/PWH draw (htf-stop pre-registration)
     reentry: str | None = None           # sim.run.REENTRY_MODES: one extra trade per window (re-entry pre-registration)
+    reentry_nochase: bool = False        # a re-entry only at the same or a better price than the stopped trade (re-entry v2)
+    counter_tp1: str | None = None       # sim.run.COUNTER_TP1: against the weekly (htf40) → whole position off at TP1
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -116,6 +118,10 @@ class Params:
             extra.append(f"stop{self.stop_tf}")
         if self.reentry:
             extra.append(f"reentry_{self.reentry}")
+        if self.reentry_nochase:
+            extra.append("nochase")
+        if self.counter_tp1:
+            extra.append(f"countertp1_{self.counter_tp1}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:

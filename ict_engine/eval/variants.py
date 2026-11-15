@@ -78,6 +78,11 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "stop: 1h swing + daily draw": replace(BASE, stop_tf="1h"),
     "re-entry: after a stop, same side": replace(BASE, reentry="after_stop"),
     "control: any second trade": replace(BASE, reentry="any"),
+    # re-entry v2 + counter-trend small grabs (research/preregistered-reentry-v2-2026-11-16.md; US100 US500 US30)
+    "re-entry v2: no chase + counter-trend small grab": replace(BASE, reentry="after_stop", reentry_nochase=True, counter_tp1="reentry"),
+    "re-entry v2: no chase": replace(BASE, reentry="after_stop", reentry_nochase=True),
+    "re-entry v2: counter-trend small grab": replace(BASE, reentry="after_stop", counter_tp1="reentry"),
+    "small grab: every counter-trend trade": replace(BASE, counter_tp1="all"),
 }
 
 
@@ -129,6 +134,11 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "stop: 1h swing + daily draw": replace(MB, stop_tf="1h"),
     "re-entry: after a stop, same side": replace(MB, reentry="after_stop"),
     "control: any second trade": replace(MB, reentry="any"),
+    # re-entry v2 + counter-trend small grabs (research/preregistered-reentry-v2-2026-11-16.md; US100 US500 US30)
+    "re-entry v2: no chase + counter-trend small grab": replace(MB, reentry="after_stop", reentry_nochase=True, counter_tp1="reentry"),
+    "re-entry v2: no chase": replace(MB, reentry="after_stop", reentry_nochase=True),
+    "re-entry v2: counter-trend small grab": replace(MB, reentry="after_stop", counter_tp1="reentry"),
+    "small grab: every counter-trend trade": replace(MB, counter_tp1="all"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
