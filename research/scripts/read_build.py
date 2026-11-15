@@ -23,7 +23,8 @@ from ict_engine.concepts.bars import resample  # noqa: E402
 from ict_engine.concepts.context import _weekly_bars, completed_daily, weekly_structure_state  # noqa: E402
 from ict_engine.concepts.liquidity_map import build  # noqa: E402
 from ict_engine.data import dukascopy  # noqa: E402
-from ict_engine.concepts.events import swings  # noqa: E402
+from ict_engine.concepts.events import fvgs, swings  # noqa: E402
+from ict_engine.concepts.liquidity_map import _htf_gap  # noqa: E402
 from liqmap_build import NY, num, panel, wall  # noqa: E402
 
 OUT = Path("out/read")
@@ -58,17 +59,65 @@ def structure(f: pd.DataFrame) -> dict:
             "flips": [[wall(pd.Timestamp(t).tz_localize(NY) if pd.Timestamp(t).tzinfo is None else t), s] for t, s in flips[-3:]]}
 
 
-def current_range(f: pd.DataFrame, tf: str, past: pd.DataFrame) -> tuple[float, float] | None:
-    """The range price is in now on ``tf``: the latest confirmed swing high and swing low (completed bars), each stretched
-    to any new extreme made since (1m bars up to the moment), so it always contains price."""
-    sw = swings(f, tf)
-    H = next((e for e in reversed(sw) if e.kind == "swing_high"), None)
-    L = next((e for e in reversed(sw) if e.kind == "swing_low"), None)
-    if H is None or L is None:
+def trade_range(f: pd.DataFrame, tf: str, side: str, guard: float, past: pd.DataFrame) -> dict | None:
+    """The range we're trading (Sharif, 2026-11-16): the fake-out swing against us — for a sell, the protected high,
+    which usually took buyside first — to the extreme of the move in our direction since. Bull mirrors."""
+    col = "high" if side == "bear" else "low"
+    at_guard = f.index[(f[col] - guard).abs() < 0.006]
+    if not len(at_guard):
         return None
-    hi = max(H.top, float(past[past.index >= H.origin_ts].high.max()))
-    lo = min(L.bottom, float(past[past.index >= L.origin_ts].low.min()))
-    return (lo, hi) if hi > lo else None
+    t = at_guard[-1]
+    since = past[past.index >= t]
+    lo, hi = (float(since.low.min()), guard) if side == "bear" else (guard, float(since.high.max()))
+    if hi <= lo:
+        return None
+    # the fake-out: did that swing take an earlier swing's liquidity (buyside for a sell) on the way?
+    prior = [e for e in swings(f[f.index < t], tf) if e.origin_ts >= t - 30 * (f.index[1] - f.index[0])]
+    took = ([e.top for e in prior if e.kind == "swing_high" and e.top < guard] if side == "bear"
+            else [e.bottom for e in prior if e.kind == "swing_low" and e.bottom > guard])
+    swept = (max(took) if side == "bear" else min(took)) if took else None
+    return {"lo": lo, "hi": hi, "t": wall(t), "t0": t, "swept": swept}
+
+
+def range_arrays(fr: dict, at: pd.Timestamp, side: str, lo: float, hi: float, t0: pd.Timestamp, price: float) -> list[dict]:
+    """4H / 1H gaps on our side (bearish to sell, bullish to buy) inside the range, judged on their own timeframe's closes
+    like 1w/1d (closed through → IFVG flipped, closed back → retired). Each gets its place in the range: premium
+    (expensive), at EQ, or discount (cheap) — premium is relative to the range the array sits in (swing high/low).
+    Only arrays of the move in our direction: a FVG formed after the fake-out swing (``t0``), or an IFVG whose flip
+    (the close through it) came after it. Up to 6 usable ones (expensive / at EQ for a sell) nearest to price, then the
+    cheap ones, 8 in all."""
+    eq, out = (lo + hi) / 2, []
+    pct = lambda p: (p - lo) / (hi - lo)
+    for tf in ("4h", "1h"):
+        f = fr[tf]
+        for g in fvgs(f, tf):
+            if g.ts >= at:
+                continue
+            stt = _htf_gap(g, f, at)
+            if stt is None:
+                continue
+            d = g.direction if stt == "fvg" else ("bear" if g.direction == "bull" else "bull")
+            if d != side or g.top <= lo or g.bottom >= hi:
+                continue
+            if stt == "fvg" and g.origin_ts < t0:
+                continue
+            if stt == "ifvg":
+                c = f[(f.close_ts > g.ts) & (f.close_ts < at)].close
+                thru = c[(c < g.bottom) if g.direction == "bull" else (c > g.top)]
+                if thru.empty or thru.index[0] < t0:
+                    continue
+            where = "at EQ" if g.bottom <= eq <= g.top else "premium" if g.bottom > eq else "discount"
+            good = (where == "premium") if side == "bear" else (where == "discount")
+            verdict = ("expensive → a real sell array" if side == "bear" else "cheap → a real buy array") if good else \
+                      ("acceptable, a bit " + ("cheaper" if side == "bear" else "dearer")) if where == "at EQ" else \
+                      ("cheap → not a sell" if side == "bear" else "expensive → not a buy")
+            out.append({"tf": tf, "kind": stt, "bottom": round(float(g.bottom), 2), "top": round(float(g.top), 2),
+                        "where": where, "verdict": verdict, "p0": pct(g.bottom), "p1": pct(g.top), "formed": wall(g.origin_ts),
+                        "label": f"{tf} {'bearish' if d == 'bear' else 'bullish'} {stt.upper()}"})
+    dist = lambda x: 0 if x["bottom"] <= price <= x["top"] else min(abs(price - x["bottom"]), abs(price - x["top"]))
+    ok = sorted([x for x in out if not x["verdict"].endswith("not a sell") and not x["verdict"].endswith("not a buy")], key=dist)
+    near = ok[:6] + sorted([x for x in out if x not in ok], key=dist)[:8 - len(ok[:6])]
+    return sorted(near, key=lambda x: -x["top"])
 
 
 def lab(x: dict) -> str:
@@ -158,34 +207,38 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
         play += f" Price is inside the {inside[0]['tf']} {inside[0]['kind'].upper()} — respect there (reaction, closes holding) comes first."
     st.append({"id": "s_play", "tf": "", "text": "Where the play is: " + play})
 
-    # the current range (framework §3): the 1H range = the leg we're in; the daily range = the HTF one.
-    # Sell only in premium of both, buy only in discount of both — the side comes from the play.
+    # the range we're trading: the protected level on the play's timeframe (4H first) → the extreme since; sell in its
+    # premium half (or a bit cheaper, at a bearish array on EQ), buy in its discount half
     want_side = D if kind == "counter_weekly" else (W if W != "neutral" else D)
-    ranges = []
-    for tf, nm_ in (("1h", "1H range"), ("1d", "Daily range")):
-        r = current_range(fr[tf], tf, past)
-        if r:
-            ranges.append((tf, nm_, *r))
-    if ranges and want_side in ("bull", "bear"):
+    rtf = next((tf for tf in ("4h", "1d", "1h") if S[tf]["state"] == want_side and S[tf]["guard"] is not None), None)
+    r = trade_range(fr[rtf], rtf, want_side, S[rtf]["guard"], past) if rtf else None
+    if r:
+        lo, hi = r["lo"], r["hi"]
+        eq, frac = (lo + hi) / 2, (price - lo) / (hi - lo)
         want = "premium" if want_side == "bear" else "discount"
-        parts, ok = [], []
-        for tf, nm_, lo, hi in ranges:
-            frac = (price - lo) / (hi - lo)
-            zone = "premium" if frac > 0.5 else "discount"
-            ok.append(zone == want)
-            parts.append(f"{nm_} {lo:.2f}–{hi:.2f} (EQ {(lo + hi) / 2:.2f}): price at {frac:.0%} = {zone}")
-        tf0, _, lo, hi = ranges[0]
-        ote = (lo + 0.62 * (hi - lo), lo + 0.79 * (hi - lo)) if want == "premium" else (hi - 0.79 * (hi - lo), hi - 0.62 * (hi - lo))
         verb = "sell" if want == "premium" else "buy"
-        now = ("price is already in " + want + " of both — this is where the engine would look"
-               if all(ok) else f"not there yet — wait for price to come into {want}" if not any(ok)
-               else "only one range agrees — not both yet")
-        st.append({"id": "s_range", "tf": tf0, "text": "Current range: " + "; ".join(parts) + f". The play is {want_side}, "
-                   f"so I'm hoping for a {want}: {verb} only in {want} of both (OTE 62–79% of the {ranges[0][1]} = "
-                   f"{ote[0]:.2f}–{ote[1]:.2f}); {now}."})
-        for tf, nm_, lo, hi in ranges:
-            marks.append({"type": "range", "tf": tf, "low": lo, "high": hi, "want": want, "label": nm_})
-
+        zone = "premium" if frac > 0.5 else "discount"
+        arr = range_arrays(fr, at, want_side, lo, hi, r["t0"], price)
+        if want_side == "bear":
+            anchor = (f"the fake-out high {hi:.2f} (it took buyside {r['swept']:.2f} first, against us)" if r["swept"]
+                      else f"the protected high {hi:.2f}") + f" → the low of the move down since, {lo:.2f}"
+        else:
+            anchor = (f"the fake-out low {lo:.2f} (it took sellside {r['swept']:.2f} first, against us)" if r["swept"]
+                      else f"the protected low {lo:.2f}") + f" → the high of the move up since, {hi:.2f}"
+        arr_t = ("; ".join(f"{x['label']} {x['bottom']:.2f}–{x['top']:.2f} ({x['p0']:.0%}–{x['p1']:.0%}, {x['where']}: "
+                           f"{x['verdict']})" for x in arr)
+                 if arr else f"no {'bearish' if want_side == 'bear' else 'bullish'} gap inside it yet")
+        now = (f"price is in the {want} half now" if zone == want
+               else f"price is in {zone} — wait for it to come back to a {want} array")
+        st.append({"id": "s_range", "tf": rtf, "text": f"Current range ({SHORT[rtf]}): {anchor}. EQ {eq:.2f}; price at "
+                   f"{frac:.0%} = {zone}. The play is {want_side}, so I'm hoping for a {want}: {verb} from a PD array "
+                   f"that is {'expensive' if verb == 'sell' else 'cheap'} in this range. Where each array sits: {arr_t}. "
+                   f"{now[0].upper() + now[1:]}."})
+        marks.append({"type": "range", "tf": rtf, "t": r["t"], "low": round(lo, 2), "high": round(hi, 2), "want": want,
+                      "label": f"{SHORT[rtf]} range"})
+        for x in arr:
+            marks.append({"type": "zone", "grp": "range", "tf": x["tf"], "t": x["formed"], "top": x["top"], "bottom": x["bottom"],
+                          "label": f"{x['label']} {x['p0']:.0%}–{x['p1']:.0%} {x['where']}"})
     for tf, s in S.items():
         if s["guard"] is not None and s["state"] != "neutral":
             marks.append({"type": "level", "tf": tf, "price": s["guard"], "color": "down" if s["state"] == "bear" else "up",

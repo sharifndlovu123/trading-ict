@@ -111,7 +111,7 @@ let plines = [];
 const COL = { up: "--up", down: "--down", bs: "--bs", ss: "--ss" };
 // a mark shows on its own timeframe and every lower one
 const visible = m => RANK[m.tf] !== undefined ? RANK[m.tf] <= RANK[st.tf] : true;
-const group = m => m.type === "range" ? "range" : m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
+const group = m => m.grp ? m.grp : m.type === "range" ? "range" : m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
 
 function draw() {
   const past = st.it.panels[st.tf] || [], fwd = st.fwd && saved() ? (st.it.fwd[st.tf] || []) : [];
@@ -216,7 +216,7 @@ function paint() {
     g.fillText(label + " · premium", a + 6, yH + 12); g.fillText("EQ " + eq.toFixed(2), a + 6, yE - 3); g.fillText("discount", a + 6, yL - 4);
   };
   for (const m of st.it.marks) if (m.type === "range" && visible(m) && st.show.range)
-    rangeBox(null, m.low, m.high, m.label, m.want, css("--accent"), m.tf === st.tf);   // a higher-TF range: lines only
+    rangeBox(m.t ? xAt(m.t) : null, m.low, m.high, m.label + " · hoping for " + m.want, null, css("--accent"), m.tf === st.tf);   // the whole half is the zone (no OTE); a higher-TF range: lines only
   for (const z of draft().mine) {
     if (RANK[z.tf] > RANK[st.tf]) continue;
     const x0 = xAt(z.t0);
@@ -232,9 +232,10 @@ function paint() {
     if (!visible(m) || !st.show[group(m)]) continue;
     if (m.type === "zone") {
       const y1 = series.priceToCoordinate(m.top), y2 = series.priceToCoordinate(m.bottom); if (y1 == null || y2 == null) continue;
-      g.fillStyle = css("--zone"); g.fillRect(0, Math.min(y1, y2), W, Math.abs(y2 - y1));
-      g.strokeStyle = css("--zoneline"); g.lineWidth = 1; g.strokeRect(0, Math.min(y1, y2), W, Math.abs(y2 - y1));
-      g.fillStyle = css("--range"); g.fillText(m.label, 6, Math.min(y1, y2) + 12);
+      const a = Math.max(0, m.t ? (xAt(m.t) ?? 0) : 0);                 // from the candle it formed on
+      g.fillStyle = css("--zone"); g.fillRect(a, Math.min(y1, y2), W - a, Math.abs(y2 - y1));
+      g.strokeStyle = css("--zoneline"); g.lineWidth = 1; g.strokeRect(a, Math.min(y1, y2), W - a, Math.abs(y2 - y1));
+      g.fillStyle = css("--range"); g.fillText(m.label, a + 4, Math.min(y1, y2) + 12);
     } else if (m.type === "vline") {
       const x = xAt(m.t); if (x == null || x < 0 || x > W) continue;
       const own = m.tf === st.tf;
