@@ -13,7 +13,7 @@
 const MARK_PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
-  ["", "level", ["BOS"]],
+  ["", "level", ["BOS", "grab"]],
   ["", "trend", ["trendline"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
