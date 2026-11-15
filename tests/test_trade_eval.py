@@ -117,3 +117,21 @@ def test_intraday_pools_use_only_the_session_before_the_entry():
                    bars([(100, 100, 90, 91)], "2024-01-09 09:31")])         # after the entry
     p = {x["label"]: x["price"] for x in intraday_pools(b, pd.Timestamp("2024-01-09 09:30", tz=NY))}
     assert p["session so far high"] == 103 and p["session so far low"] == 97.5
+
+
+def test_activity_quiet_vs_busy_against_the_same_clock_window():
+    from trade_eval import activity
+    days = pd.bdate_range("2024-01-01", periods=12, tz=NY)
+    parts = []
+    for i, d in enumerate(days):
+        idx = pd.date_range(d + pd.Timedelta(hours=9), periods=60, freq="1min")
+        hi = 110 if i == len(days) - 1 else 102                       # the last day's 09:00–10:00 range is 10, before it 2
+        parts.append(pd.DataFrame({"open": 100.0, "high": hi, "low": 100.0, "close": 101.0}, index=idx))
+    b = pd.concat(parts)
+    busy = activity(b, days[-1] + pd.Timedelta(hours=10), adr=20)
+    assert busy["range_adr"] == 0.5 and busy["relative"] == 5.0 and busy["state"] == "busy"
+    normal = activity(b, days[-2] + pd.Timedelta(hours=10), adr=20)   # uses only the days before it
+    assert normal["relative"] == 1.0 and normal["state"] == "normal"
+    quiet = activity(b.assign(high=lambda x: x.high.where(x.index.normalize() != days[-1], 100.5)),
+                     days[-1] + pd.Timedelta(hours=10), adr=20)
+    assert quiet["state"] == "quiet"

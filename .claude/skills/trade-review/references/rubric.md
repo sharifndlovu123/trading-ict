@@ -9,7 +9,7 @@ brackets (research/review-log.md). It shows which steps cost the most so far, so
 
 | # | Step | Pass when | Fact-sheet evidence |
 |---|---|---|---|
-| 1 | **Time** | Inside a killzone / macro / the window the model trades; no high-impact release within ~30 min unless the plan is the news move | `clock_windows`, `news` |
+| 1 | **Time and activity** | Price is moving, not a dry consolidation (activity "normal" or "busy" for this time of day). Inside a killzone / macro / the window the model trades; no high-impact release within ~30 min unless the plan is the news move | `clock_windows`, `activity`, `news` |
 | 2 | **Bias / narrative** | Trade side = the HTF story: monthly chain (BOS → EQs → draw), weekly + daily structure. Rides the wave, doesn't catch a reversal. A counter-HTF trade needs a lower-TF reason *and* a near target | `read_kind`, `side_matches_read`, statements (Monthly / Weekly / Daily / Where the play is) |
 | 3 | **Dealing range** | Short from premium / long from discount of the current range (OTE best). Fast moves may only give the shallow array | `range` (fraction, half, OTE), `momentum` |
 | 4 | **POI / array** | ONE array that fits the move: an HTF level or a tradeable OB (strong body + aggressive push + an event), or the FVG/IFVG the range offers. Not a stack of arrays [OB-picked engine plans lost in every mode, n 25] | `arrays_near`, statements (OB tags) |

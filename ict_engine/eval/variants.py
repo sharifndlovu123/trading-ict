@@ -29,6 +29,7 @@ from ict_engine.models.model_2022 import Params
 ROOT = Path(__file__).resolve().parents[2]
 BASE = Params()
 NO_LONDON = tuple(w for w in BASE.windows if w != "london_kz")
+NO_PREMARKET = tuple(w for w in BASE.windows if w != "ny_premarket")
 VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 cap 2R, cost gate 0.1R, bias prev_day_dol)
     "baseline": BASE,
     "first defaults (TP1 uncapped, no cost gate)": replace(BASE, tp1_cap_r=None, max_cost_r=None),
@@ -37,6 +38,11 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "tp1 cap 3R": replace(BASE, tp1_cap_r=3.0),
     "no cost gate": replace(BASE, max_cost_r=None),
     "cost <= 0.2R": replace(BASE, max_cost_r=0.2),
+    # US100 sweep 2026-11-16 (review log #38): micro-risk trades (stop <= 0.03 ADR) lose in three models; the 2022
+    # model with risk >= 0.05 ADR was 41% / +0.20 R in-sample on US100; premarket 22% / -0.40 R
+    "cost <= 0.05R": replace(BASE, max_cost_r=0.05),
+    "no premarket": replace(BASE, windows=NO_PREMARKET),
+    "cost <= 0.05R, no premarket": replace(BASE, max_cost_r=0.05, windows=NO_PREMARKET),
     "no London": replace(BASE, windows=NO_LONDON),
     "bias prev_day (old default)": replace(BASE, bias_rule="prev_day"),
     "bias draw_dol (strict)": replace(BASE, bias_rule="draw_dol"),

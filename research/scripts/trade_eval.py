@@ -169,6 +169,34 @@ def level_checks(items: list[dict], long: bool, entry: float, stop: float, tps: 
     return out
 
 
+def activity(bars: pd.DataFrame, at: pd.Timestamp, adr: float, mins: int = 60, days: int = 20) -> dict:
+    """How active the market was in the ``mins`` before ``at`` (Sharif 2026-11-16: "be in the market when price is
+    moving and active, not sit in a dry consolidation"). Known at ``at``.
+      range_adr  the high–low of the last ``mins`` minutes, in ADR
+      relative   that range ÷ the median range of the same clock window over the previous ``days`` trading days
+                 (1 = normal for this time of day; < 0.6 quiet, > 1.5 busy)
+      net_adr    |close − open| of the window in ADR (directional movement, not just chop)"""
+    w = bars[(bars.index >= at - timedelta(minutes=mins)) & (bars.index < at)]
+    if w.empty or not adr:
+        return {"range_adr": None, "relative": None, "net_adr": None, "state": None}
+    rng = float(w.high.max() - w.low.min())
+    past = []
+    for k in range(1, days * 2):
+        t = at - timedelta(days=k)
+        if t.weekday() >= 5:
+            continue
+        p = bars[(bars.index >= t - timedelta(minutes=mins)) & (bars.index < t)]
+        if len(p) >= mins // 2:
+            past.append(float(p.high.max() - p.low.min()))
+        if len(past) >= days:
+            break
+    med = float(pd.Series(past).median()) if past else None
+    rel = rng / med if med else None
+    state = None if rel is None else "quiet" if rel < 0.6 else "busy" if rel > 1.5 else "normal"
+    return {"range_adr": round(rng / adr, 3), "relative": round(rel, 2) if rel is not None else None,
+            "net_adr": round(abs(float(w.close.iloc[-1] - w.open.iloc[0])) / adr, 3), "state": state}
+
+
 def range_place(pin: dict, long: bool, price: float) -> dict | None:
     """Where the entry sits in the read's current range for this side: 0 = the move's extreme, 1 = the fake-out.
     A short wants premium (≥ 0.5 from the low), a long discount."""
@@ -255,6 +283,7 @@ def evaluate(asset: str, side: str, entry_time: pd.Timestamp, entry: float, stop
         "read_side": want, "side_matches_read": (want == ("bull" if long else "bear")) if want in ("bull", "bear") else None,
         "statements": [s["text"] for s in rd.get("statements", [])],
         "range": range_place(pin, long, entry), "momentum_adr_per_candle": pin.get("mom"), "range_tf": pin.get("rtf"),
+        "activity": activity(bars, entry_time, adr),
         "clock_windows": active(entry_time, clock, include_optional=True), "news": news, "news_ahead": news_ahead,
         "swept_before": swept_before(pre, bars, entry_time - PRE_SWEEP, entry_time),
         "levels": level_checks(items + intraday_pools(bars, entry_time), long, entry, stop, [p for p, _ in tps], adr),
@@ -302,6 +331,10 @@ def markdown(f: dict, note: str = "") -> str:
           f"- clock windows: {', '.join(k['clock_windows']) or 'none'} · news: "
           + (f"{k['news']['event']} {k['news']['at']:%a %H:%M} ({k['news']['mins']:+d} min)" if k["news"] else "none near"),
           f"- scheduled news during the hold window (known in advance): {'; '.join(k['news_ahead']) or 'none'}"]
+    ac = k.get("activity") or {}
+    if ac.get("range_adr") is not None:
+        L.append(f"- market activity, last 60 min: range {ac['range_adr']} ADR = **{ac['state']}** ({ac['relative']}× the normal "
+                 f"for this time of day), net move {ac['net_adr']} ADR")
     if k["range"]:
         r = k["range"]
         L.append(f"- current {k['range_tf']} range {r['lo']}–{r['hi']}: entry at {r['fraction_from_low']} from the low = "

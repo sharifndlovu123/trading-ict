@@ -48,7 +48,10 @@ def traits(f: dict) -> dict:
            "k_stop_gap_adr": st.get("gap_adr"), "k_pools_before_tp1": len(tp.get("pools_before", [])),
            "k_tp1_just_past_pool": bool(tp.get("just_past_a_pool")), "k_risk_adr": k["risk_adr"], "k_rr_tp1": k["rr_tp1"],
            "k_news_within_30m": bool(k["news"] and abs(k["news"]["mins"]) <= 30),
-           "k_momentum": k["momentum_adr_per_candle"], "k_range_tf": k["range_tf"]}
+           "k_momentum": k["momentum_adr_per_candle"], "k_range_tf": k["range_tf"],
+           "k_activity": (k.get("activity") or {}).get("state"), "k_activity_rel": (k.get("activity") or {}).get("relative"),
+           "k_activity_range_adr": (k.get("activity") or {}).get("range_adr"),
+           "k_activity_net_adr": (k.get("activity") or {}).get("net_adr")}
     o = a["own"]
     out |= {"cf_mfe_r": o.get("mfe_r"), "cf_mae_r": o.get("mae_r"), "cf_overnight": o.get("overnight"),
             "cf_day_only_r": (a.get("day_only") or {}).get("r"), "cf_best_r": (a.get("reach") or {}).get("best_r"),
