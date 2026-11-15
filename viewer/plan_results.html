@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engine Plan Results</title>
+<style>
+:root {
+  --bg: #f2f3f0; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #75746f; --line: #dcdcd6; --grid: #ebebe6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --pos: #1f7a55; --neg: #b23b3b;
+}
+:root[data-theme="dark"] {
+  --bg: #111110; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #9a9990; --line: #34342f; --grid: #262624;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --pos: #4cc28c; --neg: #e66767;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 28px 0 8px; }
+.sub { color: var(--ink2); margin: 0 0 16px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.tile .k { color: var(--ink2); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.tile .v { font: 600 28px/1.2 ui-monospace, Menlo, monospace; margin: 4px 0; }
+.tile .d { color: var(--ink2); font-size: 12.5px; font-family: ui-monospace, monospace; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+#chart { position: relative; }
+#chart svg { width: 100%; height: 340px; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px;
+  font: 12px/1.45 ui-monospace, monospace; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none; white-space: nowrap; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink2); font-size: 13px; margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink2); font-weight: 500; }
+td.num { font-family: ui-monospace, monospace; }
+.neg { color: var(--neg); } .pos { color: var(--pos); }
+.scroll { overflow-x: auto; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 10px; }
+ul.read li { margin: 4px 0; }
+.note { color: var(--muted); font-size: 12.5px; }
+button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 3px 9px; cursor: pointer; float: right; }
+</style>
+</head>
+<body>
+<main>
+  <button id="theme">☾ dark</button>
+  <h1>Engine plan — full review in R</h1>
+  <p class="sub" id="sub"></p>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Cumulative R by entry mode</h2>
+  <div class="card">
+    <div class="legend" id="legend"></div>
+    <div id="chart"><svg id="svg"></svg><div class="tip" id="tip"></div></div>
+    <div class="note">Each trade: 50 % off at TP1, stop to entry, the rest to the final target or the horizon close. Same-minute stop and target count as the stop.</div>
+  </div>
+
+  <h2>Reading it</h2>
+  <div class="card"><ul class="read">
+    <li><b>Filling on the first touch loses clearly</b> (−0.15 R a trade, z −4.3). That part is solid.</li>
+    <li><b>The confirmation "profits" are a few outsized trades, not an edge.</b> The jump in June 2022 is a handful of US30/US500 trades of +19 to +27 R
+      (tiny confirmation stops, price ran to the final target). Take the 3 best out and <i>confirm</i> is −73 R, <i>confirm + flip</i> −15 R;
+      cap every trade at 10 R and both are negative. The median trade in every mode is −1 R.</li>
+    <li><b>The "support" entry is too early:</b> 403 of 460 take the full −1 R. The first lower-timeframe FVG after the touch comes on the first wiggle,
+      and the stop sits just past it.</li>
+    <li><b>The flip leg holds up best:</b> 34 % win, still +32 R with each trade capped at 10 R, about +2 R without its 3 best trades. Worth working on, not proven.</li>
+    <li>Plans from <b>fast moves</b> and from <b>order-block zones</b> lose in every mode; the <b>daily range</b> does better than the 4H.</li>
+    <li>Consecutive days often re-plan the same zone, so some trades repeat (the 1 and 2 Jun 2022 US30 trades close together). The z-scores overstate how sure we are.
+      All of this is in-sample: it tells us what to fix, not what works.</li>
+  </ul></div>
+
+  <h2>Breakdowns <span class="note">(trades · win % · mean R · total R · z)</span></h2>
+  <div class="grid2" id="cuts"></div>
+
+  <h2>Confirm + flip: what happened on each plan day</h2>
+  <div class="card scroll" id="stage" style="margin-bottom:10px"></div>
+  <div class="grid2">
+    <div class="card scroll" id="outcomes"></div>
+  </div>
+</main>
+<script>
+const D = /*DATA*/null;
+const MODES = [["touch", "Touch fill", "--s1"], ["confirm", "Confirm", "--s2"], ["confirm_flip", "Confirm + flip", "--s3"]];
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const sg = x => x == null ? "–" : (x > 0 ? "+" : "") + x;
+const cls = x => x == null ? "" : x > 0 ? "pos" : x < 0 ? "neg" : "";
+(function () { let t = "light"; try { t = localStorage.getItem("pr-theme") || "light"; } catch (e) {}
+  document.documentElement.dataset.theme = t; $("theme").textContent = t === "light" ? "☾ dark" : "☀ light";
+  $("theme").onclick = () => { try { localStorage.setItem("pr-theme", t === "light" ? "dark" : "light"); } catch (e) {} location.reload(); }; })();
+
+$("sub").textContent = `${D.reads} days read at 08:30 NY on US100 · US500 · US30, ${D.period[0]} → ${D.period[1]} (in-sample). ` +
+  `${D.reads - D.waits} plans, ${D.waits} waits. Descriptive only — not a test.`;
+$("tiles").innerHTML = MODES.map(([m, nm, c]) => { const h = D.head[m];
+  return `<div class="tile"><div class="k"><span class="sw" style="background:var(${c})"></span>${nm}</div>
+    <div class="v ${cls(h.sum)}">${sg(h.sum)} R</div>
+    <div class="d">${h.trades} trades · ${h.win}% win · ${sg(h.mean)} R/trade · z ${h.z}</div>
+    <div class="d">without its 3 best trades: <b class="${cls(h.wo3)}">${sg(h.wo3)} R</b> · each capped at 10 R: <b class="${cls(h.cap10)}">${sg(h.cap10)} R</b></div></div>`; }).join("");
+$("legend").innerHTML = MODES.map(([m, nm, c]) => `<span><span class="sw" style="background:var(${c})"></span>${nm}</span>`).join("");
+
+// cumulative R: one axis, three series, crosshair + tooltip
+(function chart() {
+  const svg = $("svg"), W = svg.clientWidth || 900, H = 340, m = { l: 48, r: 150, t: 10, b: 26 };
+  const dates = [...new Set(MODES.flatMap(([k]) => D.curves[k].map(p => p[0])))].sort();
+  const T = s => new Date(s + "T00:00:00Z").getTime(), t0 = T(dates[0]), t1 = T(dates[dates.length - 1]);
+  const all = MODES.flatMap(([k]) => D.curves[k].map(p => p[1])).concat([0]);
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const x = t => m.l + (T(t) - t0) / (t1 - t0) * (W - m.l - m.r), y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  let g = "";
+  const step = Math.pow(10, Math.floor(Math.log10((hi - lo) / 4))), st = [1, 2, 5].map(k => k * step).find(s => (hi - lo) / s <= 6) || step * 10;
+  for (let v = Math.ceil(lo / st) * st; v <= hi; v += st)
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? css("--muted") : css("--grid")}" stroke-width="1"/>
+          <text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${css("--ink2")}">${v}</text>`;
+  const yrs = [...new Set(dates.map(d => d.slice(0, 7)))].filter(s => /-(01|04|07|10)$/.test(s));
+  yrs.forEach(s => { const xx = x(s + "-01"); if (xx > m.l && xx < W - m.r)
+    g += `<text x="${xx}" y="${H - 8}" text-anchor="middle" font-size="11" fill="${css("--ink2")}">${s}</text>`; });
+  const labels = [];
+  MODES.forEach(([k, nm, c]) => { const pts = D.curves[k]; if (!pts.length) return;
+    g += `<polyline fill="none" stroke="${css(c)}" stroke-width="2" stroke-linejoin="round" points="${pts.map(p => `${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}"/>`;
+    const L = pts[pts.length - 1]; labels.push({ y: y(L[1]), t: `${nm} ${sg(Math.round(L[1]))} R`, c }); });
+  labels.sort((a, b) => a.y - b.y).forEach((l, i, a) => { if (i && l.y - a[i - 1].y < 14) l.y = a[i - 1].y + 14;
+    g += `<circle cx="${W - m.r}" cy="${l.y}" r="0"/><text x="${W - m.r + 6}" y="${l.y + 4}" font-size="12" fill="${css("--ink")}">${l.t}</text>`; });
+  g += `<line id="xh" y1="${m.t}" y2="${H - m.b}" stroke="${css("--muted")}" stroke-dasharray="3 3" visibility="hidden"/>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = g;
+  const at = (k, d) => { let v = 0; for (const p of D.curves[k]) { if (p[0] <= d) v = p[1]; else break; } return v; };
+  svg.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * W / r.width;
+    if (px < m.l || px > W - m.r) { svg.onmouseleave(); return; }
+    const tt = t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0), d = new Date(tt).toISOString().slice(0, 10);
+    const xh = $("xh"); xh.setAttribute("x1", px); xh.setAttribute("x2", px); xh.setAttribute("visibility", "visible");
+    const tip = $("tip"); tip.style.display = "block";
+    tip.innerHTML = `<b>${d}</b><br>` + MODES.map(([k, nm, c]) => `<span class="sw" style="background:var(${c})"></span> ${nm}: ${sg(+at(k, d).toFixed(1))} R`).join("<br>");
+    const lx = (e.clientX - r.left) + 14; tip.style.left = (lx + 190 > r.width ? lx - 210 : lx) + "px"; tip.style.top = "12px"; };
+  svg.onmouseleave = () => { $("tip").style.display = "none"; const xh = $("xh"); if (xh) xh.setAttribute("visibility", "hidden"); };
+})();
+
+const row = s => `<td class="num">${s.trades}</td><td class="num">${s.win ?? "–"}</td><td class="num ${cls(s.mean)}">${sg(s.mean)}</td><td class="num ${cls(s.sum)}">${sg(s.sum)}</td><td class="num">${s.z ?? "–"}</td>`;
+$("cuts").innerHTML = Object.entries(D.cuts).map(([name, groups]) => `<div class="card scroll"><b>${name}</b><table>
+  <tr><th></th><th>mode</th><th>trades</th><th>win %</th><th>mean R</th><th>total R</th><th>z</th></tr>
+  ${Object.entries(groups).map(([k, ms]) => MODES.map(([m, nm], i) => `<tr><td>${i ? "" : k}</td><td style="text-align:left">${nm}</td>${row(ms[m])}</tr>`).join("")).join("")}
+  </table></div>`).join("");
+$("stage").innerHTML = `<b>Trades by leg</b><table><tr><th>leg</th><th>trades</th><th>win %</th><th>mean R</th><th>total R</th><th>z</th><th>full −1 R</th><th>avg win</th><th>median</th><th>w/o best 3</th><th>cap 10 R</th></tr>
+  ${Object.entries(D.stage).map(([k, s]) => `<tr><td>${k === "flip" ? "flip (closed through → other side)" : "support (FVG our way)"}</td>${row(s)}<td class="num">${s.full_stops}</td><td class="num">${sg(s.avg_win)}</td><td class="num">${sg(s.median)}</td><td class="num ${cls(s.wo3)}">${sg(s.wo3)}</td><td class="num ${cls(s.cap10)}">${sg(s.cap10)}</td></tr>`).join("")}</table>`;
+$("outcomes").innerHTML = `<b>Most common outcomes</b><table><tr><th>outcome</th><th>days</th></tr>
+  ${Object.entries(D.outcomes).map(([k, v]) => `<tr><td style="white-space:normal">${k}</td><td class="num">${v}</td></tr>`).join("")}</table>`;
+</script>
+</body>
+</html>
