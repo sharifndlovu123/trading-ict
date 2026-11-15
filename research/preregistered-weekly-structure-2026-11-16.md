@@ -24,3 +24,28 @@ Variant: "small grab: against the weekly structure". Paired per trade vs baselin
 **Pass (per model) = OOS paired mean Δ > 0, z ≥ 2.4, ≥ 30 OOS counter-structure trades.** Trades with the structure or
 in neutral weeks must be unchanged (checked). Reported beside it: baseline expectancy with / against / neutral structure,
 IS and OOS (descriptive). A pass becomes a forward-v2 candidate; 2024-07+ stays unseen.
+
+## Amendment 1 (2026-11-16, before any run): the definition, fitted to Sharif's in-sample labels
+The rule above (last two 3-week fractal swings) was never run in a test. Checked against Sharif's labels first:
+20 bias charts (`reports/reviews/bias.jsonl`) and one W+D timeline per index, Oct 2021 → 2023-09-28
+(`reports/reviews/bias-timeline.jsonl`, 243 labelled weeks). It agreed with his timeline on 33% of weeks and flipped
+10–21× where he flips once. His answers (2026-11-16) fixed the definition:
+- the last change line is the trend; higher highs built below the most recent weekly lower high are shifts, not a change
+  ("still a downtrend, buyers' momentum growing"); only breaking that lower high turns it (= ICT: a market structure
+  shift is short-term sentiment, a market structure **break** changes the tide; ruling §21);
+- a break that only pokes through and then ranges is not the turn (US30 Nov 2022 → range until 17 Jul 2023);
+- the protected level is an intermediate-term swing (ICT Core Content Month 12), not every 3-week fractal.
+
+**Final definition (`ict_engine.concepts.context.weekly_structure_state`, tests `tests/test_weekly_structure.py`):**
+completed weeks; short-term high = a week with lower highs either side; intermediate-term high (ITH) = a short-term high
+with lower short-term highs either side, counted from the week the next short-term high is known (lows mirror). Bear:
+the guard is the ITH the latest ITL came from; a weekly close > guard + 0.25 × weekly ATR(14) → bull; price above the
+guard without such a close → the guard rises to that high. Bull mirrors. Neutral until the first break.
+On his timeline (in-sample) its flips land on his: US500 2023-06-12 (same week), US30 2023-07-17 (the week he named),
+US100 2023-05-22 (the close through the Aug-2022 lower high he described); no other flips after the warm-up. The margin
+0.25 was chosen among {0, 0.25, 0.5} on these in-sample labels; 0.5 gives the same flips. Nothing OOS was looked at.
+
+**Warm-up:** intermediate swings need ~1–2 years of weeks. Data before 2021-10 is fetched for US100 US500 US30
+(Oct 2019 →), and the backtest loader's warm-up is raised from 70 to 800 days (more history before the start only;
+the other rules use fixed tails — checked equal on a before/after backtest). Everything else in this pre-registration
+(rule, variant, metric, pass bar z ≥ 2.4 paired, ≥ 30 OOS counter-structure trades, last definition on this OOS) stands.

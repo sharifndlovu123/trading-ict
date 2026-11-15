@@ -279,36 +279,96 @@ def bias_dol_weekly(daily: pd.DataFrame) -> tuple[str, str]:
     return side(done.iloc[-1], done.iloc[-2], "last week") or ("neutral", "last week was an inside week")
 
 
-def weekly_swings(daily: pd.DataFrame) -> tuple[pd.DataFrame, list, list] | None:
-    """Completed weeks (the unfinished current week dropped) and their confirmed swings: a week whose high (low) is above
-    (below) the previous and the next week's. A swing exists only once the next week has closed.
-    Returns (weeks, [(week_start, high)], [(week_start, low)]) oldest first, or None without timestamps."""
+WEEKLY_BREAK_ATR = 0.25          # a weekly break must close this many weekly ATRs (14 weeks) beyond the protected level
+
+
+def _weekly_bars(daily: pd.DataFrame) -> pd.DataFrame | None:
+    """Completed weeks (high, low, close; index = Monday) from completed daily bars; the unfinished current week dropped."""
     wk = _weekly(daily) if len(daily) else None
     if wk is None:
         return None
     g, last = wk
-    done = g if last.weekday() == 4 else g.iloc[:-1]
-    h, lo = done.high.to_numpy(float), done.low.to_numpy(float)
-    sh = [(done.index[i], float(h[i])) for i in range(1, len(done) - 1) if h[i] > h[i - 1] and h[i] > h[i + 1]]
-    sl = [(done.index[i], float(lo[i])) for i in range(1, len(done) - 1) if lo[i] < lo[i - 1] and lo[i] < lo[i + 1]]
-    return done, sh, sl
+    ts = pd.DatetimeIndex(daily["close_ts"]) if "close_ts" in daily else daily.index
+    days = pd.to_datetime(pd.Index(trading_day(ts.tz_convert(NY))))
+    monday = days - pd.to_timedelta(days.day_of_week, unit="D")
+    g["close"] = daily.groupby(monday.to_numpy()).close.last()
+    return g if last.weekday() == 4 else g.iloc[:-1]
+
+
+def _term_swings(w: pd.DataFrame) -> tuple[list, list]:
+    """ICT's hierarchy (Core Content Month 12): a short-term high is a week with a lower high either side (known one week
+    later); an intermediate-term high is a short-term high with a lower short-term high either side (known once the next
+    short-term high is). Lows mirror. Returns ([(i, price, known_at_i)] ITH, same ITL)."""
+    h, lo = w.high.to_numpy(float), w.low.to_numpy(float)
+    sth = [(i, h[i]) for i in range(1, len(w) - 1) if h[i] > h[i - 1] and h[i] > h[i + 1]]
+    stl = [(i, lo[i]) for i in range(1, len(w) - 1) if lo[i] < lo[i - 1] and lo[i] < lo[i + 1]]
+
+    def it(xs, high):
+        return [(xs[a][0], float(xs[a][1]), xs[a + 1][0] + 1) for a in range(1, len(xs) - 1)
+                if ((xs[a][1] > xs[a - 1][1] and xs[a][1] > xs[a + 1][1]) if high
+                    else (xs[a][1] < xs[a - 1][1] and xs[a][1] < xs[a + 1][1]))]
+    return it(sth, True), it(stl, False)
+
+
+def weekly_structure_state(w: pd.DataFrame, m: float = WEEKLY_BREAK_ATR, n_atr: int = 14):
+    """Walk completed weeks; return (state, guard, flips). Sharif 2026-11-16 + ruling §21 (shift ≠ break):
+    - bear: the guard is the intermediate-term high the latest intermediate-term low came from (the protected lower
+      high). Higher highs below it are shifts, not a change. A weekly close above guard + m × weekly ATR is a break →
+      bull. Price trading above the guard without such a close → the guard rises to that high (the range top).
+    - bull: mirror with the protected higher low. neutral until the first break of an intermediate-term level.
+    Swings count only from the week they are known (no look-ahead)."""
+    ith, itl = _term_swings(w)
+    c, h, lo = w.close.to_numpy(float), w.high.to_numpy(float), w.low.to_numpy(float)
+    rng = h - lo
+    state, guard, flips, seen_low, seen_high = "neutral", None, [], None, None
+    for i in range(len(w)):
+        atr = rng[max(0, i - n_atr):i].mean() if i else rng[0]
+        hs = [(j, p) for j, p, k in ith if k <= i]
+        ls = [(j, p) for j, p, k in itl if k <= i]
+        if state == "neutral":
+            if hs and c[i] > hs[-1][1] + m * atr:
+                state, guard, seen_high = "bull", (ls[-1][1] if ls else lo[i]), hs[-1]; flips.append((w.index[i], "bull"))
+            elif ls and c[i] < ls[-1][1] - m * atr:
+                state, guard, seen_low = "bear", (hs[-1][1] if hs else h[i]), ls[-1]; flips.append((w.index[i], "bear"))
+        elif state == "bear":
+            if ls and ls[-1] != seen_low and hs and hs[-1][0] < ls[-1][0]:      # a new lower low → its lower high guards
+                guard, seen_low = hs[-1][1], ls[-1]
+            if c[i] > guard + m * atr:
+                state, guard, seen_high = "bull", (ls[-1][1] if ls else lo[i]), (hs[-1] if hs else None)
+                flips.append((w.index[i], "bull"))
+            elif h[i] > guard:
+                guard = float(h[i])
+        else:
+            if hs and hs[-1] != seen_high and ls and ls[-1][0] < hs[-1][0]:
+                guard, seen_high = ls[-1][1], hs[-1]
+            if c[i] < guard - m * atr:
+                state, guard, seen_low = "bear", (hs[-1][1] if hs else h[i]), (ls[-1] if ls else None)
+                flips.append((w.index[i], "bear"))
+            elif lo[i] < guard:
+                guard = float(lo[i])
+    return state, guard, flips
+
+
+def weekly_swings(daily: pd.DataFrame) -> tuple[pd.DataFrame, list, list] | None:
+    """Completed weeks and their intermediate-term swings [(week_start, price)] (for display), or None."""
+    w = _weekly_bars(daily)
+    if w is None:
+        return None
+    ith, itl = _term_swings(w)
+    return w, [(w.index[i], p) for i, p, _ in ith], [(w.index[i], p) for i, p, _ in itl]
 
 
 def bias_weekly_structure(daily: pd.DataFrame) -> tuple[str, str]:
-    """Weekly trend from structure (Sharif: "lower lows and lower highs"): the last two weekly swing highs and swing lows
-    both lower → bear, both higher → bull, anything else → neutral. Completed weeks only."""
-    w = weekly_swings(daily)
+    """Weekly trend from structure: lower highs + lower lows = bear, until a weekly close breaks the protected lower high
+    (intermediate-term) with displacement. See ``weekly_structure_state``. Needs ~1–2 years of daily bars."""
+    w = _weekly_bars(daily)
     if w is None:
         return "neutral", "no timestamps for weekly grouping"
-    _, sh, sl = w
-    if len(sh) < 2 or len(sl) < 2:
-        return "neutral", "fewer than two weekly swing highs/lows"
-    (h1, h2), (l1, l2) = (sh[-2][1], sh[-1][1]), (sl[-2][1], sl[-1][1])
-    if h2 < h1 and l2 < l1:
-        return "bear", f"lower high {h2:.2f} < {h1:.2f} and lower low {l2:.2f} < {l1:.2f}"
-    if h2 > h1 and l2 > l1:
-        return "bull", f"higher high {h2:.2f} > {h1:.2f} and higher low {l2:.2f} > {l1:.2f}"
-    return "neutral", f"mixed: highs {h1:.2f}→{h2:.2f}, lows {l1:.2f}→{l2:.2f}"
+    state, guard, flips = weekly_structure_state(w)
+    if state == "neutral":
+        return "neutral", f"no intermediate-term break yet ({len(w)} weeks)"
+    since = flips[-1][0]
+    return state, f"{state} since week of {pd.Timestamp(since).date()}; protected {'high' if state == 'bear' else 'low'} {guard:.2f}"
 
 
 def bias_prev_day_dol(daily: pd.DataFrame) -> tuple[str, str]:
