@@ -131,3 +131,33 @@ def test_ob_state_holding_failed_on_a_close_through_mt_and_traded_through():
     both = bars(BASE + [(76, 99, 75, 95)])
     assert ob5(both, both.close_ts.iloc[8])["state"].startswith("failed: closed through its MT, then")
     assert ob5(both, both.close_ts.iloc[7])["state"] == "holding"          # no look-ahead
+
+
+def test_strength_body_and_aggressive_push_sharif():
+    from ict_engine.concepts.ob_context import _strength
+    from ict_engine.concepts.events import Event
+    idx = pd.date_range("2025-01-01", periods=17, freq="D", tz=NY)
+    rows = [(100, 106, 99, 104)] * 14 + [(104, 110, 103, 109),   # 14: up-close, body 5 = range 7 × 0.71, 1.25× mean 4
+                                         (109, 110, 99, 100),     # 15: push down, body 9 = 2.25× mean
+                                         (100, 101, 97, 98)]
+    df = pd.DataFrame(rows, columns=["open", "high", "low", "close"], index=idx, dtype=float)
+    ob = Event("ob", "1d", "bear", idx[15], idx[14], 110.0, 103.0, {"body": (109.0, 104.0)})
+    s = _strength(df, ob)
+    assert s["body_range"] == pytest.approx(0.71, abs=0.01) and s["body_mean"] == 1.25 and s["push_mean"] == 2.25
+    assert s["ok"]
+    weak = df.copy(); weak.iloc[14] = (104, 110, 98, 105)       # body 1 of range 12: a weak body
+    assert not _strength(weak, ob)["strong_body"]
+    slow = df.copy(); slow.iloc[15] = (109, 110, 105, 106)      # next candle body 3 = 0.75×: no aggressive push
+    s2 = _strength(slow, ob)
+    assert s2["strong_body"] and not s2["aggressive_push"] and not s2["ok"]
+    assert _strength(df.iloc[:15], ob)["push_mean"] is None    # push candle not there yet: no look-ahead
+
+
+def test_regression_strength_sharif_us100_sep_ob_and_july_candle(us100_daily):
+    d, at = us100_daily
+    m = period_bars(d, "M", at)
+    reads = ob_reads(m, "1M", at, last=4, fine=d)
+    sep = [x for x in reads if x["direction"] == "bear" and x["candle"].month == 9][-1]
+    assert sep["strength"]["ok"]                                   # body 0.48 / 0.91, push 1.88 (October)
+    jul = [x for x in reads if x["direction"] == "bull" and x["candle"].month == 7][-1]
+    assert jul["strength"]["strong_body"] and not jul["strength"]["aggressive_push"]   # August: 0.92×, no push

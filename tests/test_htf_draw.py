@@ -135,3 +135,9 @@ def test_regression_sharif_gold_daily_ob_entry(gold):
     d0, *_, h0, a0 = gold("2026-11-10 12:00")                     # before the engulfing close: no such OB yet
     assert not [x for x in ob_reads(d0, "1d", a0, last=3, fine=h0) if x["direction"] == "bear"
                 and x["body"][0] == pytest.approx(4064.9, abs=1)]
+
+
+def test_regression_gold_daily_ob_strength(gold):
+    d, m, w, h, a = gold("2026-11-11 01:00")
+    r = [x for x in ob_reads(d, "1d", a, last=2, fine=h, htf=[(m, "1M"), (w, "1w")]) if x["direction"] == "bear"][-1]
+    assert r["strength"]["ok"] and r["strength"]["push_mean"] == pytest.approx(2.11, abs=0.05)

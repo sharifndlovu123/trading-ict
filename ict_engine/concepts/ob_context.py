@@ -274,6 +274,33 @@ def _validation(bars: pd.DataFrame, ob, as_of: pd.Timestamp) -> str:
     return "open crossed only"
 
 
+STRENGTH = {"body_range": 0.4, "body_mean": 0.75, "push_mean": 1.5, "n": 14}
+
+
+def _strength(bars: pd.DataFrame, ob, rules: dict = STRENGTH) -> dict:
+    """Sharif (2026-11-16): the OB is the ONE candle just before the aggressive push, judged by its BODY — "a weak
+    body cannot be a solid OB". Body strong = body ≥ ``body_range`` × its own range and ≥ ``body_mean`` × the mean
+    body of the ``n`` candles before it; the push = the very next candle, closing the other way with a body ≥
+    ``push_mean`` × that mean. Thresholds fitted to his two cases (US100 Sep 2026 monthly: 0.48 / 0.91, push 1.88;
+    gold 9 Nov 2026 daily: 0.80 / 1.50, push 2.11) — the US100 Jul 2026 candle fails on the push (0.92)."""
+    a = bars.index.get_loc(ob.origin_ts)
+    body = (bars.close - bars.open).abs()
+    rng = (bars.high - bars.low)
+    prior = body.iloc[max(0, a - rules["n"]):a]
+    mb = float(prior.mean()) if len(prior) else float(body.iloc[a])
+    br = float(body.iloc[a] / rng.iloc[a]) if rng.iloc[a] > 0 else 0.0
+    bm = float(body.iloc[a] / mb) if mb > 0 else 0.0
+    push = None
+    if a + 1 < len(bars):
+        nxt = bars.iloc[a + 1]
+        right = (nxt.close < nxt.open) if ob.direction == "bear" else (nxt.close > nxt.open)
+        push = float(abs(nxt.close - nxt.open) / mb) if right and mb > 0 else 0.0
+    strong = br >= rules["body_range"] and bm >= rules["body_mean"]
+    pushed = push is not None and push >= rules["push_mean"]
+    return {"body_range": round(br, 2), "body_mean": round(bm, 2), "push_mean": None if push is None else round(push, 2),
+            "strong_body": strong, "aggressive_push": pushed, "ok": strong and pushed}
+
+
 def ob_reads(bars: pd.DataFrame, tf: str, as_of: pd.Timestamp, last: int = 3, fine: pd.DataFrame | None = None,
              htf: list | None = None) -> list[dict]:
     """The newest ``last`` OBs (single candle, close through its open) known by ``as_of``, each with event / place / draw.
@@ -286,5 +313,5 @@ def ob_reads(bars: pd.DataFrame, tf: str, as_of: pd.Timestamp, last: int = 3, fi
                     "body": (round(bot, 2), round(top, 2)), "mt": round((top + bot) / 2, 2),
                     "event": _event(b, ob, tf), "place": _place(b, ob, tf), "draw": _draw(b, ob, tf, as_of, fine, htf), "state": _state(b, ob, as_of, fine),
                     "displacement": bool(ob.meta.get("fvg")), "htf_level": _htf_level(ob, htf),
-                    "validation": _validation(b, ob, as_of)})
+                    "validation": _validation(b, ob, as_of), "strength": _strength(b, ob)})
     return out

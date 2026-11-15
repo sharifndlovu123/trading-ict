@@ -296,13 +296,18 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
             when = {"1M": f"{r['candle']:%b %Y}", "1w": f"wk {r['candle']:%d %b %Y}", "1d": f"{r['candle'] + timedelta(hours=6):%d %b %Y}"}[tf]
             hl = r["htf_level"]
             need_htf = tf != "1M"                 # Bible p.16 step 2: into a HTF support/resistance (none above 1M)
-            live_ob = bool(ev) and pl["fits"] and not r["state"].startswith("failed") and (hl or not need_htf)
-            why = ", ".join(w for w, bad in (("no event", not ev), ("wrong half", not pl["fits"]),
+            sg = r["strength"]
+            live_ob = (sg["ok"] and bool(ev) and pl["fits"] and not r["state"].startswith("failed")
+                       and (hl or not need_htf))
+            why = ", ".join(w for w, bad in (("weak body", not sg["strong_body"]), ("no aggressive push", not sg["aggressive_push"]),
+                                                ("no event", not ev), ("wrong half", not pl["fits"]),
                                                 ("no HTF level", need_htf and not hl)) if bad)
             tag = ("tradeable" if live_ob else "not one to use: " + ", ".join(x for x in (why, r["state"] if
                    r["state"].startswith("failed") else "") if x))
             if not r["state"].startswith("failed"):
                 tag += f"; {r['state']}"
+            tag += (f"; body {sg['body_range']:.2f} of its range, {sg['body_mean']:.2f}× the mean body; push "
+                    + (f"{sg['push_mean']:.2f}×" if sg["push_mean"] is not None else "pending"))
             tag += f"; {r['validation']}"
             tag += (f"; into {hl['what']} {hl['zone'][0]:.2f}" + (f"–{hl['zone'][1]:.2f}" if hl["zone"][1] != hl["zone"][0] else "")
                     if hl else "") + ("; displacement (FVG left by the move away)" if r["displacement"] else "")
