@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pandas as pd
 
-MODES = {"touch": "Touch fill", "confirm": "Confirm", "confirm_flip": "Confirm + flip"}
+MODES = {"touch": "Touch fill", "confirm": "Confirm", "confirm_flip": "Confirm + flip",
+         "confirm_flip_reaction": "Confirm + flip, old stop"}
 
 
 def stats(g: pd.DataFrame) -> dict:

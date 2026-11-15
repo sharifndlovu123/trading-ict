@@ -7,11 +7,11 @@
 <style>
 :root {
   --bg: #f2f3f0; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #75746f; --line: #dcdcd6; --grid: #ebebe6;
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --pos: #1f7a55; --neg: #b23b3b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --pos: #1f7a55; --neg: #b23b3b;
 }
 :root[data-theme="dark"] {
   --bg: #111110; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #9a9990; --line: #34342f; --grid: #262624;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --pos: #4cc28c; --neg: #e66767;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --pos: #4cc28c; --neg: #e66767;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
@@ -19,7 +19,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
 h1 { font-size: 22px; margin: 0 0 4px; }
 h2 { font-size: 15px; margin: 28px 0 8px; }
 .sub { color: var(--ink2); margin: 0 0 16px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
 .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
 .tile .k { color: var(--ink2); font-size: 13px; display: flex; align-items: center; gap: 6px; }
 .tile .v { font: 600 28px/1.2 ui-monospace, Menlo, monospace; margin: 4px 0; }
@@ -49,6 +49,7 @@ button { font: inherit; color: var(--ink); background: var(--surface); border: 1
 <main>
   <button id="theme">☾ dark</button>
   <h1>Engine plan — full review in R</h1>
+  <p class="sub"><b>Support stop now beyond the zone</b> (the zone's far edge, or the reaction if it wicked further, + 0.05 ADR). "Old stop" = just past the first reaction after the touch.</p>
   <p class="sub" id="sub"></p>
   <div class="tiles" id="tiles"></div>
 
@@ -61,16 +62,15 @@ button { font: inherit; color: var(--ink); background: var(--surface); border: 1
 
   <h2>Reading it</h2>
   <div class="card"><ul class="read">
-    <li><b>Filling on the first touch loses clearly</b> (−0.15 R a trade, z −4.3). That part is solid.</li>
-    <li><b>The confirmation "profits" are a few outsized trades, not an edge.</b> The jump in June 2022 is a handful of US30/US500 trades of +19 to +27 R
-      (tiny confirmation stops, price ran to the final target). Take the 3 best out and <i>confirm</i> is −73 R, <i>confirm + flip</i> −15 R;
-      cap every trade at 10 R and both are negative. The median trade in every mode is −1 R.</li>
-    <li><b>The "support" entry is too early:</b> 403 of 460 take the full −1 R. The first lower-timeframe FVG after the touch comes on the first wiggle,
-      and the stop sits just past it.</li>
-    <li><b>The flip leg holds up best:</b> 34 % win, still +32 R with each trade capped at 10 R, about +2 R without its 3 best trades. Worth working on, not proven.</li>
-    <li>Plans from <b>fast moves</b> and from <b>order-block zones</b> lose in every mode; the <b>daily range</b> does better than the 4H.</li>
-    <li>Consecutive days often re-plan the same zone, so some trades repeat (the 1 and 2 Jun 2022 US30 trades close together). The z-scores overstate how sure we are.
-      All of this is in-sample: it tells us what to fix, not what works.</li>
+    <li><b>Filling on the first touch loses clearly</b> (−0.15 R a trade, z −4.3).</li>
+    <li><b>Stop beyond the zone: wins more often, still loses.</b> Support trades win 25 % (was 11 %) and full −1 R stops drop from 403 to 324 of 460.
+      With each trade capped at 10 R the support leg improves from −96 R to −74 R. The raw total looks worse (−62 vs +4) only because the wider stop
+      shrinks the few +20 R outliers that carried the old version.</li>
+    <li><b>So the stop wasn't the main problem; the confirmation is.</b> 316 of the 460 support trades are stopped beyond the whole zone:
+      after the first 5m/15m FVG our way, price usually trades straight back through the zone. That first small FVG isn't confirmation.</li>
+    <li><b>The flip leg is unchanged and still the best part:</b> 211 trades, 34 % win, +58 R (+32 R capped at 10 R). A zone that fails is more informative than one that "holds" for one candle.</li>
+    <li>Fast moves and order-block zones still lose; daily-range plans are about flat on support (+0.005 R) while 4H-range plans lose (−0.20 R).</li>
+    <li>In-sample, overlapping days, nothing near z 2.4: it tells us what to fix, not what works.</li>
   </ul></div>
 
   <h2>Breakdowns <span class="note">(trades · win % · mean R · total R · z)</span></h2>
@@ -84,7 +84,9 @@ button { font: inherit; color: var(--ink); background: var(--surface); border: 1
 </main>
 <script>
 const D = /*DATA*/null;
-const MODES = [["touch", "Touch fill", "--s1"], ["confirm", "Confirm", "--s2"], ["confirm_flip", "Confirm + flip", "--s3"]];
+const MODES = [["touch", "Touch fill", "--s1"], ["confirm", "Confirm", "--s2"], ["confirm_flip", "Confirm + flip", "--s3"],
+               ["confirm_flip_reaction", "Confirm + flip, old stop", "--s4"]];
+const TABLE_MODES = MODES.slice(0, 3);
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const sg = x => x == null ? "–" : (x > 0 ? "+" : "") + x;
@@ -104,7 +106,7 @@ $("legend").innerHTML = MODES.map(([m, nm, c]) => `<span><span class="sw" style=
 
 // cumulative R: one axis, three series, crosshair + tooltip
 (function chart() {
-  const svg = $("svg"), W = svg.clientWidth || 900, H = 340, m = { l: 48, r: 150, t: 10, b: 26 };
+  const svg = $("svg"), W = svg.clientWidth || 900, H = 340, m = { l: 48, r: 205, t: 10, b: 26 };
   const dates = [...new Set(MODES.flatMap(([k]) => D.curves[k].map(p => p[0])))].sort();
   const T = s => new Date(s + "T00:00:00Z").getTime(), t0 = T(dates[0]), t1 = T(dates[dates.length - 1]);
   const all = MODES.flatMap(([k]) => D.curves[k].map(p => p[1])).concat([0]);
@@ -140,7 +142,7 @@ $("legend").innerHTML = MODES.map(([m, nm, c]) => `<span><span class="sw" style=
 const row = s => `<td class="num">${s.trades}</td><td class="num">${s.win ?? "–"}</td><td class="num ${cls(s.mean)}">${sg(s.mean)}</td><td class="num ${cls(s.sum)}">${sg(s.sum)}</td><td class="num">${s.z ?? "–"}</td>`;
 $("cuts").innerHTML = Object.entries(D.cuts).map(([name, groups]) => `<div class="card scroll"><b>${name}</b><table>
   <tr><th></th><th>mode</th><th>trades</th><th>win %</th><th>mean R</th><th>total R</th><th>z</th></tr>
-  ${Object.entries(groups).map(([k, ms]) => MODES.map(([m, nm], i) => `<tr><td>${i ? "" : k}</td><td style="text-align:left">${nm}</td>${row(ms[m])}</tr>`).join("")).join("")}
+  ${Object.entries(groups).map(([k, ms]) => TABLE_MODES.map(([m, nm], i) => `<tr><td>${i ? "" : k}</td><td style="text-align:left">${nm}</td>${row(ms[m])}</tr>`).join("")).join("")}
   </table></div>`).join("");
 $("stage").innerHTML = `<b>Trades by leg</b><table><tr><th>leg</th><th>trades</th><th>win %</th><th>mean R</th><th>total R</th><th>z</th><th>full −1 R</th><th>avg win</th><th>median</th><th>w/o best 3</th><th>cap 10 R</th></tr>
   ${Object.entries(D.stage).map(([k, s]) => `<tr><td>${k === "flip" ? "flip (closed through → other side)" : "support (FVG our way)"}</td>${row(s)}<td class="num">${s.full_stops}</td><td class="num">${sg(s.avg_win)}</td><td class="num">${sg(s.median)}</td><td class="num ${cls(s.wo3)}">${sg(s.wo3)}</td><td class="num ${cls(s.cap10)}">${sg(s.cap10)}</td></tr>`).join("")}</table>`;

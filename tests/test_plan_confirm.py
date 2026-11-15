@@ -31,19 +31,40 @@ HEAD = [(97, 99, 96.5, 99),           # B0 below the zone
         (99, 101, 99, 100.5)]         # B1 touches 100 → armed
 
 
-def test_support_fvg_entry_at_its_near_edge():
-    b = five(HEAD + [(100.5, 101.5, 99.5, 99.8),   # B2
-                     (99.8, 99.9, 97, 97.5),       # B3
-                     (97.5, 98.5, 95, 95.5),       # B4: high 98.5 < B2 low 99.5 → bear FVG 98.5–99.5 (support)
-                     (95.5, 98.6, 95.5, 97),       # B5 retraces to 98.5 → filled
-                     (97, 97, 89, 89.5),           # B6 TP1 90
-                     (89.5, 89.5, 84, 85)])        # B7 final 85
-    r = replay_confirm(b, AT, PLAN, flip=True)
-    assert r["stage"] == "support" and r["entry"] == 98.5
+SUPPORT = HEAD + [(100.5, 101.5, 99.5, 99.8),   # B2
+                  (99.8, 99.9, 97, 97.5),       # B3
+                  (97.5, 98.5, 95, 95.5),       # B4: high 98.5 < B2 low 99.5 → bear FVG 98.5–99.5 (support)
+                  (95.5, 98.6, 95.5, 97),       # B5 retraces to 98.5 → filled
+                  (97, 97, 89, 89.5),           # B6 TP1 90
+                  (89.5, 89.5, 84, 85)]         # B7 final 85
+
+
+def test_support_stop_beyond_the_zone_is_the_default():
+    r = replay_confirm(five(SUPPORT), AT, PLAN, flip=True)
+    assert r["mode"] == "confirm_flip" and r["stage"] == "support" and r["entry"] == 98.5
+    assert r["stop"] == pytest.approx(102.5)                      # the zone's far edge 102 + 0.05 ADR (reaction 101.5 inside)
+    assert r["confirmed"] == wall(AT + pd.Timedelta(minutes=25))  # B4's close: known only then (no look-ahead)
+    assert r["r_tp1"] == pytest.approx(8.5 / 4, abs=0.01)
+    assert r["runner_r"] == pytest.approx((8.5 + 13.5) / 8, abs=0.01)
+
+
+def test_support_stop_beyond_the_reaction_variant():
+    r = replay_confirm(five(SUPPORT), AT, PLAN, flip=True, stop_at="reaction")
+    assert r["mode"] == "confirm_flip_reaction" and r["entry"] == 98.5
     assert r["stop"] == pytest.approx(101.7)                      # reaction high 101.5 + 0.02 ADR
-    assert r["confirmed"] == wall(AT + pd.Timedelta(minutes=25))             # B4's close: known only then (no look-ahead)
     assert r["r_tp1"] == pytest.approx(8.5 / 3.2, abs=0.01)
     assert r["runner_r"] == pytest.approx((8.5 + 13.5) / 6.4, abs=0.01)
+
+
+def test_zone_stop_uses_the_reaction_when_it_wicked_past_the_far_edge():
+    rows = HEAD + [(100.5, 102.6, 99.5, 99.8), (99.8, 99.9, 97, 97.5), (97.5, 98.5, 95, 95.5)]   # wick 102.6 > 102, close inside
+    r = replay_confirm(five(rows), AT, PLAN)
+    assert r["stage"] == "support" and r["stop"] == pytest.approx(103.1)    # 102.6 + 0.05 ADR
+
+
+def test_bad_stop_at_raises():
+    with pytest.raises(ValueError):
+        replay_confirm(five(SUPPORT), AT, PLAN, stop_at="nope")
 
 
 def test_against_close_through_flips_on_the_retest():

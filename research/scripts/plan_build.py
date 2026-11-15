@@ -191,11 +191,13 @@ def _limit(path: pd.DataFrame, long: bool, e: float, s: float, t1: float) -> tup
     return None, "no retest before the horizon"
 
 
-def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = True) -> dict:
+def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = True, stop_at: str = "zone") -> dict:
     """Sharif 2026-11-16: "we wait for any PD array action that supports what we are aiming to achieve or against."
       arm      the first 1m touch of the array's near edge (before it: stop traded → cancelled, TP1 → missed)
       support  a new FVG our way on the confirmation TF (CTF), its third candle closing after the arm → limit at its
-               near edge, stop beyond the reaction extreme since the arm (+0.02 ADR, risk ≥ MIN_RISK ADR)
+               near edge; stop (``stop_at``) "zone" = beyond the array's far edge or the reaction extreme, whichever is
+               further, + 0.05 ADR (Sharif 2026-11-16: "stop beyond the zone"; default) | "reaction" = beyond the reaction
+               extreme since the arm + 0.02 ADR, risk ≥ MIN_RISK ADR (the first version: 88 % full stops in-sample)
       against  a CTF close through the array's far edge → (flip) the array failed: the other side on the retest of
                that far edge (the inversion), stop beyond the array's other edge + 0.05 ADR, TP1 = the range
                fake-out the first plan used as its stop (≥ 1 R, else the next pool), final = the next pool
@@ -208,7 +210,10 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
     e, s, t1, fn, adr = p["entry"], p["stop"], p["tp1"], p["final"], p["adr"]
     a = p["array"]
     far = a["bottom"] if long else a["top"]
-    base = {"mode": "confirm_flip" if flip else "confirm", "r_tp1": 0.0, "runner_r": 0.0, "stage": "none"}
+    if stop_at not in ("zone", "reaction"):
+        raise ValueError(f"stop_at {stop_at!r}")
+    base = {"mode": ("confirm_flip" if flip else "confirm") + ("" if stop_at == "zone" else "_reaction"),
+            "r_tp1": 0.0, "runner_r": 0.0, "stage": "none"}
     armed = None
     for ts, h, l in zip(path.index, path.high, path.low):
         if (l <= s) if long else (h >= s):
@@ -266,7 +271,10 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
                 ge = c2.low if long else c2.high                     # the gap's near edge from above (long) / below (short)
                 react = path[(path.index >= armed) & (path.index < cts.iloc[i])]
                 ext = react.low.min() if long else react.high.max()
-                cs = ext - 0.02 * adr if long else ext + 0.02 * adr
+                if stop_at == "zone":
+                    cs = min(ext, far) - 0.05 * adr if long else max(ext, far) + 0.05 * adr
+                else:
+                    cs = ext - 0.02 * adr if long else ext + 0.02 * adr
                 if abs(ge - cs) < MIN_RISK * adr:
                     cs = ge - MIN_RISK * adr if long else ge + MIN_RISK * adr
                 crisk = abs(ge - cs)
@@ -360,7 +368,7 @@ def cache_pins(asset: str, workers: int):
     print(asset, len(rows), "reads →", f, flush=True)
 
 
-MODES = ("touch", "confirm", "confirm_flip")
+MODES = ("touch", "confirm", "confirm_flip", "confirm_reaction", "confirm_flip_reaction")
 
 
 def simulate(assets: list[str]) -> pd.DataFrame:
@@ -383,8 +391,8 @@ def simulate(assets: list[str]) -> pd.DataFrame:
             t = replay(bars, r["at"], p)
             rows.append(base | {"mode": "touch", "stage": "touch", "trade": "filled" in t, "outcome": t["outcome"],
                                 "r_tp1": t["r_tp1"], "runner_r": t["runner_r"]})
-            for flip in (False, True):
-                c = replay_confirm(bars, r["at"], p, flip=flip)
+            for flip, stop_at in ((False, "zone"), (True, "zone"), (False, "reaction"), (True, "reaction")):
+                c = replay_confirm(bars, r["at"], p, flip=flip, stop_at=stop_at)
                 rows.append(base | {"mode": c["mode"], "stage": c["stage"], "trade": "filled" in c,
                                     "outcome": c["outcome"], "r_tp1": c["r_tp1"], "runner_r": c["runner_r"],
                                     "trade_side": c.get("side", p["side"]) if "filled" in c else None})
