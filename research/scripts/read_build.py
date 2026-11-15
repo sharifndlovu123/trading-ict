@@ -26,6 +26,7 @@ from ict_engine.data import dukascopy  # noqa: E402
 from ict_engine.concepts.events import fvgs, swings  # noqa: E402
 from ict_engine.concepts.liquidity_map import _htf_gap  # noqa: E402
 from ict_engine.concepts.ob_context import ob_reads, period_bars  # noqa: E402
+from ict_engine.concepts.htf_draw import bos_draw  # noqa: E402
 from liqmap_build import NY, candles, num, panel, wall  # noqa: E402
 
 OUT = Path("out/read")
@@ -213,6 +214,15 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
     else:
         play, kind = (f"Weekly {W}, lower timeframes mixed: no clear play — wait for a {SHORT['1h']}/{SHORT['4h']} "
                       f"break in the weekly direction."), "mixed"
+    mon = period_bars(fr["1d"], "M", at)
+    chain = bos_draw(mon, "1M", at)
+    play_side = D if kind == "counter_weekly" else (W if W != "neutral" else D)
+    if chain and chain["bos"]["direction"] == play_side and chain["draw"] and not chain["draw"]["reached"]:
+        eq, dr = chain["equal"], chain["draw"]
+        first = (f"first the 1M equal {'lows' if play_side == 'bear' else 'highs'} {eq['level']:.2f}, then "
+                 if eq and not eq["taken"] else "")
+        play += (f" The higher-TF draw (monthly): {first}the 1M FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f}, its near edge "
+                 f"{dr['edge']:.2f} = the target.")
     if inside:
         play += f" Price is inside the {inside[0]['tf']} {inside[0]['kind'].upper()} — respect there (reaction, closes holding) comes first."
     st.append({"id": "s_play", "tf": "", "text": "Where the play is: " + play})
@@ -272,29 +282,51 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
         marks.append({"type": "level", "tf": s_["tf"] if s_["tf"] in SHORT else "1h", "price": s_["price"], "color": "ss",
                       "label": f"SSL {lab(s_)}"})
     # monthly panel + order blocks (monthly / weekly) in their place, with their draw (live reads; ruling §22)
-    mon = period_bars(fr["1d"], "M", at)
+    wk = period_bars(fr["1d"], "W", at)
     obs = []
-    for tf, x in (("1M", mon), ("1w", period_bars(fr["1d"], "W", at))):
-        for r in ob_reads(x, tf, at, last=2, fine=fr["1d"]):
+    for tf, x, hi in (("1M", mon, None), ("1w", wk, [(mon, "1M")]), ("1d", fr["1d"], [(mon, "1M"), (wk, "1w")])):
+        for r in ob_reads(x, tf, at, last=2, fine=fr["1d"] if tf != "1d" else fr["1h"], htf=hi):
             ev = r["event"]
             ev_t = (f"after {ev['what']} {ev['price']:.2f} (to {ev['extreme']:.2f})" if ev else "no event before it — just a candle")
             pl = r["place"]
             fits = "the right place" if pl["fits"] else "the wrong half"
             dr = r["draw"]
-            dr_t = (f" Draw: the remaining FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f})"
+            dr_t = (f" Draw: the remaining {dr['tf']} FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f})"
                     + (f", liquidity at its edge {dr['liquidity']:.2f}" if dr["liquidity"] else "") + f" — {dr['state']}." if dr else "")
-            obs.append(f"{tf} {r['direction']}ish OB {r['candle']:%b %Y}{'' if tf == '1M' else ' wk ' + format(r['candle'], '%d')}: body "
+            when = {"1M": f"{r['candle']:%b %Y}", "1w": f"wk {r['candle']:%d %b %Y}", "1d": f"{r['candle'] + timedelta(hours=6):%d %b %Y}"}[tf]
+            obs.append(f"{tf} {r['direction']}ish OB {when}: body "
                        f"{r['body'][0]:.2f}–{r['body'][1]:.2f} (MT {r['mt']:.2f}), {ev_t}; {pl['zone']} {pl['fraction']:.2f} of "
-                       f"the look-back range = {fits}.{dr_t}")
-            marks.append({"type": "zone", "grp": "struct", "tf": "1M" if tf == "1M" else "1w", "t": wall(r["candle"]),
+                       f"the {pl['basis']} {pl['range'][0]:.2f}–{pl['range'][1]:.2f} = {fits}.{dr_t}")
+            T = {"1M": "M", "1w": "W", "1d": "D"}[tf]
+            marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "t": wall(r["candle"]),
                           "top": r["body"][1], "bottom": r["body"][0],
-                          "label": f"{'M' if tf == '1M' else 'W'} {'bear' if r['direction'] == 'bear' else 'bull'} OB"
-                                   + ("" if ev else " (no event)")})
-            if dr:
-                marks.append({"type": "zone", "grp": "struct", "tf": "1M" if tf == "1M" else "1w", "top": dr["fvg"][1],
-                              "bottom": dr["fvg"][0], "label": f"{'M' if tf == '1M' else 'W'} draw FVG (after the OB)"})
+                          "label": f"{T} {'bear' if r['direction'] == 'bear' else 'bull'} OB" + ("" if ev else " (no event)")})
+            same = chain and chain["draw"] and dr and tuple(dr["fvg"]) == tuple(chain["draw"]["fvg"])   # drawn once below
+            if dr and dr["tf"] == tf and not same:
+                marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "top": dr["fvg"][1],
+                              "bottom": dr["fvg"][0], "label": f"{T} draw FVG (after the OB)"})
     if obs:
         st.insert(0, {"id": "s_ob", "tf": "1M", "text": "Order blocks: " + " | ".join(obs)})
+    if chain:                                     # the monthly story first: BOS → equal lows/highs → the draw beyond
+        b, eq, dr = chain["bos"], chain["equal"], chain["draw"]
+        bear = b["direction"] == "bear"
+        t = (f"Monthly: structure broke {'down' if bear else 'up'} — {b['candle']:%b %Y} closed {b['close']:.2f} "
+             f"{'below' if bear else 'above'} the {b['swing']:%b %Y} swing {'low' if bear else 'high'} {b['level']:.2f} (BOS).")
+        if eq:
+            t += (f" Equal {'lows' if bear else 'highs'} {eq['level']:.2f} ("
+                  + ", ".join(f"{c:%b %Y} {p_:.2f}" for c, p_ in zip(eq["candles"], eq["prices"]))
+                  + f") = the {'sellside' if bear else 'buyside'} that leg is drawn to"
+                  + (f"; taken in {eq['taken']['candle']:%b %Y} ({eq['taken']['extreme']:.2f})." if eq["taken"] else "; still resting."))
+            marks.append({"type": "level", "tf": "1M", "price": eq["level"], "color": "ss" if bear else "bs",
+                          "label": f"M EQ{'L' if bear else 'H'}" + (" (taken)" if eq["taken"] else "")})
+        if dr:
+            t += (f" Beyond them, the interest: the 1M FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f}), "
+                  f"near edge {dr['edge']:.2f} — {'reached' if dr['reached'] else 'not reached yet'}.")
+            marks.append({"type": "zone", "grp": "struct", "tf": "1M", "top": dr["fvg"][1], "bottom": dr["fvg"][0],
+                          "label": "M draw FVG (after BOS + EQ)"})
+        marks.append({"type": "level", "tf": "1M", "price": b["level"], "color": "ss" if bear else "bs",
+                      "label": f"M BOS {b['level']:.2f}"})
+        st.insert(0, {"id": "s_mbos", "tf": "1M", "text": t})
     fwd_bars = bars[(bars.index >= at)]
     return {"id": f"{asset}-{d:%Y%m%d}", "asset": asset, "day": str(d), "at": wall(at), "price": price, "adr": adr,
             "kind": kind, "structure": S, "statements": st, "marks": marks,

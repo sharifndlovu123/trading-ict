@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,6 +16,11 @@
   --up: #4cc28c; --down: #e0706f; --range: #e8c04a; --grid: #1e2421; --chip: #232a26;
   --bs: #6aa8f0; --ss: #c58bf0; --zone: rgba(232, 192, 74, .12); --zoneline: rgba(232, 192, 74, .7); --fwd: #6c746f;
   --prem: rgba(224, 112, 111, .10); --disc: rgba(76, 194, 140, .10); --ote: rgba(127, 191, 169, .22); --mine: #f08a5d; } }
+:root[data-theme="dark"] {
+  --bg: #111513; --panel: #181d1a; --ink: #e5e8e4; --muted: #9aa39d; --line: #2c3330; --accent: #7fbfa9;
+  --up: #4cc28c; --down: #e0706f; --range: #e8c04a; --grid: #1e2421; --chip: #232a26;
+  --bs: #6aa8f0; --ss: #c58bf0; --zone: rgba(232, 192, 74, .12); --zoneline: rgba(232, 192, 74, .7); --fwd: #6c746f;
+  --prem: rgba(224, 112, 111, .10); --disc: rgba(76, 194, 140, .10); --ote: rgba(127, 191, 169, .22); --mine: #f08a5d; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
 header { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -58,6 +63,7 @@ aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
   <button id="prev">◀</button><select id="pick"></select><button id="next">▶</button>
   <span id="where" class="muted"></span>
   <span id="count" class="muted" style="margin-left:auto"></span>
+  <button id="theme" title="light / dark">☾ dark</button>
 </header>
 <main>
   <div class="chartbox">
@@ -110,9 +116,22 @@ const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css
   wickDownColor: css("--down"), borderVisible: false });
 let plines = [];
 const COL = { up: "--up", down: "--down", bs: "--bs", ss: "--ss" };
-// a mark shows on its own timeframe and every lower one
-const visible = m => RANK[m.tf] !== undefined ? RANK[m.tf] <= RANK[st.tf] : true;
+// a mark shows on its own timeframe and every lower one ("own": only on its own timeframe — OB boxes)
+const visible = m => m.own ? m.tf === st.tf : RANK[m.tf] !== undefined ? RANK[m.tf] <= RANK[st.tf] : true;
 const group = m => m.grp ? m.grp : m.type === "range" ? "range" : m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
+
+(function () {                                   // light by default (Sharif: easier to read); remembered per browser
+  const root = document.documentElement, btn = document.getElementById("theme");
+  let t = "light";
+  try { t = localStorage.getItem("read-theme") || "light"; } catch (e) {}
+  const set = v => { root.dataset.theme = v; btn.textContent = v === "light" ? "☾ dark" : "☀ light"; };
+  set(t);
+  btn.onclick = () => {
+    const v = root.dataset.theme === "light" ? "dark" : "light"; set(v);
+    try { localStorage.setItem("read-theme", v); } catch (e) {}
+    if (typeof draw === "function") draw();
+  };
+})();
 
 function draw() {
   const past = st.it.panels[st.tf] || [], fwd = st.fwd && saved() ? (st.it.fwd[st.tf] || []) : [];
