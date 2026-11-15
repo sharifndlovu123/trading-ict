@@ -432,7 +432,7 @@ const PALETTE = [
 const placeKey = (side, kind) => side + "|" + kind;
 $("palette").innerHTML = '<span class="muted">place:</span>' + PALETTE.map(([side, shape, kinds]) =>
   kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : "↓ "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
-  '<span class="muted" style="margin-left:auto">Esc = stop placing · Del / right-click = remove</span>';
+  '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click = remove</span>';
 const GRAB = 6;
 function hit(px, py) {
   let best = null;
@@ -546,7 +546,9 @@ function setTool(t, place = null) {
       if (b && b.shape === "zone" && b.top < b.bottom) [b.top, b.bottom] = [b.bottom, b.top];
       if (b && b.shape === "zone" && b.top === b.bottom) { d.added.splice(i, 1); st.sel = null; }
     }
+    const wasFresh = held.fresh;
     held = null; freeze(false); saveDrafts(); mineBox(); ladder(); drawLines(); drawOptions();
+    if (wasFresh) setTool("move");                                                // one placement per pick
   });
   el.addEventListener("contextmenu", e => {
     const [px, py] = pos(e), h = hit(px, py);

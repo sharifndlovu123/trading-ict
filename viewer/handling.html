@@ -44,6 +44,16 @@ h3 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spac
 .lvl .note { grid-column: 1 / -1; }
 .res { border: 2px solid var(--accent); border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
 .res .big { font-size: 16px; font-weight: 700; font-family: ui-monospace, monospace; }
+#palette { gap: 3px; padding: 4px 6px; }
+.mtool { padding: 0 6px; font-size: 12px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; }
+.mtool.bs { border-color: var(--bs); } .mtool.ss { border-color: var(--ss); } .mtool.ar { border-color: var(--area); border-style: dashed; }
+.mtool.on { background: var(--mine); color: #fff; border-color: var(--mine); font-weight: 600; }
+#chart { position: relative; }
+.step { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; margin: 4px 0; }
+.step.on { border: 2px solid var(--accent); }
+.step .hd { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+.step textarea { min-height: 38px; margin-top: 3px; width: 100%; }
+.mk { display: grid; grid-template-columns: 1fr auto auto; gap: 4px; align-items: center; font-size: 12px; padding: 2px 0; border-bottom: 1px solid var(--line); }
 .kind-cut { color: var(--down); font-weight: 600; } .kind-won { color: var(--up); font-weight: 600; }
 textarea { width: 100%; min-height: 60px; }
 #status { margin-left: auto; }
@@ -66,6 +76,7 @@ textarea { width: 100%; min-height: 60px; }
       <span class="muted" style="margin-left:10px">show:</span>
       <span class="chip on" data-f="engine">engine plan</span><span class="chip" data-f="liq">liquidity map</span><span class="chip" data-f="areas">areas</span>
     </div>
+    <div class="tabs" id="palette"></div>
     <div id="hint"></div>
     <div id="chart"></div>
   </div>
@@ -89,6 +100,10 @@ textarea { width: 100%; min-height: 60px; }
         <option value="no_trade">neither trade — I'd stay out</option>
       </select>
     </div>
+    <h3>Your breakdown — top down <span class="muted" style="text-transform:none">(click a timeframe to view it; marks are tagged with it)</span></h3>
+    <div id="steps"></div>
+    <h3>What you placed</h3>
+    <div id="mymarks"></div>
     <h3>Why — stop and targets from the same map, used differently</h3>
     <textarea id="notes" placeholder="Where the stop belongs and why (which liquidity protects it), where price is drawn to, when to take partials…"></textarea>
     <div style="display:flex;gap:6px;margin:8px 0 14px;align-items:center">
@@ -98,6 +113,7 @@ textarea { width: 100%; min-height: 60px; }
 </div>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
 <script src="linedrag.js"></script>
+<script src="marks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -111,7 +127,25 @@ let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("handling-drafts") || "{}"); } catch (e) {}
 try { Object.assign(st.filt, JSON.parse(localStorage.getItem("handling-filt") || "{}")); } catch (e) {}
 const saveDrafts = () => { try { localStorage.setItem("handling-drafts", JSON.stringify(drafts)); } catch (e) {} };
-const draft = () => (drafts[st.it.id] ||= { stop: null, tps: [], entry: null, be: false, notes: "", verdict: "" });
+const draft = () => { const d = (drafts[st.it.id] ||= { stop: null, tps: [], entry: null, be: false, notes: "", verdict: "" });
+  d.marks ||= []; d.steps ||= {}; return d; };
+const TFS = [["1w", "Weekly"], ["1d", "Daily"], ["4h", "4H"], ["1h", "1H"], ["15m", "15m"], ["5m", "5m"]];
+function stepsBox() {
+  const d = draft();
+  $("steps").innerHTML = TFS.map(([tf, nm]) => `<div class="step ${st.tf === tf ? "on" : ""}" data-tf="${tf}">
+    <div class="hd"><b>${nm}</b><span class="muted">${d.marks.filter(m => m.tf === tf).length} marks</span></div>
+    <textarea data-tf="${tf}" placeholder="what you see on the ${nm.toLowerCase()}">${(d.steps[tf] || "").replace(/</g, "&lt;")}</textarea></div>`).join("");
+  $("steps").querySelectorAll(".hd").forEach(h => h.onclick = () => { st.tf = h.parentElement.dataset.tf; render(); });
+  $("steps").querySelectorAll("textarea").forEach(t => t.oninput = () => { d.steps[t.dataset.tf] = t.value; saveDrafts(); });
+}
+function marksBox() {
+  const d = draft(), f = x => x == null ? "–" : (+x).toFixed(2);
+  $("mymarks").innerHTML = d.marks.length ? d.marks.map((m, i) => `<div class="mk"><span><b>${m.tf}</b> ${m.kind}${m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : ""}
+      <span class="mono">${m.shape === "zone" ? f(m.bottom) + "–" + f(m.top) : m.shape === "trend" ? f(m.p0) + "→" + f(m.p1) : f(m.price)}</span></span>
+      <span></span><button data-del="${i}" title="remove">✕</button></div>`).join("")
+    : '<div class="muted">Pick a type in the <b>place:</b> row under the timeframes, then click the chart (a level runs to the end) or drag start → finish. Weekly / daily marks show on every lower timeframe.</div>';
+  $("mymarks").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { d.marks.splice(+b.dataset.del, 1); saveDrafts(); marksBox(); stepsBox(); layer.redraw(); });
+}
 
 const chart = LightweightCharts.createChart($("chart"), { autoSize: true,
   layout: { background: { color: css("--panel") }, textColor: css("--muted") },
@@ -147,6 +181,7 @@ function drawLines() {
 
 function setData() {
   const rows = st.it.panels[st.tf] || [];
+  st.times = rows.map(c => c[0]);
   series.setData(rows.map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
   const mk = [{ time: snap(st.it.decided), position: st.it.side === "long" ? "belowBar" : "aboveBar", color: css("--key"), shape: st.it.side === "long" ? "arrowUp" : "arrowDown", text: "decision" }];
   if (st.it.filled) mk.push({ time: snap(st.it.filled), position: "inBar", color: css("--entry"), shape: "circle", text: "fill" });
@@ -247,7 +282,7 @@ function render() {
   $("saved").textContent = st.answers[st.it.id] ? "saved ✓" : "";
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tf === st.tf));
   document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", !!st.filt[c.dataset.f]));
-  facts(); setData(); refresh();
+  facts(); setData(); refresh(); stepsBox(); marksBox(); layer.redraw();
 }
 async function load(i) {
   st.i = (i + st.ids.length) % st.ids.length; setTool(null);
@@ -258,10 +293,16 @@ async function load(i) {
 }
 function setTool(t) {
   st.tool = st.tool === t ? null : t;
+  if (st.tool && typeof layer !== "undefined") layer.setPlace(null);
   document.querySelectorAll("[data-tool]").forEach(b => b.classList.toggle("armed", b.dataset.tool === st.tool));
   $("hint").style.display = st.tool ? "block" : "none";
   $("hint").textContent = st.tool ? `click the chart to place your ${st.tool === "tp" ? "TP" : st.tool}` : "";
 }
+const layer = marksLayer(chart, series, $("chart"), {
+  list: () => st.it ? draft().marks : [], times: () => st.times || [], nowT: () => null, paletteEl: $("palette"), color: css,
+  tfName: () => st.tf, onPlace: on => { if (on && st.tool) setTool(st.tool); },
+  changed: () => { saveDrafts(); marksBox(); stepsBox(); },
+});
 lineDrag(chart, series, $("chart"), {
   targets: () => {
     const it = st.it, d = draft(), out = [];
@@ -299,7 +340,7 @@ chart.subscribeClick(p => {
   if (st.tool === "stop") d.stop = { price: v, why: d.stop ? d.stop.why : STOP_WHY[0] };
   else if (st.tool === "entry") d.entry = v;
   else d.tps.push({ price: v, pct: d.tps.length ? 25 : 50, why: TP_WHY[0] });
-  if (st.tool !== "tp") setTool(null);
+  setTool(null);                                            // one placement per pick
   saveDrafts(); refresh();
 });
 document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool));
@@ -321,7 +362,7 @@ document.addEventListener("keydown", e => {
 $("save").onclick = async () => {
   const d = draft(), x = replay();
   const body = { id: st.it.id, asset: st.it.asset, side: st.it.side, kind: st.it.kind, engine: { entry: st.it.entry, stop: st.it.stop, tp1: st.it.tp1, final: st.it.final, runner_r: st.it.runner_r },
-                 entry: d.entry, stop: d.stop, tps: d.tps, be: d.be, notes: d.notes, verdict: d.verdict || null, replay_r: x.r ?? null, replay_events: x.ev ?? [] };
+                 entry: d.entry, stop: d.stop, tps: d.tps, be: d.be, notes: d.notes, verdict: d.verdict || null, marks: d.marks, steps: d.steps, replay_r: x.r ?? null, replay_events: x.ev ?? [] };
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { $("saved").textContent = "save failed — is the server running?"; return; }
   st.answers[st.it.id] = body; render();
