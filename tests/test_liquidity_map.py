@@ -110,3 +110,17 @@ def test_topdown_names_existing_items_on_both_sides():
         assert all(ids[i]["role"] == "buyside" and ids[i]["where"] == "above" for i in d["buyside"])
         assert all(ids[i]["role"] == "sellside" and ids[i]["where"] == "below" for i in d["sellside"])
         assert all(ids[i]["role"] == "area" for i in d["areas"])
+
+
+def test_no_zero_width_areas_on_real_data():
+    """PD-array audit 2026-11-16: 1h/4h volume imbalances a fraction of a point wide showed up as areas with
+    top == bottom after rounding (slivers, not areas) and could take one of the 3 gap slots per side."""
+    from datetime import date
+    from ict_engine.data import dukascopy
+    try:
+        b = dukascopy.load("US500", date(2022, 4, 1), date(2022, 10, 1))
+    except Exception:
+        pytest.skip("US500 2022 data not fetched")
+    for at in ("2022-05-28 00:30", "2022-09-29 04:14"):
+        m = build(b, pd.Timestamp(at, tz=NY))
+        assert not [it for it in m["items"] if it["role"] == "area" and it["top"] <= it["bottom"]], at

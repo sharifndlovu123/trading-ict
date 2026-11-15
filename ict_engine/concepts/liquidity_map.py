@@ -219,6 +219,8 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
                     f"{tf} equal {'highs' if high else 'lows'}")
         gaps = {"above": [], "below": []}
         for g in list(fvgs(b, tf)) + list(volume_imbalances(b, tf)):
+            if round(g.top, 2) <= round(g.bottom, 2):                 # a sliver (< 0.01 wide), not an area (audit 2026-11-16)
+                continue
             if g.ts >= as_of:
                 continue
             if tf in ("1w", "1d"):
