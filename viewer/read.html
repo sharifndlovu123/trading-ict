@@ -208,7 +208,10 @@ function paint() {
       const o = want === "premium" ? [lo + .62 * (hi - lo), lo + .79 * (hi - lo)] : [hi - .79 * (hi - lo), hi - .62 * (hi - lo)];
       const y1 = series.priceToCoordinate(o[1]), y2 = series.priceToCoordinate(o[0]);
       g.fillStyle = css("--ote"); g.fillRect(a, y1, W - a, y2 - y1);
-      g.fillStyle = col; g.fillText("OTE (" + want + ")", a + 6, y1 + 11);
+      g.fillStyle = col; g.fillText("OTE 0.62–0.79 (" + want + ")", a + 6, y1 + 11);
+      const ext = want === "premium" ? lo : hi, fk = want === "premium" ? hi : lo;           // 0 = the move's extreme, 1 = the fake-out
+      for (const q of [0, .5, .62, .79, 1]) { const yq = series.priceToCoordinate(ext + (fk - ext) * q); if (yq == null) continue;
+        g.fillText(String(q), W - 34, yq - 2); }
     }
     g.strokeStyle = g.fillStyle = col; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(a, yH); g.lineTo(W, yH); g.moveTo(a, yL); g.lineTo(W, yL); g.stroke();
@@ -216,7 +219,7 @@ function paint() {
     g.fillText(label + " · premium", a + 6, yH + 12); g.fillText("EQ " + eq.toFixed(2), a + 6, yE - 3); g.fillText("discount", a + 6, yL - 4);
   };
   for (const m of st.it.marks) if (m.type === "range" && visible(m) && st.show.range)
-    rangeBox(m.t ? xAt(m.t) : null, m.low, m.high, m.label + " · hoping for " + m.want, null, css("--accent"), m.tf === st.tf);   // the whole half is the zone (no OTE); a higher-TF range: lines only
+    rangeBox(m.t ? xAt(m.t) : null, m.low, m.high, m.label + " · hoping for " + m.want, m.want, css("--accent"), m.tf === st.tf);   // fib of the move; a higher-TF range: lines only
   for (const z of draft().mine) {
     if (RANK[z.tf] > RANK[st.tf]) continue;
     const x0 = xAt(z.t0);

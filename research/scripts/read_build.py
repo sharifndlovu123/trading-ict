@@ -81,13 +81,13 @@ def trade_range(f: pd.DataFrame, tf: str, side: str, guard: float, past: pd.Data
 
 def range_arrays(fr: dict, at: pd.Timestamp, side: str, lo: float, hi: float, t0: pd.Timestamp, price: float) -> list[dict]:
     """4H / 1H gaps on our side (bearish to sell, bullish to buy) inside the range, judged on their own timeframe's closes
-    like 1w/1d (closed through → IFVG flipped, closed back → retired). Each gets its place in the range: premium
-    (expensive), at EQ, or discount (cheap) — premium is relative to the range the array sits in (swing high/low).
-    Only arrays of the move in our direction: a FVG formed after the fake-out swing (``t0``), or an IFVG whose flip
-    (the close through it) came after it. Up to 6 usable ones (expensive / at EQ for a sell) nearest to price, then the
-    cheap ones, 8 in all."""
-    eq, out = (lo + hi) / 2, []
-    pct = lambda p: (p - lo) / (hi - lo)
+    like 1w/1d (closed through → IFVG flipped, closed back → retired). Only arrays of the move in our direction (the
+    distribution the range is): a FVG formed after the fake-out swing ``t0``, or an IFVG whose flip came after it.
+    Depth = retracement on the fib of the move (0 = its extreme, 1 = the fake-out; Sharif, 2026-11-16 example): a
+    shallow array may be all price gives, a deep one (OTE 0.62–0.79) the better price. Neither is wrong; each has a
+    risk — shallow: knocked out if price goes deeper; deep: the trade is missed. Momentum decides."""
+    out = []
+    dep = (lambda p: (hi - p) / (hi - lo)) if side == "bull" else (lambda p: (p - lo) / (hi - lo))
     for tf in ("4h", "1h"):
         f = fr[tf]
         for g in fvgs(f, tf):
@@ -106,18 +106,16 @@ def range_arrays(fr: dict, at: pd.Timestamp, side: str, lo: float, hi: float, t0
                 thru = c[(c < g.bottom) if g.direction == "bull" else (c > g.top)]
                 if thru.empty or thru.index[0] < t0:
                     continue
-            where = "at EQ" if g.bottom <= eq <= g.top else "premium" if g.bottom > eq else "discount"
-            good = (where == "premium") if side == "bear" else (where == "discount")
-            verdict = ("expensive → a real sell array" if side == "bear" else "cheap → a real buy array") if good else \
-                      ("acceptable, a bit " + ("cheaper" if side == "bear" else "dearer")) if where == "at EQ" else \
-                      ("cheap → not a sell" if side == "bear" else "expensive → not a buy")
+            d0, d1 = sorted((dep(g.top), dep(g.bottom)))
+            depth = ("deep — risk: price may not come this far, the trade is missed" if d1 >= 0.62 else
+                     "around EQ" if d1 >= 0.5 else
+                     "shallow — risk: knocked out if price goes deeper")
             out.append({"tf": tf, "kind": stt, "bottom": round(float(g.bottom), 2), "top": round(float(g.top), 2),
-                        "where": where, "verdict": verdict, "p0": pct(g.bottom), "p1": pct(g.top), "formed": wall(g.origin_ts),
+                        "d0": d0, "d1": d1, "depth": depth, "formed": wall(g.origin_ts),
                         "label": f"{tf} {'bearish' if d == 'bear' else 'bullish'} {stt.upper()}"})
-    dist = lambda x: 0 if x["bottom"] <= price <= x["top"] else min(abs(price - x["bottom"]), abs(price - x["top"]))
-    ok = sorted([x for x in out if not x["verdict"].endswith("not a sell") and not x["verdict"].endswith("not a buy")], key=dist)
-    near = ok[:6] + sorted([x for x in out if x not in ok], key=dist)[:8 - len(ok[:6])]
-    return sorted(near, key=lambda x: -x["top"])
+    now = dep(price)
+    ahead = sorted([x for x in out if x["d1"] > now], key=lambda x: x["d0"])            # still on the pullback's way
+    return ahead[:6], now
 
 
 def lab(x: dict) -> str:
@@ -218,27 +216,34 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
         want = "premium" if want_side == "bear" else "discount"
         verb = "sell" if want == "premium" else "buy"
         zone = "premium" if frac > 0.5 else "discount"
-        arr = range_arrays(fr, at, want_side, lo, hi, r["t0"], price)
+        arr, now_d = range_arrays(fr, at, want_side, lo, hi, r["t0"], price)
+        ext, fk = (hi, lo) if want_side == "bull" else (lo, hi)
+        lv = lambda q: ext + (fk - ext) * q
         if want_side == "bear":
             anchor = (f"the fake-out high {hi:.2f} (it took buyside {r['swept']:.2f} first, against us)" if r["swept"]
                       else f"the protected high {hi:.2f}") + f" → the low of the move down since, {lo:.2f}"
         else:
             anchor = (f"the fake-out low {lo:.2f} (it took sellside {r['swept']:.2f} first, against us)" if r["swept"]
                       else f"the protected low {lo:.2f}") + f" → the high of the move up since, {hi:.2f}"
-        arr_t = ("; ".join(f"{x['label']} {x['bottom']:.2f}–{x['top']:.2f} ({x['p0']:.0%}–{x['p1']:.0%}, {x['where']}: "
-                           f"{x['verdict']})" for x in arr)
-                 if arr else f"no {'bearish' if want_side == 'bear' else 'bullish'} gap inside it yet")
-        now = (f"price is in the {want} half now" if zone == want
-               else f"price is in {zone} — wait for it to come back to a {want} array")
-        st.append({"id": "s_range", "tf": rtf, "text": f"Current range ({SHORT[rtf]}): {anchor}. EQ {eq:.2f}; price at "
-                   f"{frac:.0%} = {zone}. The play is {want_side}, so I'm hoping for a {want}: {verb} from a PD array "
-                   f"that is {'expensive' if verb == 'sell' else 'cheap'} in this range. Where each array sits: {arr_t}. "
-                   f"{now[0].upper() + now[1:]}."})
+        ext_t = (since_ext := past[past.index >= r["t0"]])["high" if want_side == "bull" else "low"]
+        ext_t = ext_t.idxmax() if want_side == "bull" else ext_t.idxmin()
+        nb = int(((fr[rtf].index >= r["t0"]) & (fr[rtf].index <= ext_t)).sum())
+        mom = f"momentum: the move ran {(hi - lo) / adr:.1f} ADR in {nb} {SHORT[rtf]} candle{'s' if nb != 1 else ''}"
+        fib = f"fib of the move: 0 = {ext:.2f}, 0.5 EQ = {lv(.5):.2f}, OTE 0.62–0.79 = {lv(.62):.2f}–{lv(.79):.2f}, 1 = {fk:.2f}"
+        arr_t = ("; ".join(f"{x['label']} {x['bottom']:.2f}–{x['top']:.2f} ({x['d0']:.2f}–{x['d1']:.2f}, {x['depth']})"
+                           for x in arr) if arr else "none left between price and the fake-out")
+        where = ("price is at the extreme of the move (0) — no pullback yet" if now_d <= 0.05 else
+                 f"price has pulled back to {now_d:.2f}" + (" — in the OTE now" if 0.62 <= now_d <= 0.79 else
+                                                              " — past the OTE, the range is at risk" if now_d > 0.79 else ""))
+        st.append({"id": "s_range", "tf": rtf, "text": f"Current range ({SHORT[rtf]}): {anchor} — the distribution our "
+                   f"PD arrays come from ({mom}). {fib}; {where}. Hoping for a {want}: {'buy' if want_side == 'bull' else 'sell'} "
+                   f"at an array on the pullback, in the order price meets them: {arr_t}. Shallow or deep is not right or wrong: "
+                   f"shallow risks a knock-out, deep risks missing it — momentum decides. Target beyond the move: the liquidity in the play above."})
         marks.append({"type": "range", "tf": rtf, "t": r["t"], "low": round(lo, 2), "high": round(hi, 2), "want": want,
                       "label": f"{SHORT[rtf]} range"})
         for x in arr:
             marks.append({"type": "zone", "grp": "range", "tf": x["tf"], "t": x["formed"], "top": x["top"], "bottom": x["bottom"],
-                          "label": f"{x['label']} {x['p0']:.0%}–{x['p1']:.0%} {x['where']}"})
+                          "label": f"{x['label']} {x['d0']:.2f}–{x['d1']:.2f}"})
     for tf, s in S.items():
         if s["guard"] is not None and s["state"] != "neutral":
             marks.append({"type": "level", "tf": tf, "price": s["guard"], "color": "down" if s["state"] == "bear" else "up",
