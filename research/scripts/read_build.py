@@ -131,10 +131,11 @@ def fmt_day(ts: int | None, tf: str) -> str:
     return t.strftime("%d %b %Y") if tf in ("1w", "1d") else t.strftime("%d %b %H:%M")
 
 
-def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
-    at = pd.Timestamp(datetime.combine(d, time(8, 30)), tz=NY)
+def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None) -> dict | None:
+    live = at is not None
+    at = at if live else pd.Timestamp(datetime.combine(d, time(8, 30)), tz=NY)
     past = bars[bars.index < at]
-    if past.empty or bars[(bars.index >= at - timedelta(minutes=5)) & (bars.index < at)].empty:
+    if past.empty or (not live and bars[(bars.index >= at - timedelta(minutes=5)) & (bars.index < at)].empty):
         return None
     fr = frames(past, d, at)
     S = {tf: structure(f) for tf, f in fr.items()}
@@ -180,7 +181,7 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
     W, D, H4, H1 = (S[tf]["state"] for tf in ("1w", "1d", "4h", "1h"))
     side = lambda x: {"bull": "buyside", "bear": "sellside"}.get(x)
     pool = lambda x: (bs[0] if x == "bull" and bs else ss[0] if x == "bear" and ss else None)
-    htf = lambda x: next((p for p in (bs if x == "bull" else ss) if p["tf"] in ("1w", "1d")), None)
+    htf = lambda x: next((p for p in (bs if x == "bull" else ss) if p["tf"] in ("1w", "1d") and p is not pool(x)), None)
     nm = lambda p: f"{lab(p)} {p['price']:.2f}" if p else "–"
     if W == "neutral":
         play, kind = ("No weekly side yet: the play is on the daily and lower — near liquidity only "
@@ -266,11 +267,29 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
             "fwd": {tf: panel(fwd_bars, tf, at, at + FWD[tf]) for tf in PANELS}}
 
 
+def live(at: pd.Timestamp):
+    """The current chart (US100, US500): a live read, not a test — no selection is made from it."""
+    out = Path("out/read-live")
+    (out / "s").mkdir(parents=True, exist_ok=True)
+    ids = []
+    for x in ("US100", "US500"):
+        bars = dukascopy.load(x, at.date() - timedelta(days=1000), at.date() + timedelta(days=1))
+        it = read(x, bars, at.date(), at=at)
+        it["id"] = f"{x}-live-{at:%Y%m%d}"
+        (out / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":")))
+        ids.append(it["id"]); print(it["id"], it["kind"])
+    (out / "index.json").write_text(json.dumps({"generated": str(date.today()), "live": str(at), "ids": ids}, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--seed", type=int, default=5)
+    ap.add_argument("--live", help="one read per index as of this NY time, e.g. '2026-11-15 18:00' (Sunday open: "
+                                   "Friday's day and week count as closed) → out/read-live")
     a = ap.parse_args()
+    if a.live:
+        return live(pd.Timestamp(a.live, tz=NY))
     rnd = random.Random(a.seed)
     bars = {x: dukascopy.load(x, HIST, CUT + timedelta(days=60)) for x in ASSETS}
     days = [START + timedelta(days=i) for i in range((CUT - START).days)]
