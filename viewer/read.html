@@ -9,11 +9,13 @@
   --bg: #f2f3f0; --panel: #fff; --ink: #1b1f1d; --muted: #646b66; --line: #d9ddd7; --accent: #2f5d50;
   --up: #1f7a55; --down: #b23b3b; --range: #b58a00; --grid: #eceee9; --chip: #e8ebe5;
   --bs: #2b6cb0; --ss: #9b4dca; --zone: rgba(181, 138, 0, .13); --zoneline: rgba(181, 138, 0, .7); --fwd: #8a918c;
+  --prem: rgba(178, 59, 59, .10); --disc: rgba(31, 122, 85, .10); --ote: rgba(47, 93, 80, .22); --mine: #c0562a;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #111513; --panel: #181d1a; --ink: #e5e8e4; --muted: #9aa39d; --line: #2c3330; --accent: #7fbfa9;
   --up: #4cc28c; --down: #e0706f; --range: #e8c04a; --grid: #1e2421; --chip: #232a26;
-  --bs: #6aa8f0; --ss: #c58bf0; --zone: rgba(232, 192, 74, .12); --zoneline: rgba(232, 192, 74, .7); --fwd: #6c746f; } }
+  --bs: #6aa8f0; --ss: #c58bf0; --zone: rgba(232, 192, 74, .12); --zoneline: rgba(232, 192, 74, .7); --fwd: #6c746f;
+  --prem: rgba(224, 112, 111, .10); --disc: rgba(76, 194, 140, .10); --ote: rgba(127, 191, 169, .22); --mine: #f08a5d; } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
 header { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -30,6 +32,10 @@ main { flex: 1; display: grid; grid-template-columns: 1fr 430px; gap: 10px; padd
 .tog { padding: 2px 8px; border-radius: 5px; border: 1px dashed var(--line); cursor: pointer; user-select: none; font-size: 12px; }
 .tog.on { border-style: solid; border-color: var(--accent); }
 #chart { flex: 1; min-height: 300px; }
+.tool { padding: 2px 8px; border-radius: 5px; border: 1px solid var(--accent); cursor: pointer; user-select: none; font-size: 12px; }
+.tool.on { background: var(--accent); color: var(--panel); }
+.mine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: ui-monospace, monospace; font-size: 12px; }
+.mine .x { cursor: pointer; color: var(--muted); } .mine input { flex: 1; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
 aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
 .stmt .tx { margin-bottom: 5px; }
@@ -67,9 +73,12 @@ aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
         <span><span class="sw" style="background:var(--bs)"></span>buyside</span>
         <span><span class="sw" style="background:var(--ss)"></span>sellside</span>
         <span><span class="sw" style="background:var(--zoneline)"></span>area</span>
+        <span><span class="sw" style="background:var(--prem);height:8px"></span>premium</span>
+        <span><span class="sw" style="background:var(--disc);height:8px"></span>discount</span>
         <span>dashed vertical = structure flip</span>
       </div></div>
     <div id="stmts"></div>
+    <div class="card"><div class="muted" style="margin-bottom:4px">Your ranges / zones — pick <b>+ range</b> or <b>+ zone</b> above the chart, then drag from one corner to the other (right-click removes)</div><div id="minelist"></div></div>
     <div class="card"><div class="muted">Overall — what would you have seen? Anything the engine missed?</div><textarea id="note" style="min-height:70px"></textarea></div>
     <button class="primary" id="save">Save</button>
     <div class="card" id="after" style="display:none"></div>
@@ -81,11 +90,13 @@ const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const TFS = [["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
 const RANK = { "1w": 0, "1d": 1, "4h": 2, "1h": 3 };
-const st = { ids: [], i: 0, it: null, tf: "1d", answers: {}, show: { struct: true, areas: true, liq: true }, fwd: false };
+let drag = null;
+const st = { ids: [], i: 0, it: null, tf: "1d", answers: {}, show: { struct: true, areas: true, liq: true, range: true }, fwd: false };
 let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("readDrafts") || "{}"); } catch (e) { drafts = {}; }
 const saveDrafts = () => { try { localStorage.setItem("readDrafts", JSON.stringify(drafts)); } catch (e) {} };
-const draft = () => (drafts[st.it.id] ||= { verdict: {}, comment: {}, note: "" });
+const draft = () => { const d = (drafts[st.it.id] ||= { verdict: {}, comment: {}, note: "" }); d.mine ||= []; return d; };
+st.tool = null;                                        // "range" | "zone" while drawing
 const saved = () => !!st.answers[st.it.id];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -100,7 +111,7 @@ let plines = [];
 const COL = { up: "--up", down: "--down", bs: "--bs", ss: "--ss" };
 // a mark shows on its own timeframe and every lower one
 const visible = m => RANK[m.tf] !== undefined ? RANK[m.tf] <= RANK[st.tf] : true;
-const group = m => m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
+const group = m => m.type === "range" ? "range" : m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
 
 function draw() {
   const past = st.it.panels[st.tf] || [], fwd = st.fwd && saved() ? (st.it.fwd[st.tf] || []) : [];
@@ -118,12 +129,15 @@ function draw() {
   chart.timeScale().fitContent();
   $("tabs").innerHTML = TFS.map(([k, n]) => `<span class="tab ${k === st.tf ? "on" : ""}" data-tf="${k}">${n}</span>`).join("") +
     `<span style="width:10px"></span>` +
-    [["struct", "structure"], ["areas", "areas"], ["liq", "liquidity"]].map(([k, n]) =>
+    [["struct", "structure"], ["areas", "areas"], ["liq", "liquidity"], ["range", "current range"]].map(([k, n]) =>
       `<span class="tog ${st.show[k] ? "on" : ""}" data-k="${k}">${n}</span>`).join("") +
+    `<span style="width:6px"></span><span class="tool ${st.tool === "range" ? "on" : ""}" data-tool="range" title="drag high → low: EQ, premium / discount, OTE">+ range</span><span class="tool ${st.tool === "zone" ? "on" : ""}" data-tool="zone" title="drag a box: an area you are watching">+ zone</span>` +
     (saved() ? `<span class="tog ${st.fwd ? "on" : ""}" id="fwdt" title="grey candles = after the moment">what happened next</span>` : "") +
     `<span class="muted" style="margin-left:auto">candles before ${new Date(st.it.at * 1000).toISOString().slice(0, 16).replace("T", " ")} NY</span>`;
   document.querySelectorAll("#tabs .tab").forEach(e => e.onclick = () => { st.tf = e.dataset.tf; draw(); });
   document.querySelectorAll("#tabs .tog[data-k]").forEach(e => e.onclick = () => { st.show[e.dataset.k] = !st.show[e.dataset.k]; draw(); });
+  document.querySelectorAll("#tabs .tool").forEach(e => e.onclick = () => { st.tool = st.tool === e.dataset.tool ? null : e.dataset.tool;
+    $("chart").style.cursor = st.tool ? "crosshair" : ""; chart.applyOptions({ handleScroll: !st.tool, handleScale: !st.tool }); draw(); });
   if ($("fwdt")) $("fwdt").onclick = () => { st.fwd = !st.fwd; draw(); };
   vdirty++;
 }
@@ -131,7 +145,7 @@ function draw() {
 function side() {
   const d = draft();
   $("stmts").innerHTML = st.it.statements.map(s => {
-    const v = d.verdict[s.id], tx = esc(s.text).replace(/^(Weekly|Daily|4H|1H|Areas I'm watching|Liquidity|Where the play is)/, "<b>$1</b>");
+    const v = d.verdict[s.id], tx = esc(s.text).replace(/^(Weekly|Daily|4H|1H|Areas I'm watching|Liquidity|Where the play is|Current range)/, "<b>$1</b>");
     return `<div class="card stmt ${s.id === "s_play" ? "play" : ""}"><div class="tx" ${s.tf ? `data-tf="${s.tf}"` : ""}>${tx}</div>
       <div class="picks">${["agree", "partly", "disagree"].map(b => `<span class="pick ${b} ${v === b ? "on" : ""}" data-s="${s.id}" data-v="${b}">${b}</span>`).join("")}</div>
       <textarea data-s="${s.id}" placeholder="your read (optional)">${esc(d.comment[s.id] || "")}</textarea></div>`;
@@ -140,6 +154,14 @@ function side() {
     const x = draft(); x.verdict[e.dataset.s] = x.verdict[e.dataset.s] === e.dataset.v ? undefined : e.dataset.v; saveDrafts(); side(); });
   $("stmts").querySelectorAll("textarea").forEach(e => e.oninput = () => { draft().comment[e.dataset.s] = e.value; saveDrafts(); });
   $("stmts").querySelectorAll(".tx[data-tf] b").forEach(e => e.onclick = () => { st.tf = e.parentElement.dataset.tf; draw(); });
+  $("minelist").innerHTML = d.mine.length ? d.mine.map((z, i) => `<div class="mine"><b style="color:var(--mine)">${z.tf.toUpperCase()} ${z.kind}</b>
+    ${z.lo.toFixed(2)}–${z.hi.toFixed(2)}${z.kind === "range" ? ` · EQ ${((z.lo + z.hi) / 2).toFixed(2)} · price ${Math.round((st.it.price - z.lo) / (z.hi - z.lo) * 100)}%` : ""}
+    ${z.kind === "range" ? `<select data-i="${i}" title="what you're hoping for"><option value="">hoping for…</option><option value="premium" ${z.want === "premium" ? "selected" : ""}>premium (sell)</option><option value="discount" ${z.want === "discount" ? "selected" : ""}>discount (buy)</option></select>` : ""}
+    <input data-i="${i}" placeholder="label / why" value="${esc(z.label || "")}"><span class="x" data-i="${i}" title="remove">✕</span></div>`).join("")
+    : '<span class="muted">none yet</span>';
+  $("minelist").querySelectorAll("input").forEach(e => e.oninput = () => { draft().mine[+e.dataset.i].label = e.value; saveDrafts(); vdirty++; });
+  $("minelist").querySelectorAll("select").forEach(e => e.onchange = () => { draft().mine[+e.dataset.i].want = e.value || null; saveDrafts(); vdirty++; });
+  $("minelist").querySelectorAll(".x").forEach(e => e.onclick = () => { draft().mine.splice(+e.dataset.i, 1); saveDrafts(); side(); vdirty++; });
   $("note").value = d.note || "";
   const a = $("after");
   if (!saved()) { a.style.display = "none"; return; }
@@ -176,6 +198,35 @@ function paint() {
   const xNow = xAt(st.it.at);
   if (xNow != null && xNow >= 0 && xNow <= W) {                 // the moment
     g.strokeStyle = css("--muted"); g.setLineDash([1, 3]); g.beginPath(); g.moveTo(xNow, 0); g.lineTo(xNow, H); g.stroke(); g.setLineDash([]); }
+  const rangeBox = (x0, lo, hi, label, want, col, fill = true) => {     // a range: premium / discount halves, EQ, OTE of the wanted side
+    const yH = series.priceToCoordinate(hi), yL = series.priceToCoordinate(lo), eq = (hi + lo) / 2, yE = series.priceToCoordinate(eq);
+    if (yH == null || yL == null) return;
+    const a = Math.max(0, x0 ?? 0);
+    if (fill) { g.fillStyle = css("--prem"); g.fillRect(a, yH, W - a, yE - yH);
+      g.fillStyle = css("--disc"); g.fillRect(a, yE, W - a, yL - yE); }
+    if (want && fill) {
+      const o = want === "premium" ? [lo + .62 * (hi - lo), lo + .79 * (hi - lo)] : [hi - .79 * (hi - lo), hi - .62 * (hi - lo)];
+      const y1 = series.priceToCoordinate(o[1]), y2 = series.priceToCoordinate(o[0]);
+      g.fillStyle = css("--ote"); g.fillRect(a, y1, W - a, y2 - y1);
+      g.fillStyle = col; g.fillText("OTE (" + want + ")", a + 6, y1 + 11);
+    }
+    g.strokeStyle = g.fillStyle = col; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(a, yH); g.lineTo(W, yH); g.moveTo(a, yL); g.lineTo(W, yL); g.stroke();
+    g.setLineDash([5, 4]); g.beginPath(); g.moveTo(a, yE); g.lineTo(W, yE); g.stroke(); g.setLineDash([]);
+    g.fillText(label + " · premium", a + 6, yH + 12); g.fillText("EQ " + eq.toFixed(2), a + 6, yE - 3); g.fillText("discount", a + 6, yL - 4);
+  };
+  for (const m of st.it.marks) if (m.type === "range" && visible(m) && st.show.range)
+    rangeBox(null, m.low, m.high, m.label, m.want, css("--accent"), m.tf === st.tf);   // a higher-TF range: lines only
+  for (const z of draft().mine) {
+    if (RANK[z.tf] > RANK[st.tf]) continue;
+    const x0 = xAt(z.t0);
+    if (z.kind === "range") rangeBox(x0, z.lo, z.hi, "mine" + (z.tf === st.tf ? "" : " " + z.tf.toUpperCase()) + (z.label ? ": " + z.label : ""), z.want, css("--mine"), z.tf === st.tf);
+    else { const y1 = series.priceToCoordinate(z.hi), y2 = series.priceToCoordinate(z.lo); if (y1 == null || y2 == null) continue;
+      const a = Math.max(0, x0 ?? 0); g.fillStyle = "rgba(192,86,42,.14)"; g.fillRect(a, y1, W - a, y2 - y1);
+      g.strokeStyle = g.fillStyle = css("--mine"); g.lineWidth = 1.5; g.strokeRect(a, y1, W - a, y2 - y1);
+      g.fillText("mine" + (z.tf === st.tf ? "" : " " + z.tf.toUpperCase()) + (z.label ? ": " + z.label : " zone"), a + 6, y1 + 12); }
+  }
+  if (drag) { g.strokeStyle = css("--mine"); g.setLineDash([4, 3]); g.strokeRect(drag.x0, drag.y0, drag.x1 - drag.x0, drag.y1 - drag.y0); g.setLineDash([]); }
   let row = 0;
   for (const m of st.it.marks) {
     if (!visible(m) || !st.show[group(m)]) continue;
@@ -201,6 +252,35 @@ function paint() {
   requestAnimationFrame(loop);
 })();
 
+// + range / + zone: press at one corner, release at the other
+const snapT = x => { const lg = chart.timeScale().coordinateToLogical(x); const rows = st.it.panels[st.tf] || [];
+  if (lg == null || !rows.length) return null; return rows[Math.max(0, Math.min(rows.length - 1, Math.round(lg)))][0]; };
+$("chart").addEventListener("pointerdown", e => {
+  if (!st.tool || e.button !== 0) return;
+  const b = $("chart").getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+  drag = { x0: x, y0: y, x1: x, y1: y }; e.preventDefault(); e.stopImmediatePropagation();
+}, true);
+window.addEventListener("pointermove", e => { if (!drag) return; const b = $("chart").getBoundingClientRect();
+  drag.x1 = e.clientX - b.left; drag.y1 = e.clientY - b.top; vdirty++; });
+window.addEventListener("pointerup", () => {
+  if (!drag) return;
+  const p0 = series.coordinateToPrice(drag.y0), p1 = series.coordinateToPrice(drag.y1), t0 = snapT(Math.min(drag.x0, drag.x1));
+  const big = Math.abs(drag.y1 - drag.y0) > 4;
+  if (big && p0 != null && p1 != null) {
+    draft().mine.push({ kind: st.tool, tf: st.tf, t0, hi: Math.round(Math.max(p0, p1) * 100) / 100, lo: Math.round(Math.min(p0, p1) * 100) / 100, label: "" });
+    saveDrafts();
+  }
+  drag = null; st.tool = null; $("chart").style.cursor = ""; chart.applyOptions({ handleScroll: true, handleScale: true });
+  side(); draw();
+});
+$("chart").addEventListener("contextmenu", e => {
+  const b = $("chart").getBoundingClientRect(), y = e.clientY - b.top, M = draft().mine;
+  const i = M.findIndex(z => { if (RANK[z.tf] > RANK[st.tf]) return false; const a = series.priceToCoordinate(z.hi), c = series.priceToCoordinate(z.lo);
+    return a != null && c != null && (Math.abs(a - y) <= 6 || Math.abs(c - y) <= 6); });
+  if (i >= 0) { e.preventDefault(); M.splice(i, 1); saveDrafts(); side(); vdirty++; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && st.tool) { st.tool = null; drag = null; $("chart").style.cursor = "";
+  chart.applyOptions({ handleScroll: true, handleScale: true }); draw(); } });
 $("note").oninput = () => { draft().note = $("note").value; saveDrafts(); };
 async function load(i) {
   st.i = (i + st.ids.length) % st.ids.length;
@@ -213,7 +293,7 @@ async function load(i) {
 }
 $("save").onclick = async () => {
   const d = draft();
-  const body = { id: st.it.id, asset: st.it.asset, day: st.it.day, kind: st.it.kind, verdict: d.verdict, comment: d.comment, note: d.note,
+  const body = { id: st.it.id, asset: st.it.asset, day: st.it.day, kind: st.it.kind, verdict: d.verdict, comment: d.comment, note: d.note, mine: d.mine,
                  statements: Object.fromEntries(st.it.statements.map(s => [s.id, s.text])) };
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { alert("save failed"); return; }

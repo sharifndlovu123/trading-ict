@@ -23,6 +23,7 @@ from ict_engine.concepts.bars import resample  # noqa: E402
 from ict_engine.concepts.context import _weekly_bars, completed_daily, weekly_structure_state  # noqa: E402
 from ict_engine.concepts.liquidity_map import build  # noqa: E402
 from ict_engine.data import dukascopy  # noqa: E402
+from ict_engine.concepts.events import swings  # noqa: E402
 from liqmap_build import NY, num, panel, wall  # noqa: E402
 
 OUT = Path("out/read")
@@ -55,6 +56,19 @@ def structure(f: pd.DataFrame) -> dict:
     return {"state": st, "guard": num(guard) if guard is not None else None,
             "since": wall(pd.Timestamp(last[0]).tz_localize(NY) if pd.Timestamp(last[0]).tzinfo is None else last[0]) if last else None,
             "flips": [[wall(pd.Timestamp(t).tz_localize(NY) if pd.Timestamp(t).tzinfo is None else t), s] for t, s in flips[-3:]]}
+
+
+def current_range(f: pd.DataFrame, tf: str, past: pd.DataFrame) -> tuple[float, float] | None:
+    """The range price is in now on ``tf``: the latest confirmed swing high and swing low (completed bars), each stretched
+    to any new extreme made since (1m bars up to the moment), so it always contains price."""
+    sw = swings(f, tf)
+    H = next((e for e in reversed(sw) if e.kind == "swing_high"), None)
+    L = next((e for e in reversed(sw) if e.kind == "swing_low"), None)
+    if H is None or L is None:
+        return None
+    hi = max(H.top, float(past[past.index >= H.origin_ts].high.max()))
+    lo = min(L.bottom, float(past[past.index >= L.origin_ts].low.min()))
+    return (lo, hi) if hi > lo else None
 
 
 def lab(x: dict) -> str:
@@ -92,7 +106,7 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
     areas, bs, ss = dedup(areas), sorted(dedup(bs), key=lambda x: x["price"]), sorted(dedup(ss), key=lambda x: -x["price"])
 
     # statements
-    st = []
+    st, marks = [], []
     for tf in ("1w", "1d", "4h", "1h"):
         s = S[tf]
         if s["state"] == "neutral":
@@ -144,7 +158,34 @@ def read(asset: str, bars: pd.DataFrame, d: date) -> dict | None:
         play += f" Price is inside the {inside[0]['tf']} {inside[0]['kind'].upper()} — respect there (reaction, closes holding) comes first."
     st.append({"id": "s_play", "tf": "", "text": "Where the play is: " + play})
 
-    marks = []
+    # the current range (framework §3): the 1H range = the leg we're in; the daily range = the HTF one.
+    # Sell only in premium of both, buy only in discount of both — the side comes from the play.
+    want_side = D if kind == "counter_weekly" else (W if W != "neutral" else D)
+    ranges = []
+    for tf, nm_ in (("1h", "1H range"), ("1d", "Daily range")):
+        r = current_range(fr[tf], tf, past)
+        if r:
+            ranges.append((tf, nm_, *r))
+    if ranges and want_side in ("bull", "bear"):
+        want = "premium" if want_side == "bear" else "discount"
+        parts, ok = [], []
+        for tf, nm_, lo, hi in ranges:
+            frac = (price - lo) / (hi - lo)
+            zone = "premium" if frac > 0.5 else "discount"
+            ok.append(zone == want)
+            parts.append(f"{nm_} {lo:.2f}–{hi:.2f} (EQ {(lo + hi) / 2:.2f}): price at {frac:.0%} = {zone}")
+        tf0, _, lo, hi = ranges[0]
+        ote = (lo + 0.62 * (hi - lo), lo + 0.79 * (hi - lo)) if want == "premium" else (hi - 0.79 * (hi - lo), hi - 0.62 * (hi - lo))
+        verb = "sell" if want == "premium" else "buy"
+        now = ("price is already in " + want + " of both — this is where the engine would look"
+               if all(ok) else f"not there yet — wait for price to come into {want}" if not any(ok)
+               else "only one range agrees — not both yet")
+        st.append({"id": "s_range", "tf": tf0, "text": "Current range: " + "; ".join(parts) + f". The play is {want_side}, "
+                   f"so I'm hoping for a {want}: {verb} only in {want} of both (OTE 62–79% of the {ranges[0][1]} = "
+                   f"{ote[0]:.2f}–{ote[1]:.2f}); {now}."})
+        for tf, nm_, lo, hi in ranges:
+            marks.append({"type": "range", "tf": tf, "low": lo, "high": hi, "want": want, "label": nm_})
+
     for tf, s in S.items():
         if s["guard"] is not None and s["state"] != "neutral":
             marks.append({"type": "level", "tf": tf, "price": s["guard"], "color": "down" if s["state"] == "bear" else "up",
