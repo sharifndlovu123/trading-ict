@@ -164,20 +164,35 @@ function paintLines() {
   const g = cv.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, el.clientWidth, el.clientHeight);
   if (!st.it) return;
   g.font = "11px ui-monospace, monospace"; g.lineWidth = 2;
-  for (const c of draft().changes[st.tf] || []) {
-    const x = ts.timeToCoordinate(c.t); if (x == null) continue;
-    g.strokeStyle = g.fillStyle = css(c.to === "bull" ? "--up" : "--down");
-    g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); g.setLineDash([]);
-    g.fillText("→ " + c.to, x + 4, 14);
-  }
-  const last = st.it.panels[st.tf] && st.it.panels[st.tf].length ? st.it.panels[st.tf][st.it.panels[st.tf].length - 1][0] : null;
-  for (const b of draft().bos[st.tf] || []) {
-    const x0 = ts.timeToCoordinate(b.t0), x1 = ts.timeToCoordinate(b.t1 || last), y = series.priceToCoordinate(b.price);
-    if (x0 == null || x1 == null || y == null) continue;
-    g.strokeStyle = g.fillStyle = css(b.dir === "up" ? "--up" : "--down");
-    g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-    g.beginPath(); g.arc(x0, y, 3, 0, 7); g.fill();
-    g.fillText("BOS " + (b.dir === "up" ? "↑" : "↓"), Math.max(x0, x1) - 46, y + (b.dir === "up" ? -7 : 13));
+  // a line shows on its own timeframe and on every lower one (weekly structure is read from the lower charts too)
+  const rows = st.it.panels[st.tf] || [], n = rows.length; if (!n) return;
+  const step = n > 1 ? rows[n - 1][0] - rows[n - 2][0] : 3600, sp = ts.options().barSpacing;
+  const xAt = t => {                                   // any time → x, between candles, beyond either end
+    let lo = 0, hi = n - 1;
+    if (t <= rows[0][0]) { const c = ts.logicalToCoordinate(0); return c == null ? null : c - (rows[0][0] - t) / step * sp; }
+    if (t >= rows[hi][0]) { const c = ts.logicalToCoordinate(hi); return c == null ? null : c + (t - rows[hi][0]) / step * sp; }
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (rows[m][0] <= t) lo = m; else hi = m; }
+    const c = ts.logicalToCoordinate(lo); return c == null ? null : c + (t - rows[lo][0]) / (rows[hi][0] - rows[lo][0]) * sp; };
+  const W = ts.width(), here = TFS.findIndex(([k]) => k === st.tf);
+  for (const [k, name] of TFS.slice(0, here + 1)) {
+    const own = k === st.tf, tag = own ? "" : name + " ";
+    g.lineWidth = own ? 2 : 1.5;
+    for (const c of draft().changes[k] || []) {
+      const x = xAt(c.t); if (x == null || x < 0 || x > W) continue;
+      g.strokeStyle = g.fillStyle = css(c.to === "bull" ? "--up" : "--down");
+      g.setLineDash(own ? [6, 4] : [2, 4]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); g.setLineDash([]);
+      g.fillText(tag + "→ " + c.to, x + 4, own ? 14 : 28);
+    }
+    for (const b of draft().bos[k] || []) {
+      const x0 = xAt(b.t0), x1 = b.t1 ? xAt(b.t1) : xAt(rows[n - 1][0]), y = series.priceToCoordinate(b.price);
+      if (x0 == null || x1 == null || y == null || Math.max(x0, x1) < 0 || Math.min(x0, x1) > W) continue;
+      const a = Math.max(Math.min(x0, x1), 0), z = Math.min(Math.max(x0, x1), W);
+      g.strokeStyle = g.fillStyle = css(b.dir === "up" ? "--up" : "--down");
+      g.setLineDash(own ? [] : [8, 3]); g.beginPath(); g.moveTo(a, y); g.lineTo(z, y); g.stroke(); g.setLineDash([]);
+      if (x0 >= 0) { g.beginPath(); g.arc(x0, y, 3, 0, 7); g.fill(); }
+      const lab = tag + "BOS " + (b.dir === "up" ? "↑" : "↓");
+      g.fillText(lab, z - g.measureText(lab).width - 4, y + (b.dir === "up" ? -7 : 13));
+    }
   }
 }
 (function loop() {
