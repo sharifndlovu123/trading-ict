@@ -145,7 +145,7 @@ Models pick from these; the engine tests each variant.
 | Consequent encroachment | 50% of the FVG | Order block | Beyond the OB that launched the move |
 | Complete fill | Far edge of the FVG | Swing point | Beyond the swing that was swept |
 
-Source: 2022 Content slide "entry types / stop loss types". Order block quality (same deck, "selective preference"): prefer a **defined candle body** (most range between open and close) over a small body with a large wick.
+Source: 2022 Content slide "entry types / stop loss types" (p.5). 2022 model: `entry_level` = proximal (drill) | ce | distal (complete fill); `stop_type` = swing (default) | ob | imbalance (added 2026-11-16, untested). Order block quality (same deck, "selective preference"): prefer a **defined candle body** (most range between open and close) over a small body with a large wick.
 
 **From ICT's live executions** (`personal/notion/live-exec.md`): extra stop type **wick CE** — stop at the 50% of the wick that swept liquidity (5 Jan 2024). **After TP1, trail the stop** to just below the HTF FVG that launched the move (8 Dec 2023 NFP) — runner variant. Prefer **unfilled** PD arrays: a low/FVG already delivered efficiently is not a target or entry zone (8 Dec FVG tip).
 

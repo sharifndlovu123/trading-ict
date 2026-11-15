@@ -294,12 +294,18 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
             dr_t = (f" Draw: the remaining {dr['tf']} FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f})"
                     + (f", liquidity at its edge {dr['liquidity']:.2f}" if dr["liquidity"] else "") + f" — {dr['state']}." if dr else "")
             when = {"1M": f"{r['candle']:%b %Y}", "1w": f"wk {r['candle']:%d %b %Y}", "1d": f"{r['candle'] + timedelta(hours=6):%d %b %Y}"}[tf]
-            live_ob = bool(ev) and pl["fits"] and not r["state"].startswith("failed")
-            why = ", ".join(w for w, bad in (("no event", not ev), ("wrong half", not pl["fits"])) if bad)
+            hl = r["htf_level"]
+            need_htf = tf != "1M"                 # Bible p.16 step 2: into a HTF support/resistance (none above 1M)
+            live_ob = bool(ev) and pl["fits"] and not r["state"].startswith("failed") and (hl or not need_htf)
+            why = ", ".join(w for w, bad in (("no event", not ev), ("wrong half", not pl["fits"]),
+                                                ("no HTF level", need_htf and not hl)) if bad)
             tag = ("tradeable" if live_ob else "not one to use: " + ", ".join(x for x in (why, r["state"] if
                    r["state"].startswith("failed") else "") if x))
             if not r["state"].startswith("failed"):
                 tag += f"; {r['state']}"
+            tag += f"; {r['validation']}"
+            tag += (f"; into {hl['what']} {hl['zone'][0]:.2f}" + (f"–{hl['zone'][1]:.2f}" if hl["zone"][1] != hl["zone"][0] else "")
+                    if hl else "") + ("; displacement (FVG left by the move away)" if r["displacement"] else "")
             obs.append(f"{tf} {r['direction']}ish OB {when} [{tag}]: body "
                        f"{r['body'][0]:.2f}–{r['body'][1]:.2f} (MT {r['mt']:.2f}), {ev_t}; {pl['zone']} {pl['fraction']:.2f} of "
                        f"the {pl['basis']} {pl['range'][0]:.2f}–{pl['range'][1]:.2f} = {fits}.{dr_t}")

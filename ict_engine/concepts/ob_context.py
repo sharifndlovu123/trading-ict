@@ -59,7 +59,9 @@ def _event(bars: pd.DataFrame, ob, tf: str) -> dict | None:
     for x in lv:
         later = bars.loc[x.valid_from:bars.index[a - 1]] if a else bars.iloc[:0]
         gone = (later.high.max() > x.price) if bear else (later.low.min() < x.price)
-        if gone or not ((body_top < x.price <= ext) if bear else (ext <= x.price < body_bot)):
+        # the run traded THROUGH it: above the candle(s)' open (bearish OB = up-close: open = body bottom), up to the
+        # extreme — a close above the old high still ran its buystops (Bible p.16 step 1)
+        if gone or not ((body_bot < x.price <= ext) if bear else (ext <= x.price < body_top)):
             continue
         taken.append(x)
     if taken:
@@ -86,10 +88,11 @@ def _event(bars: pd.DataFrame, ob, tf: str) -> dict | None:
 
 
 def _place(bars: pd.DataFrame, ob, tf: str) -> dict:
-    """Premium / discount of the OB body. The range is the dealing range the OB's move retraced into: for a bearish
-    OB, the last swing high above the move's extreme (known before the OB candle) → the lowest low since it (Sharif's
-    gold sell, 2026-11-09 daily OB: 0.44 of the 40-day window, premium of the 4,217 → 3,869 leg). With no such swing
-    (a new high) it falls back to the ICT look-back window. Bullish mirrors. ``lookback`` keeps the window's reading."""
+    """Premium / discount of the OB body in the DEALING RANGE it formed (ICT Bible pp.27–29): a range is set when
+    sellstops are run to make a new low and then buystops are run to make a new high (or the mirror); premium above its
+    50 %. Bearish OB: the high = the OB move's high (it ran the buystops); the low = the latest swing low before the OB
+    candle that itself ran an earlier swing low's sellstops. Bullish mirrors. Falls back to the ICT look-back window
+    when no such swing exists; ``lookback`` keeps the window's reading."""
     i = int((bars["close_ts"] <= ob.ts).to_numpy().nonzero()[0][-1]) if "close_ts" in bars else bars.index.get_loc(ob.ts)
     a = bars.index.get_loc(ob.origin_ts)
     bear = ob.direction == "bear"
@@ -100,15 +103,15 @@ def _place(bars: pd.DataFrame, ob, tf: str) -> dict:
     def frac(lo, hi):
         return (mid - lo) / (hi - lo) if hi > lo else 0.5
     lb = (float(w.low.min()), float(w.high.max()))
-    move = bars.iloc[a:i + 1]
-    ext = float(move.high.max() if bear else move.low.min())
-    known_by = bars.index[a]
-    sw = [e for e in swings(bars.iloc[:a + 1], tf) if e.ts <= known_by and
-          e.kind == ("swing_high" if bear else "swing_low") and ((e.top > ext) if bear else (e.bottom < ext))]
-    if sw:
-        e = max(sw, key=lambda x: x.origin_ts)
-        leg = bars.loc[e.origin_ts:bars.index[a]]            # up to the OB candle: the confirming candle doesn't set it
-        lo, hi = (float(leg.low.min()), float(e.top)) if bear else (float(e.bottom), float(leg.high.max()))
+    ext = float(ob.top if bear else ob.bottom)                 # the OB candle(s)' high (low): the run end
+    kind = "swing_low" if bear else "swing_high"
+    sw = sorted((e for e in swings(bars.iloc[:a + 1], tf) if e.kind == kind and e.ts <= bars.index[a]),
+                key=lambda e: e.origin_ts)
+    ran = [e for k, e in enumerate(sw[1:], 1) if ((e.bottom < sw[k - 1].bottom) if bear else (e.top > sw[k - 1].top))
+           and ((e.bottom < ext) if bear else (e.top > ext))]
+    if ran:
+        e = ran[-1]
+        lo, hi = (float(e.bottom), ext) if bear else (ext, float(e.top))
         basis = "dealing range"
     else:
         (lo, hi), basis = lb, "look-back"
@@ -116,6 +119,41 @@ def _place(bars: pd.DataFrame, ob, tf: str) -> dict:
     return {"range": (round(lo, 2), round(hi, 2)), "basis": basis, "fraction": round(f, 2),
             "zone": "premium" if f >= 0.5 else "discount", "fits": (f >= 0.5) == bear,
             "lookback": {"range": (round(lb[0], 2), round(lb[1], 2)), "fraction": round(frac(*lb), 2)}}
+
+
+def _htf_level(ob, htf: list | None) -> dict | None:
+    """Bible p.16 step 2: the OB candle(s) came INTO a higher-timeframe resistance (bearish; support for bullish) —
+    a HTF bearish FVG still open, a HTF bullish FVG closed through (now an IFVG resisting), or an old HTF swing high,
+    that the OB candle(s)' range reached. Only HTF bars closed by the OB candle's own start are used."""
+    if not htf:
+        return None
+    bear = ob.direction == "bear"
+    for frame, t in htf:
+        ct = frame["close_ts"] if "close_ts" in frame else pd.Series(frame.index, index=frame.index)
+        k = frame[ct <= ob.origin_ts]
+        if len(k) < 3:
+            continue
+        kc = k.close
+        for g in reversed(fvgs(k, t)):
+            after = kc[kc.index > g.origin_ts].iloc[1:]
+            if g.direction == ("bear" if bear else "bull"):
+                closed = (after > g.top).any() if bear else (after < g.bottom).any()
+                name = f"{t} {'bearish' if bear else 'bullish'} FVG"
+            else:
+                inv = (after < g.bottom) if bear else (after > g.top)
+                if not inv.any():
+                    continue
+                back = after[after.index > inv.idxmax()]
+                closed = (back > g.top).any() if bear else (back < g.bottom).any()
+                name = f"{t} {'bearish' if bear else 'bullish'} IFVG"
+            if not closed and ob.bottom <= g.top and ob.top >= g.bottom:
+                return {"what": name, "zone": (round(float(g.bottom), 2), round(float(g.top), 2))}
+        for e in reversed(swings(k, t)):
+            if e.kind == ("swing_high" if bear else "swing_low"):
+                lvl = e.top if bear else e.bottom
+                if ob.bottom <= lvl <= ob.top:
+                    return {"what": f"{t} old {'high' if bear else 'low'}", "zone": (round(float(lvl), 2),) * 2}
+    return None
 
 
 def _remaining(frame: pd.DataFrame, tf: str, bear: bool, ref: float, known_ts: pd.Timestamp) -> list:
@@ -220,15 +258,33 @@ def _state(bars: pd.DataFrame, ob, as_of: pd.Timestamp, fine: pd.DataFrame | Non
     return "holding"
 
 
+def _validation(bars: pd.DataFrame, ob, as_of: pd.Timestamp) -> str:
+    """How far the OB has been validated by ``as_of`` (bearish; bullish mirrors), ruling §23: its open crossed = the
+    change in the state of delivery (ICT 2023, when the OB exists at all); then its low traded through (ICT Core
+    Content M4: "trades through" — a wick counts); then a close below its low (ICT Bible p.16, the strictest)."""
+    bear = ob.direction == "bear"
+    lo, hi = ob.bottom, ob.top
+    ct = bars["close_ts"] if "close_ts" in bars else pd.Series(bars.index, index=bars.index)
+    a = bars.index.get_loc(ob.origin_ts)
+    after = bars.iloc[a + 1:][(ct.iloc[a + 1:] <= as_of).to_numpy()]
+    if ((after.close < lo) if bear else (after.close > hi)).any():
+        return "closed beyond its " + ("low" if bear else "high")
+    if ((after.low < lo) if bear else (after.high > hi)).any():
+        return "traded through its " + ("low" if bear else "high")
+    return "open crossed only"
+
+
 def ob_reads(bars: pd.DataFrame, tf: str, as_of: pd.Timestamp, last: int = 3, fine: pd.DataFrame | None = None,
              htf: list | None = None) -> list[dict]:
     """The newest ``last`` OBs (single candle, close through its open) known by ``as_of``, each with event / place / draw.
     An OB without a transitional event is still listed (``event`` None) so the read can say it is "just a candle"."""
     b = bars[(bars["close_ts"] if "close_ts" in bars else bars.index) <= as_of]
     out = []
-    for ob in order_blocks(b, tf, confirm="open", single=True)[-last:]:
+    for ob in order_blocks(b, tf, confirm="open", single=True)[-last:]:   # ICT 2023: open crossed (ruling §23)
         top, bot = ob.meta["body"]
         out.append({"tf": tf, "direction": ob.direction, "candle": ob.origin_ts, "known": ob.ts,
                     "body": (round(bot, 2), round(top, 2)), "mt": round((top + bot) / 2, 2),
-                    "event": _event(b, ob, tf), "place": _place(b, ob, tf), "draw": _draw(b, ob, tf, as_of, fine, htf), "state": _state(b, ob, as_of, fine)})
+                    "event": _event(b, ob, tf), "place": _place(b, ob, tf), "draw": _draw(b, ob, tf, as_of, fine, htf), "state": _state(b, ob, as_of, fine),
+                    "displacement": bool(ob.meta.get("fvg")), "htf_level": _htf_level(ob, htf),
+                    "validation": _validation(b, ob, as_of)})
     return out

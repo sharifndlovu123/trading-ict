@@ -62,6 +62,10 @@ class Params:
     use_poi: bool = True
     min_potential: float = 10.0          # handles from entry to final target (ICT minimum framework)
     stop_buffer: float = 0.25
+    # stop types (2022 Content p.5, framework §8): swing = beyond the manipulation extreme (the swept swing point);
+    # ob = beyond the order block that launched the displacement (last opposite-close candle before it);
+    # imbalance = beyond the far end of the entry FVG
+    stop_type: str = "swing"
     # TP1 (earliest close), framework §0: day trade = opposite side of the day/session; 1m swings are
     # too fine. Swings of these TFs + context levels are candidates; TP1 at least min_tp1_r from entry.
     tp1_swing_tfs: tuple[str, ...] = ("5m",)
@@ -133,9 +137,27 @@ class Params:
             extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
         if self.entry_mode != "limit":
             extra.append(self.entry_mode)
+        if self.stop_type != "swing":
+            extra.append(f"stop_{self.stop_type}")
         win = "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)
         base = f"{self.entry_tf}-{self.entry_level}-{self.fvg_pick}-[{win}]"
         return base + ("-no_" + "_".join(off) if off else "") + "".join(f"-{e}" for e in extra)
+
+
+def stop_anchor(etf: pd.DataFrame, fvg, long: bool, stop_type: str, extreme: float, since: pd.Timestamp) -> float:
+    """The price the stop sits beyond (before the buffer), 2022 Content p.5 stop types:
+    swing = the manipulation extreme; imbalance = the entry FVG's far edge; ob = the low (high) of the last down-close
+    (up-close) candle on the entry timeframe before the displacement candle that left the FVG, from the liquidity
+    grab on — falls back to the swing when there is none."""
+    if stop_type == "swing":
+        return extreme
+    if stop_type == "imbalance":
+        return float(fvg.bottom if long else fvg.top)
+    if stop_type == "ob":
+        seg = etf[(etf.index >= since) & (etf.index < fvg.origin_ts)]
+        opp = seg[seg.close < seg.open] if long else seg[seg.close > seg.open]
+        return float(opp.low.iloc[-1] if long else opp.high.iloc[-1]) if len(opp) else extreme
+    raise ValueError(f"stop_type must be swing | ob | imbalance, got {stop_type!r}")
 
 
 def _ts(d: date, t: time) -> pd.Timestamp:
@@ -228,7 +250,10 @@ def _evaluate(mss: Event, ctx, day, asset, p: Params, day_1m, taken, gaps, htf_g
     # stop beyond the extreme of the manipulation: lowest low (highest high) from the liquidity grab to the MSS
     manip = day_1m[(day_1m.index >= liquidity.origin_ts) & (day_1m.index <= mss.origin_ts)]
     extreme = float(manip.low.min()) if long else float(manip.high.max())
-    stop = extreme - p.stop_buffer if long else extreme + p.stop_buffer
+    etf = (day_1m if p.entry_tf == "1m" else resample(day_1m.drop(columns="close_ts"), p.entry_tf)) \
+        if p.stop_type == "ob" else day_1m
+    anchor = stop_anchor(etf, fvg, long, p.stop_type, extreme, liquidity.origin_ts)
+    stop = anchor - p.stop_buffer if long else anchor + p.stop_buffer
     if (long and not stop < entry) or (not long and not stop > entry):
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
         return setup

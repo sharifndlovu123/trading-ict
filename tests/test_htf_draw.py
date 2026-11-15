@@ -61,15 +61,34 @@ def test_a_wick_through_is_not_a_break():
     assert bos_draw(b, "1M", b.close_ts.iloc[-1]) is None
 
 
-def test_ob_place_uses_the_dealing_range_the_move_retraced_into():
-    # a bearish OB: swing high 120 first, a drop to 45, then a rally (OB candle) that turns down
-    rows = [(100, 110, 98, 105), (105, 120, 100, 115), (115, 116, 45, 50), (50, 72, 48, 70),
-            (70, 112, 66, 108),    # 4: the OB candle (last up-close), body 70–108, high 112 < the swing high 120
-            (108, 110, 60, 62)]    # 5: closes 62 < 70 → bearish OB
+def test_ob_place_is_premium_of_the_dealing_range_bible():
+    # Bible pp.27–29: sellstops run to a new low (80 < 90), then buystops run to a new high (the OB candle, 118 > 115)
+    rows = [(100, 110, 95, 105),
+            (105, 108, 90, 92),     # 1 swing low 90
+            (92, 115, 93, 112),     # 2 swing high 115
+            (112, 113, 80, 82),     # 3 swing low 80: ran the sellstops under 90
+            (82, 100, 84, 98),
+            (98, 118, 96, 116),     # 5 the OB candle (last up-close): runs the buystops above 115, body 98–116
+            (116, 117, 88, 90)]     # 6 closes 90 < its low 96 → a valid bearish OB (Bible p.16 step 3)
     b = bars(rows)
     r = [x for x in ob_reads(b, "1M", b.close_ts.iloc[-1]) if x["direction"] == "bear"][-1]
-    assert r["place"]["basis"] == "dealing range" and r["place"]["range"] == (45, 120)
-    assert r["place"]["fraction"] == pytest.approx((89 - 45) / 75, abs=0.01) and r["place"]["zone"] == "premium"
+    assert r["candle"] == b.index[5] and r["known"] == b.close_ts.iloc[6] and r["validation"] == "closed beyond its low"
+    assert r["place"]["basis"] == "dealing range" and r["place"]["range"] == (80, 118)
+    assert r["place"]["fraction"] == pytest.approx((107 - 80) / 38, abs=0.01) and r["place"]["fits"]
+    assert r["event"]["what"] == "swing high" and r["event"]["price"] == 115
+
+
+def test_ob_validation_stages_ruling_23():
+    base = [(100, 110, 95, 105), (105, 108, 90, 92), (92, 115, 93, 112), (112, 113, 80, 82), (82, 100, 84, 98),
+            (98, 118, 96, 116)]                                   # bar 5: the up-close OB candle, open 98, low 96
+    def at(last):
+        b = bars(base + [last])
+        r = [x for x in ob_reads(b, "1M", b.close_ts.iloc[-1]) if x["candle"] == b.index[5]]
+        return r[0]["validation"] if r else None
+    assert at((116, 117, 99, 99.5)) is None                       # open 98 not crossed by a close: no OB yet
+    assert at((116, 117, 97, 97.5)) == "open crossed only"         # ICT 2023: the change in the state of delivery
+    assert at((116, 117, 95, 97.5)) == "traded through its low"    # ICT Core Content: trades through (wick)
+    assert at((116, 117, 88, 90)) == "closed beyond its low"       # ICT Bible: close below its low
 
 
 @pytest.fixture(scope="module")
