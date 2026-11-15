@@ -16,7 +16,9 @@ def stats(g: pd.DataFrame) -> dict:
     t = g[g.trade == True]  # noqa: E712
     n, r = len(t), t.runner_r
     sd = float(r.std()) if n > 1 else 0.0
-    return {"plans": int(len(g)), "trades": n, "win": round(100 * float((r > 0).mean()), 1) if n else None,
+    tp1 = t.outcome.str.contains("TP1")                      # the vote: TP1 before the stop
+    return {"plans": int(len(g)), "trades": n, "win": round(100 * float(tp1.mean()), 1) if n else None,
+            "profit": round(100 * float((r > 0).mean()), 1) if n else None,
             "sum": round(float(r.sum()), 1), "mean": round(float(r.mean()), 3) if n else None,
             "z": round(float(r.mean()) / sd * n ** 0.5, 2) if n > 1 and sd > 0 else None,
             "full_stops": int((r <= -0.99).sum()), "avg_win": round(float(r[r > 0].mean()), 2) if (r > 0).any() else None,

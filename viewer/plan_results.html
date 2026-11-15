@@ -62,6 +62,8 @@ button { font: inherit; color: var(--ink); background: var(--surface); border: 1
 
   <h2>Reading it</h2>
   <div class="card"><ul class="read">
+    <li><b>Correction (Fable, 2026-11-16): "win %" now means TP1 hit before the stop.</b> Earlier figures (38 % touch, 25 % support) counted any trade closed in profit,
+      most of them still open at the multi-day horizon. Strict TP1 hits: touch 6.7 %, support 4.8 %, confirm + flip 12.5 %. The plan's TP1 (median 2.6 ADR away, stop 1.6 ADR) is too far to resolve.</li>
     <li><b>Filling on the first touch loses clearly</b> (−0.15 R a trade, z −4.3).</li>
     <li><b>Stop beyond the zone: wins more often, still loses.</b> Support trades win 25 % (was 11 %) and full −1 R stops drop from 403 to 324 of 460.
       With each trade capped at 10 R the support leg improves from −96 R to −74 R. The raw total looks worse (−62 vs +4) only because the wider stop
@@ -73,7 +75,7 @@ button { font: inherit; color: var(--ink); background: var(--surface); border: 1
     <li>In-sample, overlapping days, nothing near z 2.4: it tells us what to fix, not what works.</li>
   </ul></div>
 
-  <h2>Breakdowns <span class="note">(trades · win % · mean R · total R · z)</span></h2>
+  <h2>Breakdowns <span class="note">(trades · win % = TP1 hit before the stop · mean R · total R · z)</span></h2>
   <div class="grid2" id="cuts"></div>
 
   <h2>Confirm + flip: what happened on each plan day</h2>
@@ -100,7 +102,7 @@ $("sub").textContent = `${D.reads} days read at 08:30 NY on US100 · US500 · US
 $("tiles").innerHTML = MODES.map(([m, nm, c]) => { const h = D.head[m];
   return `<div class="tile"><div class="k"><span class="sw" style="background:var(${c})"></span>${nm}</div>
     <div class="v ${cls(h.sum)}">${sg(h.sum)} R</div>
-    <div class="d">${h.trades} trades · ${h.win}% win · ${sg(h.mean)} R/trade · z ${h.z}</div>
+    <div class="d">${h.trades} trades · <b>${h.win}% hit TP1</b> (${h.profit}% closed in profit) · ${sg(h.mean)} R/trade · z ${h.z}</div>
     <div class="d">without its 3 best trades: <b class="${cls(h.wo3)}">${sg(h.wo3)} R</b> · each capped at 10 R: <b class="${cls(h.cap10)}">${sg(h.cap10)} R</b></div></div>`; }).join("");
 $("legend").innerHTML = MODES.map(([m, nm, c]) => `<span><span class="sw" style="background:var(${c})"></span>${nm}</span>`).join("");
 
