@@ -127,7 +127,7 @@ def weekly(daily: pd.DataFrame) -> pd.DataFrame:
     """Completed-session daily bars → weekly bars (Monday-dated; a week's Sunday evening belongs to its Monday)."""
     if daily.empty:
         return daily
-    wk = daily.index - pd.to_timedelta(daily.index.weekday, unit="D")
+    wk = daily.index - pd.to_timedelta(daily.index.day_of_week, unit="D")
     return daily.groupby(wk).agg(open=("open", "first"), high=("high", "max"), low=("low", "min"),
                                  close=("close", "last"), close_ts=("close_ts", "last"))
 
