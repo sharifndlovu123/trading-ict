@@ -1,6 +1,6 @@
 # Pre-registration — 2022 model: cost/risk gate 0.05 and no premarket, on 2020–2021 (never tested)
 
-Written 2026-11-16, before any run on the period. Status: **draft — waits for Sharif's go-ahead** (a clean period is spent once).
+Written 2026-11-16, before any run on the period. Status: **not run — the variants failed the in-sample condition (below). 2020–2021 stays unspent.**
 
 ## Why
 US100 sweep 2026-11-16 (review log #38, `research/sweeps/2026-11-16-us100-full-sweep.md`), in-sample 2022-01-03 → 2024-06-28:
@@ -33,7 +33,18 @@ Reported beside it, not part of the bar: win rate with its Wilson range, runner 
 - **Fail:** logged as failed in `research/review-log.md`; no re-tuning on 2020–2021. The period stays usable only for rules that were not shaped by this result.
 
 ## In-sample check (2022-01-03 → 2024-06-28, three assets)
-_(appended when the run finishes)_
+Run 2026-11-16 (`reports/variants-2022-01-03-2024-06-28-only.parquet`), 2022 model, mean R (win %) per asset:
+
+| Variant | US100 | US500 | US30 | Beats baseline on all three? |
+|---|---|---|---|---|
+| baseline | −0.076 (33.5%), n 573 | +0.009 (36.7%), n 229 | −0.104 (32.3%), n 303 | |
+| A `cost <= 0.05R` | +0.048 (36.7%), n 390 | +0.141 (41.5%), n 65 | **−0.232** (26.7%), n 86 | **No** (US30 worse) |
+| B `no premarket` | +0.015 (36.4%), n 467 | +0.029 (37.2%), n 207 | −0.109 (32.0%), n 272 | **No** (US30 unchanged) |
+| C both | +0.113 (38.6%), n 334 | +0.198 (43.5%), n 62 | **−0.256** (25.9%), n 81 | **No** |
+
+The rule in ADR terms (risk ≥ 0.05 ADR), per asset: US100 42% / +0.204 R (n 202); US500 37% / +0.023 (n 183); US30 **29% / −0.178** (n 200). On US30 the 19 trades with the tiniest stops did best. The stop-size effect is a US100 effect, not a property of the model; premarket loses on US100 (−0.44 R, n 108) and US500 (−0.18, n 22) but not on US30 (−0.09, n 32, same as its other windows).
+
+**Decision: no hold-out run.** The condition written above was not met, so 2020–2021 was not touched.
 
 ## Hold-out result (2020–2021)
-_(appended after the single run)_
+Not run.
