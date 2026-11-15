@@ -49,3 +49,17 @@ US100 2023-05-22 (the close through the Aug-2022 lower high he described); no ot
 (Oct 2019 →), and the backtest loader's warm-up is raised from 70 to 800 days (more history before the start only;
 the other rules use fixed tails — checked equal on a before/after backtest). Everything else in this pre-registration
 (rule, variant, metric, pass bar z ≥ 2.4 paired, ≥ 30 OOS counter-structure trades, last definition on this OOS) stands.
+
+## Amendment 2 (2026-11-16, before any run): wicks vs weak closes; margin 0.1; checked with history from Oct 2019
+With the Oct 2019 → Sep 2021 history fetched, amendment 1's rule turned bear 2–4 months late in 2022: a wick through the
+protected low with the close back inside moved the guard (US100 Jan 24 2022 wick to 13719, close 14414), and it kept
+chasing wicks. Sharif turned bear on the first weekly close below it (US100 2022-02-07). Changed: **only a weak close**
+(through the guard, short of the margin) is a range and moves the guard to that week's extreme (US30 Nov 2022: close 64
+points above, then a range until 17 Jul 2023); **a wick with the close back inside changes nothing.** Margin chosen on
+his 243 in-sample labelled weeks among {0, 0.1, 0.15, 0.25, 0.5} × weekly ATR(14): 87 / 95 / 94 / 93 / 78% agreement →
+**0.1** (0.1–0.25 is a plateau). Flips at 0.1 since 2021-06: US100 bear 2022-02-07 (his: same week), bull 2023-05-15
+(at the break he described); US500 bear 2022-03-07 (his 2022-04-18), bull 2023-06-12 (same); US30 bear 2022-03-07 (his
+2022-02-21), bull 2023-07-17 (the week he named). Nothing OOS was looked at.
+Backtest warm-up 70 → 800 days: before/after on 2022-06-01 → 2022-09-30 (both models, US100 + US30, 14.6k rows) differ
+only in the first week of the run (bias on 232 rows, 7 trade results) — the old 70 calendar days were < the 60 trading
+days `dol` needs. Every later row identical.

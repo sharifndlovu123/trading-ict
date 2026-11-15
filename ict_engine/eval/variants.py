@@ -83,6 +83,8 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "re-entry v2: no chase": replace(BASE, reentry="after_stop", reentry_nochase=True),
     "re-entry v2: counter-trend small grab": replace(BASE, reentry="after_stop", counter_tp1="reentry"),
     "small grab: every counter-trend trade": replace(BASE, counter_tp1="all"),
+    # research/preregistered-weekly-structure-2026-11-16.md (amendment 1): the weekly = intermediate-term structure
+    "small grab: against the weekly structure": replace(BASE, counter_tp1="all", weekly_rule="weekly_structure"),
 }
 
 
@@ -139,6 +141,8 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "re-entry v2: no chase": replace(MB, reentry="after_stop", reentry_nochase=True),
     "re-entry v2: counter-trend small grab": replace(MB, reentry="after_stop", counter_tp1="reentry"),
     "small grab: every counter-trend trade": replace(MB, counter_tp1="all"),
+    # research/preregistered-weekly-structure-2026-11-16.md (amendment 1): the weekly = intermediate-term structure
+    "small grab: against the weekly structure": replace(MB, counter_tp1="all", weekly_rule="weekly_structure"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

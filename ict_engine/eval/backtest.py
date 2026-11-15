@@ -150,9 +150,12 @@ def run(bars_1m: pd.DataFrame, start: date, end: date, asset: str,
     return pd.DataFrame(rows)
 
 
+WARMUP_DAYS = 800                                           # was 70 until the weekly-structure pre-registration
+
+
 def load_range(asset: str, start: date, end: date) -> pd.DataFrame:
     from ict_engine.data.dukascopy import load
-    first = start - timedelta(days=70)                      # warm-up for 20/40/60-day ranges
+    first = start - timedelta(days=WARMUP_DAYS)             # warm-up: 20/40/60-day ranges, and weekly structure (~2 years)
     while True:
         try:
             return load(asset, first, end)

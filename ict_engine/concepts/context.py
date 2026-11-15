@@ -279,7 +279,8 @@ def bias_dol_weekly(daily: pd.DataFrame) -> tuple[str, str]:
     return side(done.iloc[-1], done.iloc[-2], "last week") or ("neutral", "last week was an inside week")
 
 
-WEEKLY_BREAK_ATR = 0.25          # a weekly break must close this many weekly ATRs (14 weeks) beyond the protected level
+WEEKLY_BREAK_ATR = 0.1           # a weekly break must close this many weekly ATRs (14 weeks) beyond the protected level
+                                 # (fitted on Sharif's in-sample timeline: 0.1–0.25 all agree 93–95% of weeks)
 
 
 def _weekly_bars(daily: pd.DataFrame) -> pd.DataFrame | None:
@@ -314,7 +315,8 @@ def weekly_structure_state(w: pd.DataFrame, m: float = WEEKLY_BREAK_ATR, n_atr: 
     """Walk completed weeks; return (state, guard, flips). Sharif 2026-11-16 + ruling §21 (shift ≠ break):
     - bear: the guard is the intermediate-term high the latest intermediate-term low came from (the protected lower
       high). Higher highs below it are shifts, not a change. A weekly close above guard + m × weekly ATR is a break →
-      bull. Price trading above the guard without such a close → the guard rises to that high (the range top).
+      bull. A weaker close above the guard is no break: price ranges, and the guard rises to that week's high (the range
+      top). A wick through the guard with the close back inside changes nothing.
     - bull: mirror with the protected higher low. neutral until the first break of an intermediate-term level.
     Swings count only from the week they are known (no look-ahead)."""
     ith, itl = _term_swings(w)
@@ -336,16 +338,16 @@ def weekly_structure_state(w: pd.DataFrame, m: float = WEEKLY_BREAK_ATR, n_atr: 
             if c[i] > guard + m * atr:
                 state, guard, seen_high = "bull", (ls[-1][1] if ls else lo[i]), (hs[-1] if hs else None)
                 flips.append((w.index[i], "bull"))
-            elif h[i] > guard:
-                guard = float(h[i])
+            elif c[i] > guard:
+                guard = float(h[i])                         # a weak close through it → a range; its top must break
         else:
             if hs and hs[-1] != seen_high and ls and ls[-1][0] < hs[-1][0]:
                 guard, seen_high = ls[-1][1], hs[-1]
             if c[i] < guard - m * atr:
                 state, guard, seen_low = "bear", (hs[-1][1] if hs else h[i]), (ls[-1] if ls else None)
                 flips.append((w.index[i], "bear"))
-            elif lo[i] < guard:
-                guard = float(lo[i])
+            elif c[i] < guard:
+                guard = float(lo[i])                        # a weak close through it → a range; its bottom must break
     return state, guard, flips
 
 

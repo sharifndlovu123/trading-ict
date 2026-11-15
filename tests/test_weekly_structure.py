@@ -8,14 +8,15 @@ from ict_engine.concepts.context import (BIAS_RULES, _term_swings, _weekly_bars,
                                          weekly_structure_state)
 
 NY = "America/New_York"
-# Weekly mids: peak, trough, peak, ... (each week's range = mid ± 5, close = mid; ATR = 10 → a break needs 2.5 beyond).
+# Weekly mids: peak, trough, peak, ... (each week's range = mid ± 5, close = mid; ATR = 10 → a break needs 1.0 beyond).
 #   idx 0–15: a downtrend (peaks 300 320 310 300 290 295 285 280, troughs 280 290 270 250 240 245 230 235)
 #   idx 16 P290: a higher high (295) still below the protected high 300
-#   idx 18 P298: high 303 pokes above 300, close 298 is no break → the guard rises to 303
-#   idx 20 P306: close 306 > 303 + 2.5 → the break, bull
+#   idx 18 P300.5: closes 0.5 above 300, short of 301 → no break; price ranges, the guard rises to its high 305.5
+#   idx 20 P310: close 310 > 305.5 + 1 → the break, bull
 # ITH: idx10 (300, known at 13; idx2 is the first short-term high so it can't be intermediate).
 # ITL: idx9 (235, known at 12), idx13 (225, known at 16).
-MIDS = [300, 280, 320, 290, 310, 270, 300, 250, 290, 240, 295, 245, 285, 230, 280, 235, 290, 260, 298, 270, 306, 285]
+MIDS = [300, 280, 320, 290, 310, 270, 300, 250, 290, 240, 295, 245, 285, 230, 280, 235, 290, 260, 300.5, 270, 310, 285]
+WICK = MIDS[:18] + [298, 270, 302]          # idx18: high 303 wicks above 300, closes 298 back inside; idx20 closes 302
 
 
 def daily(mids, last_day=4):
@@ -57,13 +58,20 @@ def test_higher_high_below_the_protected_high_is_not_a_change():
     assert s == "bear" and guard == 300.0
 
 
-def test_a_poke_without_a_displacement_close_raises_the_guard_to_the_range_top():
-    s, guard, _ = state(19)                                          # idx18: high 303 > 300, close 298 < 302.5
-    assert s == "bear" and guard == 303.0
+def test_a_weak_close_through_the_guard_is_a_range_and_raises_it_to_the_range_top():
+    s, guard, _ = state(19)                                          # idx18: close 300.5 > 300 but < 301
+    assert s == "bear" and guard == 305.5
+
+
+def test_a_wick_through_the_guard_with_the_close_back_inside_changes_nothing():
+    w = _weekly_bars(daily(WICK[:19]))
+    assert weekly_structure_state(w)[:2] == ("bear", 300.0)
+    s, _, flips = weekly_structure_state(_weekly_bars(daily(WICK)))  # then a close of 302 > 300 + 1 breaks it
+    assert s == "bull" and flips[-1][0] == _weekly_bars(daily(WICK)).index[20]
 
 
 def test_a_displacement_close_through_the_range_top_turns_it_bull():
-    s, guard, flips = state(21)                                      # idx20: close 306 > 303 + 2.5
+    s, guard, flips = state(21)                                      # idx20: close 310 > 305.5 + 1
     assert s == "bull" and flips[-1][1] == "bull" and flips[-1][0] == _weekly_bars(daily(MIDS)).index[20]
     assert bias_weekly_structure(daily(MIDS[:21]))[0] == "bull"
 

@@ -100,3 +100,15 @@ def test_real_data_weekly_trend_uses_completed_days_only():
     assert build_context(cut, d).biases["htf40"] == ctx.biases["htf40"]
     daily = completed_daily(resample(cut, "1d"), d)
     assert ctx.biases["htf40"] == bias_htf40(daily) and ctx.biases["htf40"][0] in ("bull", "bear")
+
+
+def test_weekly_rule_picks_which_bias_is_the_weekly(monkeypatch):
+    patched(monkeypatch, [runner_setup()])
+    ctx = SimpleNamespace(biases={"htf40": ("bull", ""), "weekly_structure": ("bear", "")})
+    p = replace(model_2022.Params(), counter_tp1="all", weekly_rule="weekly_structure")
+    s = run.run_day(frame(RUN), DAY, "US100", params=p, max_trades=1, ctx=ctx)[0]
+    assert s.tags["weekly_trend"] == "bear" and s.tags.get("tp1_only")          # long against the structure
+    p = replace(p, weekly_rule="htf40")
+    patched(monkeypatch, [runner_setup()])
+    s = run.run_day(frame(RUN), DAY, "US100", params=p, max_trades=1, ctx=ctx)[0]
+    assert s.tags["weekly_trend"] == "bull" and not s.tags.get("tp1_only")

@@ -60,7 +60,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
     counter_tp1 = getattr(params, "counter_tp1", None)
     if counter_tp1 not in (None,) + COUNTER_TP1:
         raise ValueError(f"counter_tp1 must be one of {COUNTER_TP1}, not {counter_tp1!r}")
-    weekly = ((getattr(ctx, "biases", None) or {}).get("htf40") or ("neutral", ""))[0]
+    weekly = ((getattr(ctx, "biases", None) or {}).get(getattr(params, "weekly_rule", "htf40")) or ("neutral", ""))[0]
     last_fill: dict[str, tuple] = {}                    # scope → (side, exit_reason, exit_at, entry) of its last filled trade
     extra: dict[str, bool] = {}                         # scope → the one extra (re-entry) trade is in use
     for s in setups:
