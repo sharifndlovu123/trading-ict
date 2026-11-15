@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine Read</title>
+<style>
+:root {
+  --bg: #f2f3f0; --panel: #fff; --ink: #1b1f1d; --muted: #646b66; --line: #d9ddd7; --accent: #2f5d50;
+  --up: #1f7a55; --down: #b23b3b; --range: #b58a00; --grid: #eceee9; --chip: #e8ebe5;
+  --bs: #2b6cb0; --ss: #9b4dca; --zone: rgba(181, 138, 0, .13); --zoneline: rgba(181, 138, 0, .7); --fwd: #8a918c;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111513; --panel: #181d1a; --ink: #e5e8e4; --muted: #9aa39d; --line: #2c3330; --accent: #7fbfa9;
+  --up: #4cc28c; --down: #e0706f; --range: #e8c04a; --grid: #1e2421; --chip: #232a26;
+  --bs: #6aa8f0; --ss: #c58bf0; --zone: rgba(232, 192, 74, .12); --zoneline: rgba(232, 192, 74, .7); --fwd: #6c746f; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+header { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header .t { font-weight: 600; font-size: 15px; }
+select, textarea, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 3px 7px; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); font-weight: 600; }
+.muted { color: var(--muted); }
+main { flex: 1; display: grid; grid-template-columns: 1fr 430px; gap: 10px; padding: 10px; min-height: 0; }
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-height: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); align-items: center; }
+.tab { padding: 2px 10px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; font-family: ui-monospace, monospace; }
+.tab.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.tog { padding: 2px 8px; border-radius: 5px; border: 1px dashed var(--line); cursor: pointer; user-select: none; font-size: 12px; }
+.tog.on { border-style: solid; border-color: var(--accent); }
+#chart { flex: 1; min-height: 300px; }
+aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.stmt .tx { margin-bottom: 5px; }
+.stmt .tx b { font-family: ui-monospace, monospace; cursor: pointer; }
+.stmt.play { border-color: var(--accent); border-width: 2px; }
+.picks { display: flex; gap: 4px; margin-bottom: 4px; }
+.pick { flex: 1; padding: 2px 0; text-align: center; border: 1px solid var(--line); border-radius: 5px; cursor: pointer; user-select: none; font-size: 12px; }
+.pick.agree.on { background: var(--up); border-color: var(--up); color: #fff; font-weight: 600; }
+.pick.partly.on { background: var(--range); border-color: var(--range); color: #000; font-weight: 600; }
+.pick.disagree.on { background: var(--down); border-color: var(--down); color: #fff; font-weight: 600; }
+.stmt textarea, #note { width: 100%; min-height: 32px; resize: vertical; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
+.sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } #chart { min-height: 360px; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="t">Engine Read</span>
+  <button id="prev">◀</button><select id="pick"></select><button id="next">▶</button>
+  <span id="where" class="muted"></span>
+  <span id="count" class="muted" style="margin-left:auto"></span>
+</header>
+<main>
+  <div class="chartbox">
+    <div class="tabs" id="tabs"></div>
+    <div id="chart" style="position:relative"></div>
+  </div>
+  <aside>
+    <div class="card muted">What the engine sees at this moment — structure per timeframe, the areas it watches, where the
+      liquidity is, and where it thinks the play is. No entries. Judge each line (agree / partly / disagree) and say why.
+      <div class="legend" style="margin-top:6px">
+        <span><span class="sw" style="background:var(--down)"></span>protected LH (bear)</span>
+        <span><span class="sw" style="background:var(--up)"></span>protected HL (bull)</span>
+        <span><span class="sw" style="background:var(--bs)"></span>buyside</span>
+        <span><span class="sw" style="background:var(--ss)"></span>sellside</span>
+        <span><span class="sw" style="background:var(--zoneline)"></span>area</span>
+        <span>dashed vertical = structure flip</span>
+      </div></div>
+    <div id="stmts"></div>
+    <div class="card"><div class="muted">Overall — what would you have seen? Anything the engine missed?</div><textarea id="note" style="min-height:70px"></textarea></div>
+    <button class="primary" id="save">Save</button>
+    <div class="card" id="after" style="display:none"></div>
+  </aside>
+</main>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+<script>
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const TFS = [["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
+const RANK = { "1w": 0, "1d": 1, "4h": 2, "1h": 3 };
+const st = { ids: [], i: 0, it: null, tf: "1d", answers: {}, show: { struct: true, areas: true, liq: true }, fwd: false };
+let drafts = {};
+try { drafts = JSON.parse(localStorage.getItem("readDrafts") || "{}"); } catch (e) { drafts = {}; }
+const saveDrafts = () => { try { localStorage.setItem("readDrafts", JSON.stringify(drafts)); } catch (e) {} };
+const draft = () => (drafts[st.it.id] ||= { verdict: {}, comment: {}, note: "" });
+const saved = () => !!st.answers[st.it.id];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const chart = LightweightCharts.createChart($("chart"), {
+  autoSize: true, layout: { background: { color: css("--panel") }, textColor: css("--ink") },
+  grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } },
+  timeScale: { timeVisible: true, borderColor: css("--line") }, rightPriceScale: { borderColor: css("--line") },
+});
+const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"),
+  wickDownColor: css("--down"), borderVisible: false });
+let plines = [];
+const COL = { up: "--up", down: "--down", bs: "--bs", ss: "--ss" };
+// a mark shows on its own timeframe and every lower one
+const visible = m => RANK[m.tf] !== undefined ? RANK[m.tf] <= RANK[st.tf] : true;
+const group = m => m.type === "zone" ? "areas" : (m.color === "bs" || m.color === "ss") ? "liq" : "struct";
+
+function draw() {
+  const past = st.it.panels[st.tf] || [], fwd = st.fwd && saved() ? (st.it.fwd[st.tf] || []) : [];
+  const fc = css("--fwd");
+  series.setData(past.map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
+    .concat(fwd.filter(r => !past.length || r[0] > past[past.length - 1][0])
+      .map(([time, open, high, low, close]) => ({ time, open, high, low, close, color: fc, wickColor: fc }))));
+  plines.forEach(p => series.removePriceLine(p)); plines = [];
+  for (const m of st.it.marks) {
+    if (m.type !== "level" || !visible(m) || !st.show[group(m)]) continue;
+    const own = m.tf === st.tf || (m.color === "bs" || m.color === "ss");
+    plines.push(series.createPriceLine({ price: m.price, color: css(COL[m.color]), lineWidth: own ? 2 : 1,
+      lineStyle: own ? 0 : 2, axisLabelVisible: true, title: m.label }));
+  }
+  chart.timeScale().fitContent();
+  $("tabs").innerHTML = TFS.map(([k, n]) => `<span class="tab ${k === st.tf ? "on" : ""}" data-tf="${k}">${n}</span>`).join("") +
+    `<span style="width:10px"></span>` +
+    [["struct", "structure"], ["areas", "areas"], ["liq", "liquidity"]].map(([k, n]) =>
+      `<span class="tog ${st.show[k] ? "on" : ""}" data-k="${k}">${n}</span>`).join("") +
+    (saved() ? `<span class="tog ${st.fwd ? "on" : ""}" id="fwdt" title="grey candles = after the moment">what happened next</span>` : "") +
+    `<span class="muted" style="margin-left:auto">candles before ${new Date(st.it.at * 1000).toISOString().slice(0, 16).replace("T", " ")} NY</span>`;
+  document.querySelectorAll("#tabs .tab").forEach(e => e.onclick = () => { st.tf = e.dataset.tf; draw(); });
+  document.querySelectorAll("#tabs .tog[data-k]").forEach(e => e.onclick = () => { st.show[e.dataset.k] = !st.show[e.dataset.k]; draw(); });
+  if ($("fwdt")) $("fwdt").onclick = () => { st.fwd = !st.fwd; draw(); };
+  vdirty++;
+}
+
+function side() {
+  const d = draft();
+  $("stmts").innerHTML = st.it.statements.map(s => {
+    const v = d.verdict[s.id], tx = esc(s.text).replace(/^(Weekly|Daily|4H|1H|Areas I'm watching|Liquidity|Where the play is)/, "<b>$1</b>");
+    return `<div class="card stmt ${s.id === "s_play" ? "play" : ""}"><div class="tx" ${s.tf ? `data-tf="${s.tf}"` : ""}>${tx}</div>
+      <div class="picks">${["agree", "partly", "disagree"].map(b => `<span class="pick ${b} ${v === b ? "on" : ""}" data-s="${s.id}" data-v="${b}">${b}</span>`).join("")}</div>
+      <textarea data-s="${s.id}" placeholder="your read (optional)">${esc(d.comment[s.id] || "")}</textarea></div>`;
+  }).join("");
+  $("stmts").querySelectorAll(".pick").forEach(e => e.onclick = () => {
+    const x = draft(); x.verdict[e.dataset.s] = x.verdict[e.dataset.s] === e.dataset.v ? undefined : e.dataset.v; saveDrafts(); side(); });
+  $("stmts").querySelectorAll("textarea").forEach(e => e.oninput = () => { draft().comment[e.dataset.s] = e.value; saveDrafts(); });
+  $("stmts").querySelectorAll(".tx[data-tf] b").forEach(e => e.onclick = () => { st.tf = e.parentElement.dataset.tf; draw(); });
+  $("note").value = d.note || "";
+  const a = $("after");
+  if (!saved()) { a.style.display = "none"; return; }
+  const f = st.it.fwd["1d"] || [], p = st.it.price;
+  if (!f.length) { a.style.display = "none"; return; }
+  const hi = Math.max(...f.map(r => r[2])), lo = Math.min(...f.map(r => r[3])), last = f[f.length - 1][4], adr = st.it.adr;
+  a.style.display = "";
+  a.innerHTML = `<div class="muted">Saved. Next ${f.length} days (toggle “what happened next” on the chart):</div>
+    <div>high ${hi.toFixed(2)} (+${((hi - p) / adr).toFixed(1)} ADR) · low ${lo.toFixed(2)} (−${((p - lo) / adr).toFixed(1)} ADR) · last close ${last.toFixed(2)}</div>
+    <div class="muted">engine's kind of play: ${st.it.kind.replace("_", " ")}</div>`;
+}
+
+// ---- areas (boxes) and structure flips (vertical lines) on a canvas over the chart
+const cv = document.createElement("canvas");
+cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:3";
+$("chart").appendChild(cv);
+let vdirty = 1, vsig = "";
+function paint() {
+  const el = $("chart"), r = devicePixelRatio || 1, ts = chart.timeScale(), H = el.clientHeight - ts.height(), W = ts.width();
+  if (cv.width !== Math.round(el.clientWidth * r) || cv.height !== Math.round(el.clientHeight * r)) {
+    cv.width = Math.round(el.clientWidth * r); cv.height = Math.round(el.clientHeight * r);
+    cv.style.width = el.clientWidth + "px"; cv.style.height = el.clientHeight + "px"; }
+  const g = cv.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, el.clientWidth, el.clientHeight);
+  if (!st.it) return;
+  g.font = "11px ui-monospace, monospace";
+  const rows = st.it.panels[st.tf] || [], n = rows.length; if (!n) return;
+  const step = n > 1 ? rows[n - 1][0] - rows[n - 2][0] : 3600, sp = ts.options().barSpacing;
+  const xAt = t => {
+    let lo = 0, hi = n - 1;
+    if (t <= rows[0][0]) { const c = ts.logicalToCoordinate(0); return c == null ? null : c - (rows[0][0] - t) / step * sp; }
+    if (t >= rows[hi][0]) { const c = ts.logicalToCoordinate(hi); return c == null ? null : c + (t - rows[hi][0]) / step * sp; }
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (rows[m][0] <= t) lo = m; else hi = m; }
+    const c = ts.logicalToCoordinate(lo); return c == null ? null : c + (t - rows[lo][0]) / (rows[hi][0] - rows[lo][0]) * sp; };
+  const xNow = xAt(st.it.at);
+  if (xNow != null && xNow >= 0 && xNow <= W) {                 // the moment
+    g.strokeStyle = css("--muted"); g.setLineDash([1, 3]); g.beginPath(); g.moveTo(xNow, 0); g.lineTo(xNow, H); g.stroke(); g.setLineDash([]); }
+  let row = 0;
+  for (const m of st.it.marks) {
+    if (!visible(m) || !st.show[group(m)]) continue;
+    if (m.type === "zone") {
+      const y1 = series.priceToCoordinate(m.top), y2 = series.priceToCoordinate(m.bottom); if (y1 == null || y2 == null) continue;
+      g.fillStyle = css("--zone"); g.fillRect(0, Math.min(y1, y2), W, Math.abs(y2 - y1));
+      g.strokeStyle = css("--zoneline"); g.lineWidth = 1; g.strokeRect(0, Math.min(y1, y2), W, Math.abs(y2 - y1));
+      g.fillStyle = css("--range"); g.fillText(m.label, 6, Math.min(y1, y2) + 12);
+    } else if (m.type === "vline") {
+      const x = xAt(m.t); if (x == null || x < 0 || x > W) continue;
+      const own = m.tf === st.tf;
+      g.strokeStyle = g.fillStyle = css(COL[m.color]); g.lineWidth = own ? 2 : 1.2;
+      g.setLineDash(own ? [6, 4] : [2, 4]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); g.setLineDash([]);
+      g.fillText(m.label, x + 4, 14 + 14 * (RANK[m.tf] ?? 0));
+      row++;
+    }
+  }
+}
+(function loop() {
+  try { const lr = chart.timeScale().getVisibleLogicalRange();
+    const sg = [vdirty, st.tf, lr && lr.from, lr && lr.to, series.priceToCoordinate(1000), series.priceToCoordinate(2000), $("chart").clientWidth, $("chart").clientHeight].join("|");
+    if (sg !== vsig) { vsig = sg; paint(); } } catch (e) {}
+  requestAnimationFrame(loop);
+})();
+
+$("note").oninput = () => { draft().note = $("note").value; saveDrafts(); };
+async function load(i) {
+  st.i = (i + st.ids.length) % st.ids.length;
+  st.it = await (await fetch(`s/${st.ids[st.i]}.json`)).json();
+  st.fwd = false;
+  $("pick").value = st.ids[st.i];
+  $("where").textContent = `${st.it.asset} · ${st.it.day} 08:30 NY · price ${st.it.price} · ADR ${st.it.adr.toFixed(1)}`;
+  $("count").textContent = `${st.i + 1}/${st.ids.length} · saved ${Object.keys(st.answers).length}`;
+  side(); draw();
+}
+$("save").onclick = async () => {
+  const d = draft();
+  const body = { id: st.it.id, asset: st.it.asset, day: st.it.day, kind: st.it.kind, verdict: d.verdict, comment: d.comment, note: d.note,
+                 statements: Object.fromEntries(st.it.statements.map(s => [s.id, s.text])) };
+  const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) { alert("save failed"); return; }
+  st.answers[st.it.id] = body;
+  [...$("pick").options].find(o => o.value === st.it.id).textContent = "✓ " + st.it.id;
+  $("count").textContent = `${st.i + 1}/${st.ids.length} · saved ${Object.keys(st.answers).length}`;
+  side(); draw();
+};
+$("prev").onclick = () => load(st.i - 1);
+$("next").onclick = () => load(st.i + 1);
+$("pick").onchange = () => load(st.ids.indexOf($("pick").value));
+(async () => {
+  const idx = await (await fetch("index.json")).json();
+  st.ids = idx.ids;
+  try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
+  $("pick").innerHTML = st.ids.map(id => `<option value="${id}">${st.answers[id] ? "✓ " : ""}${id}</option>`).join("");
+  load(0);
+})();
+</script>
+</body>
+</html>
