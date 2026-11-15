@@ -279,6 +279,38 @@ def bias_dol_weekly(daily: pd.DataFrame) -> tuple[str, str]:
     return side(done.iloc[-1], done.iloc[-2], "last week") or ("neutral", "last week was an inside week")
 
 
+def weekly_swings(daily: pd.DataFrame) -> tuple[pd.DataFrame, list, list] | None:
+    """Completed weeks (the unfinished current week dropped) and their confirmed swings: a week whose high (low) is above
+    (below) the previous and the next week's. A swing exists only once the next week has closed.
+    Returns (weeks, [(week_start, high)], [(week_start, low)]) oldest first, or None without timestamps."""
+    wk = _weekly(daily) if len(daily) else None
+    if wk is None:
+        return None
+    g, last = wk
+    done = g if last.weekday() == 4 else g.iloc[:-1]
+    h, lo = done.high.to_numpy(float), done.low.to_numpy(float)
+    sh = [(done.index[i], float(h[i])) for i in range(1, len(done) - 1) if h[i] > h[i - 1] and h[i] > h[i + 1]]
+    sl = [(done.index[i], float(lo[i])) for i in range(1, len(done) - 1) if lo[i] < lo[i - 1] and lo[i] < lo[i + 1]]
+    return done, sh, sl
+
+
+def bias_weekly_structure(daily: pd.DataFrame) -> tuple[str, str]:
+    """Weekly trend from structure (Sharif: "lower lows and lower highs"): the last two weekly swing highs and swing lows
+    both lower → bear, both higher → bull, anything else → neutral. Completed weeks only."""
+    w = weekly_swings(daily)
+    if w is None:
+        return "neutral", "no timestamps for weekly grouping"
+    _, sh, sl = w
+    if len(sh) < 2 or len(sl) < 2:
+        return "neutral", "fewer than two weekly swing highs/lows"
+    (h1, h2), (l1, l2) = (sh[-2][1], sh[-1][1]), (sl[-2][1], sl[-1][1])
+    if h2 < h1 and l2 < l1:
+        return "bear", f"lower high {h2:.2f} < {h1:.2f} and lower low {l2:.2f} < {l1:.2f}"
+    if h2 > h1 and l2 > l1:
+        return "bull", f"higher high {h2:.2f} > {h1:.2f} and higher low {l2:.2f} > {l1:.2f}"
+    return "neutral", f"mixed: highs {h1:.2f}→{h2:.2f}, lows {l1:.2f}→{l2:.2f}"
+
+
 def bias_prev_day_dol(daily: pd.DataFrame) -> tuple[str, str]:
     """``prev_day``; on its neutral days (inside/outside), the HTF draw ``dol`` breaks the tie."""
     b, why = bias_prev_day(daily)
@@ -302,6 +334,7 @@ BIAS_RULES: dict[str, BiasRule] = {
     "prev_day": bias_prev_day,
     "htf20": bias_htf20,
     "htf40": bias_htf40,
+    "weekly_structure": bias_weekly_structure,
     "draw": bias_draw,
     "draw_htf": bias_draw_htf,
     "dol": bias_dol,
