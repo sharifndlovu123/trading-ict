@@ -48,15 +48,17 @@ def found(mark, items, adr):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--answers", default="reports/reviews/liqmap.jsonl", help="reports/reviews/topdown.jsonl for the top-down set")
+    ap.add_argument("--data", default="out/liqmap", help="out/topdown for the top-down set")
     a = ap.parse_args()
     saves = {}
-    for line in open("reports/reviews/liqmap.jsonl"):
+    for line in open(a.answers):
         d = json.loads(line)
         saves[d["id"]] = d
     maps = {}
     if a.json:
         for mid in saves:
-            maps[mid] = json.load(open(f"out/liqmap/s/{mid}.json"))["map"]
+            maps[mid] = json.load(open(f"{a.data}/s/{mid}.json"))["map"]
     else:
         import pandas as pd
         from ict_engine.concepts.liquidity_map import build

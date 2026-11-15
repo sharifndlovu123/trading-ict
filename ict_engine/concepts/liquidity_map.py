@@ -44,7 +44,7 @@ EQ_BP = {"1w": 20.0, "1d": 10.0, "4h": 4.0, "1h": 2.0}
 REACH = {"1w": 2.0}                     # weekly levels may sit up to 2× max_adr away
 PER_SIDE = {"swing": 4, "eq": 2, "gap": 3}
 # top-down liquidity per side and timeframe; context kinds skipped unless they coincide with a swing / equal level
-TOPDOWN = {"n": 2, "skip": ()}
+TOPDOWN = {"n": 2, "skip": (), "min_area_adr": 0.1}   # slivers (< 0.1 ADR wide) aren't areas to watch (his 1w ≥ 0.15)
 TF_ORDER = {"1w": -1, "1d": 0, "4h": 1, "1h": 2, "session": 3}
 
 
@@ -272,7 +272,7 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
     key["topdown"] = {}
     for tf in ("1w", "1d"):
         on = lambda it: it.tf == tf or any(a.startswith(f"{tf} ") for a in it.also)
-        areas = [it for it in items if on(it) and it.role == "area"]
+        areas = [it for it in items if on(it) and it.role == "area" and it.top - it.bottom >= TOPDOWN["min_area_adr"] * adr]
         liq = lambda it: on(it) and not (it.kind in TOPDOWN["skip"] and not it.also)
         inside = [it.id for it in areas if it.bottom <= last <= it.top]
         up = [it.id for it in areas if it.bottom > last][:1]
