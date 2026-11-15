@@ -55,6 +55,9 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
     busy_until, filled, prev = None, {}, None
     counter = getattr(params, "counter_after", None)
     tp1_hits: list[tuple[str, pd.Timestamp]] = []      # (side, when TP1 traded) of today's filled trades
+    reentry = getattr(params, "reentry", None)
+    last_fill: dict[str, tuple] = {}                    # scope → (side, exit_reason, exit_at) of its last filled trade
+    extra: dict[str, bool] = {}                         # scope → the one extra (re-entry) trade is in use
     for s in setups:
         if s.plan is None and counter and s.would_plan is not None:
             admit_counter(s, counter, bars_1m, ctx, tp1_hits)
@@ -96,17 +99,27 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.plan = plan
         scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
         # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).
-        if prev is not None and s.decided_at < busy_until and (
+        if prev is not None and busy_until is not None and s.decided_at < busy_until and (
                 prev.result.filled_at is None or prev.result.filled_at > s.decided_at):
             if prev.result.filled_at is not None:
                 filled[prev_scope] -= 1
             prev.result = Result(exit_at=s.decided_at, exit_reason="cancelled")
+            if prev.tags.get("reentry"):
+                extra[prev_scope] = False                   # a cancelled re-entry order gives its slot back
             busy_until = None
         if filled.get(scope, 0) >= max_trades:
-            label = "daily cap" if scope == "day" else f"{scope} cap"
-            s.gates.append(Gate("cap", False, f"{label} {max_trades} reached"))
-            s.plan = None
-            continue
+            lf = last_fill.get(scope)
+            if (reentry and not extra.get(scope) and filled[scope] == max_trades and lf is not None
+                    and (busy_until is None or s.decided_at >= busy_until)
+                    and (reentry == "any" or (lf[1] == "stop" and lf[2] is not None and lf[0] == s.side and s.decided_at >= lf[2]))):
+                s.tags["reentry"] = True                    # re-entry pre-registration: one extra trade in this window
+                s.gates.append(Gate("reentry", True, f"{reentry}: previous {lf[0]} trade exited by {lf[1]}"))
+                extra[scope] = True
+            else:
+                label = "daily cap" if scope == "day" else f"{scope} cap"
+                s.gates.append(Gate("cap", False, f"{label} {max_trades} reached"))
+                s.plan = None
+                continue
         if busy_until is not None and s.decided_at < busy_until:
             s.gates.append(Gate("cap", False, "previous trade still open"))
             s.plan = None
@@ -115,7 +128,10 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
         s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry, s.plan.placed_at))
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope
+        if s.result.filled_at is None and s.tags.get("reentry"):
+            extra[scope] = False                            # the re-entry never filled: the slot stays available
         if s.result.filled_at is not None:
+            last_fill[scope] = (s.side, s.result.exit_reason, s.result.exit_at)
             filled[scope] = filled.get(scope, 0) + 1
             if s.result.vote:
                 t = tp1_time(s.plan, bars_1m, s.result.filled_at)
@@ -125,6 +141,7 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
 
 
 COUNTER_MODES = ("tp1", "draw")
+REENTRY_MODES = ("after_stop", "any")
 
 
 def tp1_time(plan, bars_1m: pd.DataFrame, filled_at: pd.Timestamp) -> pd.Timestamp | None:

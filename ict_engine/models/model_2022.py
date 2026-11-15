@@ -83,6 +83,7 @@ class Params:
     # context level inside a window (liquidity-hold pre-registration); None = off
     liquidity_hold_bp: float | None = None
     stop_tf: str | None = None           # htf_stop.TFS: structural stop + PDH/PWH draw (htf-stop pre-registration)
+    reentry: str | None = None           # sim.run.REENTRY_MODES: one extra trade per window (re-entry pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -113,6 +114,8 @@ class Params:
             extra.append(f"hold{self.liquidity_hold_bp:g}bp")
         if self.stop_tf:
             extra.append(f"stop{self.stop_tf}")
+        if self.reentry:
+            extra.append(f"reentry_{self.reentry}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:

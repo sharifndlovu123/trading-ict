@@ -78,6 +78,17 @@ textarea { width: 100%; min-height: 60px; }
     </div>
     <div id="levels" style="margin-top:6px"></div>
     <div class="res" id="res"></div>
+    <div id="verdictbox" style="display:none">
+      <h3>Re-entry — was this second trade valid?</h3>
+      <select id="verdict" style="width:100%">
+        <option value="">— pick one —</option>
+        <option value="valid">valid re-entry (as the engine took it)</option>
+        <option value="valid_elsewhere">re-enter, but at a different place / time (move the entry)</option>
+        <option value="no_reentry">first trade was fine, but no re-entry here</option>
+        <option value="wrong_side">wrong side — I'd trade the other way</option>
+        <option value="no_trade">neither trade — I'd stay out</option>
+      </select>
+    </div>
     <h3>Why — stop and targets from the same map, used differently</h3>
     <textarea id="notes" placeholder="Where the stop belongs and why (which liquidity protects it), where price is drawn to, when to take partials…"></textarea>
     <div style="display:flex;gap:6px;margin:8px 0 14px;align-items:center">
@@ -100,7 +111,7 @@ let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("handling-drafts") || "{}"); } catch (e) {}
 try { Object.assign(st.filt, JSON.parse(localStorage.getItem("handling-filt") || "{}")); } catch (e) {}
 const saveDrafts = () => { try { localStorage.setItem("handling-drafts", JSON.stringify(drafts)); } catch (e) {} };
-const draft = () => (drafts[st.it.id] ||= { stop: null, tps: [], entry: null, be: false, notes: "" });
+const draft = () => (drafts[st.it.id] ||= { stop: null, tps: [], entry: null, be: false, notes: "", verdict: "" });
 
 const chart = LightweightCharts.createChart($("chart"), { autoSize: true,
   layout: { background: { color: css("--panel") }, textColor: css("--muted") },
@@ -121,6 +132,9 @@ function drawLines() {
     if (x.role === "area") { lines.push(series.createPriceLine({ price: x.top, color: c, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: "" }));
       lines.push(series.createPriceLine({ price: x.bottom, color: c, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: `${x.tf} ${x.kind}` })); }
     else lines.push(series.createPriceLine({ price: x.price, color: c, lineWidth: 1, lineStyle: 0, axisLabelVisible: false, title: `${x.tf === "session" ? "" : x.tf + " "}${x.kind}` }));
+  }
+  if (it.prior) {                     // the stopped first trade of this window (re-entry review)
+    line(it.prior.entry, css("--muted"), 1, 2, "1st entry"); line(it.prior.stop, css("--muted"), 1, 2, "1st stop");
   }
   if (st.filt.engine) {
     line(it.entry, css("--entry"), 1, 0, "engine entry"); line(it.stop, css("--stop"), 1, 0, "engine stop");
@@ -211,10 +225,15 @@ function resBox() {
 
 function facts() {
   const it = st.it, k = it.map.key || {}, b = k.bias || {};
-  $("facts").innerHTML = `<div><span class="kind-${it.kind}">${it.kind === "cut" ? "CUT OFF — moved our way, stopped, then ran" : "WON — TP1 before the stop"}</span></div>
+  const t = x => x == null ? "–" : new Date(x * 1000).toISOString().slice(11, 16);
+  const head = it.kind === "reentry"
+    ? `<span class="kind-${it.outcome === "won" ? "won" : "cut"}">RE-ENTRY after a stopped ${it.prior.side} — the engine's re-entry ${it.outcome === "won" ? "made money" : "lost"} (${(+it.runner_r).toFixed(2)} R)</span>
+       <div class="muted">1st trade: entry ${fmt(it.prior.entry)} · stop ${fmt(it.prior.stop)} · filled ${t(it.prior.filled)} · stopped ${t(it.prior.exit_at)} (${it.prior.r} R) — grey dashed lines</div>`
+    : `<span class="kind-${it.kind}">${it.kind === "cut" ? "CUT OFF — moved our way, stopped, then ran" : "WON — TP1 before the stop"}</span>`;
+  $("facts").innerHTML = `<div>${head}</div>
     <div>${it.model} · <b>${it.side.toUpperCase()}</b> · ${it.window || ""} · POI ${it.poi || "–"}</div>
     <div class="mono">entry ${fmt(it.entry)} · stop ${fmt(it.stop)} (risk ${fmt(it.risk)}) · TP1 ${fmt(it.tp1)} ${it.tp1_name || ""} · final ${fmt(it.final)}</div>
-    <div>best move our way: <b>${it.mfe_before_stop} R</b> before the stop, <b>${it.mfe_close} R</b> by the close (against: ${it.mae_close} R)</div>
+    ${it.mfe_close != null ? `<div>best move our way: <b>${it.mfe_before_stop} R</b> before the stop, <b>${it.mfe_close} R</b> by the close (against: ${it.mae_close} R)</div>` : ""}
     <div class="muted">swept: ${it.liquidity || "–"} · bias ${b.prev_day_dol || "?"} / weekly ${b.dol_weekly || "?"}${k.daily_range ? ` · daily range ${Math.round(k.daily_range.fraction * 100)}% (${k.daily_range.zone})` : ""}</div>`;
 }
 
@@ -224,6 +243,7 @@ function render() {
   $("meta").innerHTML = `${st.it.label} · <span class="pill">${st.it.model}</span>`;
   $("status").textContent = `${st.i + 1}/${st.ids.length} · saved ${Object.keys(st.answers).filter(k => st.ids.includes(k)).length}`;
   $("notes").value = d.notes || ""; $("be").checked = !!d.be;
+  $("verdictbox").style.display = st.it.prior ? "" : "none"; $("verdict").value = d.verdict || "";
   $("saved").textContent = st.answers[st.it.id] ? "saved ✓" : "";
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tf === st.tf));
   document.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", !!st.filt[c.dataset.f]));
@@ -285,6 +305,7 @@ chart.subscribeClick(p => {
 document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => setTool(b.dataset.tool));
 $("be").onchange = () => { draft().be = $("be").checked; saveDrafts(); resBox(); };
 $("notes").oninput = () => { draft().notes = $("notes").value; saveDrafts(); };
+$("verdict").onchange = () => { draft().verdict = $("verdict").value; saveDrafts(); };
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => { st.tf = t.dataset.tf; render(); });
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => { st.filt[c.dataset.f] = !st.filt[c.dataset.f];
   try { localStorage.setItem("handling-filt", JSON.stringify(st.filt)); } catch (e) {} render(); });
@@ -300,7 +321,7 @@ document.addEventListener("keydown", e => {
 $("save").onclick = async () => {
   const d = draft(), x = replay();
   const body = { id: st.it.id, asset: st.it.asset, side: st.it.side, kind: st.it.kind, engine: { entry: st.it.entry, stop: st.it.stop, tp1: st.it.tp1, final: st.it.final, runner_r: st.it.runner_r },
-                 entry: d.entry, stop: d.stop, tps: d.tps, be: d.be, notes: d.notes, replay_r: x.r ?? null, replay_events: x.ev ?? [] };
+                 entry: d.entry, stop: d.stop, tps: d.tps, be: d.be, notes: d.notes, verdict: d.verdict || null, replay_r: x.r ?? null, replay_events: x.ev ?? [] };
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { $("saved").textContent = "save failed — is the server running?"; return; }
   st.answers[st.it.id] = body; render();
@@ -309,7 +330,7 @@ $("save").onclick = async () => {
   const idx = await (await fetch("index.json")).json();
   st.ids = idx.ids;
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
-  const label = id => { const p = id.split("-"); const d = p[2], t = p[3]; return `${p[0] === "mmxm" ? "MMxM" : "2022"} ${p[1]} ${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)} ${t.slice(0, 2)}:${t.slice(2)}`; };
+  const label = id => { const p = id.replace(/^re-/, "").split("-"); const d = p[2], t = p[3]; return `${p[0] === "mmxm" ? "MMxM" : "2022"} ${p[1]} ${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)} ${t.slice(0, 2)}:${t.slice(2)}`; };
   $("pick").innerHTML = st.ids.map(id => `<option value="${id}">${st.answers[id] ? "✓ " : ""}${label(id)}</option>`).join("");
   let start = 0;
   try { const at = localStorage.getItem("handling-at"); if (at && st.ids.includes(at)) start = st.ids.indexOf(at); } catch (e) {}

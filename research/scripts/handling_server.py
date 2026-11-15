@@ -15,9 +15,10 @@ import triage_server as ts  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8767)
+    ap.add_argument("--data", type=Path, default=ts.ROOT / "out" / "handling", help="out/reentry for the re-entry review")
     ap.add_argument("--answers", type=Path, default=ts.ROOT / "reports" / "reviews" / "handling.jsonl")
     a = ap.parse_args()
-    ts.DATA, ts.PAGE, ts.ANSWERS = ts.ROOT / "out" / "handling", ts.ROOT / "viewer" / "handling.html", a.answers.resolve()
+    ts.DATA, ts.PAGE, ts.ANSWERS = a.data.resolve(), ts.ROOT / "viewer" / "handling.html", a.answers.resolve()
     if not (ts.DATA / "index.json").exists():
         raise SystemExit("build the set first: uv run python research/scripts/handling_build.py")
     print(f"trade handling: http://127.0.0.1:{a.port}  (marks → {ts.ANSWERS})")

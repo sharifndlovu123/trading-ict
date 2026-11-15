@@ -85,6 +85,7 @@ def setup_row(s: Setup, ctx, outcome: str, bias_rule: str, shadow) -> dict:
         "final": p.final_target if p else None, "tp1_name": p.tp1_name if p else None,
         "risk": p.risk if p else None, "arm": p.arm if p else None,
         "tp1_r": abs(p.tp1 - p.entry) / p.risk if p and p.risk else None,
+        "reentry": bool(s.tags.get("reentry")),
         "poi": s.tags.get("poi"), "liquidity": liq.meta.get("level") if liq else None,
         "liquidity_kind": liq.kind if liq else None,
         "fvg_size": (fvg.top - fvg.bottom) if fvg else None,

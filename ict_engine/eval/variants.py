@@ -76,6 +76,8 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "trigger: hold within 2 bp": replace(BASE, liquidity_hold_bp=2.0),
     "stop: 15m swing + daily draw": replace(BASE, stop_tf="15m"),
     "stop: 1h swing + daily draw": replace(BASE, stop_tf="1h"),
+    "re-entry: after a stop, same side": replace(BASE, reentry="after_stop"),
+    "control: any second trade": replace(BASE, reentry="any"),
 }
 
 
@@ -125,6 +127,8 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "entry: retest of the broken OC": replace(MB, entry="oc_retest"),
     "stop: 15m swing + daily draw": replace(MB, stop_tf="15m"),
     "stop: 1h swing + daily draw": replace(MB, stop_tf="1h"),
+    "re-entry: after a stop, same side": replace(MB, reentry="after_stop"),
+    "control: any second trade": replace(MB, reentry="any"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
