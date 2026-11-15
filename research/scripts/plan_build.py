@@ -75,6 +75,7 @@ def plan(pin: dict) -> dict:
     ahead = [c for c in cands if c["d1"] > now + 0.02]
     if not ahead:
         return {"wait": "no array left between price and the fake-out"}
+    considered = [{k: c[k] for k in ("label", "bottom", "top", "d0", "d1", "src")} for c in ahead]
     obs = [c for c in ahead if c["src"] == "ob"]
     fast = (pin["mom"] or 0) >= FAST.get(pin["rtf"], 0.2)
     if obs:
@@ -110,7 +111,8 @@ def plan(pin: dict) -> dict:
     return {"side": "short" if bear else "long", "array": pick, "why": why, "entry": round(entry, 2), "stop": round(stop, 2),
             "tp1": round(tp1, 2), "tp1_name": "the move's extreme" if tp1 == tps[0] else "a pool beyond the extreme",
             "final": round(final, 2), "final_name": final_name, "risk": round(risk, 2), "rtf": pin["rtf"],
-            "range": {"lo": round(lo, 2), "hi": round(hi, 2), "t": R["t"]}, "fast": fast}
+            "range": {"lo": round(lo, 2), "hi": round(hi, 2), "t": R["t"]}, "fast": fast, "adr": adr,
+            "pools_against": [x["price"] for x in (pin["bs"] if bear else pin["ss"])], "considered": considered}
 
 
 def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
@@ -137,7 +139,14 @@ def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
         break
     if filled is None:
         return {"outcome": "not filled before the horizon", "r_tp1": 0.0, "runner_r": 0.0}
-    after = path[path.index >= filled]
+    return {**manage(path[path.index >= filled], e, s, t1, fn, long), "filled": wall(filled)}
+
+
+def manage(after: pd.DataFrame, e: float, s: float, t1: float, fn: float, long: bool) -> dict:
+    """From the fill bar on: 50 % at TP1, stop to entry, the rest to final; same bar stop + target → stop first;
+    whatever is open at the end of ``after`` closes at its last close."""
+    sg = 1 if long else -1
+    risk = (e - s) * sg
     cur, half, r, ev, exit_at = s, False, 0.0, [], None
     for ts, h, l in zip(after.index, after.high, after.low):
         if (l <= cur) if long else (h >= cur):
@@ -161,8 +170,120 @@ def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
         exit_at = after.index[-1]
     r_tp1 = (t1 - e) * sg / risk if half else (-1.0 if "stopped" in " ".join(ev) else r)
     outcome = "TP1 then " + ev[-1] if half else ev[-1]
-    return {"outcome": outcome, "filled": wall(filled), "exit_at": wall(exit_at), "runner_r": round(r, 2),
-            "r_tp1": round(r_tp1, 2), "events": ev, "exit": "tp" if half else "stop" if "stopped" in ev[-1] else "open"}
+    return {"outcome": outcome, "exit_at": wall(exit_at), "runner_r": round(r, 2), "r_tp1": round(r_tp1, 2),
+            "events": ev, "exit": "tp" if half else "stop" if "stopped" in ev[-1] else "open"}
+
+
+CTF = {"1h": "5m", "4h": "5m", "1d": "15m"}       # the lower timeframe that must confirm the zone
+MIN_RISK = 0.1                                     # ADR: a confirmation stop is never tighter than this
+
+
+def _limit(path: pd.DataFrame, long: bool, e: float, s: float, t1: float) -> tuple[pd.Timestamp | None, str | None]:
+    """A resting limit: filled when price trades back to ``e``; cancelled if ``s`` trades first; missed (no chase) if
+    ``t1`` trades first. Returns (fill ts, None) or (None, reason)."""
+    for ts, h, l in zip(path.index, path.high, path.low):
+        if (l <= s) if long else (h >= s):
+            return (ts, None) if ((l <= e) if long else (h >= e)) else (None, "cancelled: stop traded before the retest")
+        if (l <= e) if long else (h >= e):
+            return ts, None
+        if (h >= t1) if long else (l <= t1):
+            return None, "missed: ran to TP1 without the retest"
+    return None, "no retest before the horizon"
+
+
+def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = True) -> dict:
+    """Sharif 2026-11-16: "we wait for any PD array action that supports what we are aiming to achieve or against."
+      arm      the first 1m touch of the array's near edge (before it: stop traded → cancelled, TP1 → missed)
+      support  a new FVG our way on the confirmation TF (CTF), its third candle closing after the arm → limit at its
+               near edge, stop beyond the reaction extreme since the arm (+0.02 ADR, risk ≥ MIN_RISK ADR)
+      against  a CTF close through the array's far edge → (flip) the array failed: the other side on the retest of
+               that far edge (the inversion), stop beyond the array's other edge + 0.05 ADR, TP1 = the range
+               fake-out the first plan used as its stop (≥ 1 R, else the next pool), final = the next pool
+      neither  the stop level / TP1 trades with no confirmation → no trade
+    Each closed CTF candle is used only from its close (no look-ahead); fills and management on 1m."""
+    from ict_engine.concepts.bars import resample
+    end = at + HORIZON[p["rtf"]]
+    path = bars[(bars.index >= at) & (bars.index < end)]
+    long = p["side"] == "long"
+    e, s, t1, fn, adr = p["entry"], p["stop"], p["tp1"], p["final"], p["adr"]
+    a = p["array"]
+    far = a["bottom"] if long else a["top"]
+    base = {"mode": "confirm_flip" if flip else "confirm", "r_tp1": 0.0, "runner_r": 0.0, "stage": "none"}
+    armed = None
+    for ts, h, l in zip(path.index, path.high, path.low):
+        if (l <= s) if long else (h >= s):
+            if (l <= e) if long else (h >= e):
+                armed = ts
+                break
+            return {**base, "outcome": "cancelled: the stop level traded before the zone"}
+        if (h >= t1) if long else (l <= t1):
+            return {**base, "outcome": "missed: price ran to TP1 without reaching the zone"}
+        if (l <= e) if long else (h >= e):
+            armed = ts
+            break
+    if armed is None:
+        return {**base, "outcome": "zone not reached before the horizon"}
+    c = resample(path[path.index >= armed.floor(CTF[p["rtf"]].replace("m", "min"))], CTF[p["rtf"]])
+    cts = c["close_ts"] + pd.Timedelta(minutes=1)          # close_ts = its last 1m bar; known at that bar's end
+    for i in range(len(c)):
+        bar = c.iloc[i]
+        seen = path[(path.index >= armed) & (path.index < cts.iloc[i])]
+        # 1) the stop or TP1 traded inside this candle without a confirmation yet → no trade
+        if ((seen.low <= s).any() if long else (seen.high >= s).any()):
+            return {**base, "stage": "armed", "armed": wall(armed), "outcome": "stop level traded with no confirmation"}
+        if ((seen.high >= t1).any() if long else (seen.low <= t1).any()):
+            return {**base, "stage": "armed", "armed": wall(armed), "outcome": "TP1 traded with no confirmation (missed)"}
+        # 2) against: a close through the far edge
+        if (bar.close < far) if long else (bar.close > far):
+            if not flip:
+                return {**base, "stage": "against", "armed": wall(armed), "outcome": "against: closed through the zone, no trade"}
+            fl = not long
+            fe = far                                                  # the retest of the failed array's far edge
+            fs = (a["bottom"] - 0.05 * adr) if fl else (a["top"] + 0.05 * adr)   # beyond the array's other edge
+            frisk = abs(fe - fs)
+            pools = sorted([x for x in p["pools_against"] if ((x > fe) if fl else (x < fe))], reverse=not fl)
+            fake = p["range"]["hi"] if fl else p["range"]["lo"]
+            tps = sorted({fake, *pools}, reverse=not fl)
+            tps = [x for x in tps if ((x > fe) if fl else (x < fe))]
+            ft1 = next((x for x in tps if abs(x - fe) >= frisk), None)
+            if ft1 is None:
+                return {**base, "stage": "against", "armed": wall(armed), "outcome": "against: flip has no room (< 1 R)"}
+            nxt = [x for x in tps if ((x > ft1) if fl else (x < ft1))]
+            ffn = nxt[0] if nxt else ft1
+            rest = path[path.index >= cts.iloc[i]]
+            fill, why = _limit(rest, fl, fe, fs, ft1)
+            info = {**base, "stage": "flip", "armed": wall(armed), "side": "long" if fl else "short", "entry": round(fe, 2),
+                    "stop": round(fs, 2), "tp1": round(ft1, 2), "final": round(ffn, 2), "confirmed": wall(cts.iloc[i])}
+            if fill is None:
+                return {**info, "outcome": "flip " + why}
+            m = manage(rest[rest.index >= fill], fe, fs, ft1, ffn, fl)
+            return {**info, **m, "outcome": "flip: " + m["outcome"], "filled": wall(fill)}
+        # 3) support: a new FVG our way whose third candle closed after the arm
+        if i >= 2:
+            c0, c2 = c.iloc[i - 2], bar
+            gap = (c2.low > c0.high) if long else (c2.high < c0.low)
+            if gap:
+                ge = c2.low if long else c2.high                     # the gap's near edge from above (long) / below (short)
+                react = path[(path.index >= armed) & (path.index < cts.iloc[i])]
+                ext = react.low.min() if long else react.high.max()
+                cs = ext - 0.02 * adr if long else ext + 0.02 * adr
+                if abs(ge - cs) < MIN_RISK * adr:
+                    cs = ge - MIN_RISK * adr if long else ge + MIN_RISK * adr
+                crisk = abs(ge - cs)
+                tps = [t1, fn] if abs(t1 - ge) >= crisk else [fn]
+                ct1 = tps[0]
+                if abs(ct1 - ge) < crisk:
+                    return {**base, "stage": "support", "armed": wall(armed), "outcome": "support but < 1 R to the targets"}
+                rest = path[path.index >= cts.iloc[i]]
+                fill, why = _limit(rest, long, ge, cs, ct1)
+                info = {**base, "stage": "support", "armed": wall(armed), "side": p["side"], "entry": round(float(ge), 2),
+                        "stop": round(float(cs), 2), "tp1": round(ct1, 2), "final": round(fn, 2),
+                        "confirmed": wall(cts.iloc[i])}
+                if fill is None:
+                    return {**info, "outcome": "support " + why}
+                m = manage(rest[rest.index >= fill], ge, cs, ct1, fn, long)
+                return {**info, **m, "outcome": "support: " + m["outcome"], "filled": wall(fill)}
+    return {**base, "stage": "armed", "armed": wall(armed), "outcome": "no confirmation before the horizon"}
 
 
 def item(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp) -> dict | None:
@@ -183,7 +304,13 @@ def item(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp) -> dict | No
         out.update(side="wait", wait=p["wait"], entry=None, stop=None, tp1=None, final=None, risk=None, runner_r=None, path=[])
         return out
     rr = replay(bars, at, p)
+    cf = replay_confirm(bars, at, p, flip=True)
     path = bars[(bars.index >= at) & (bars.index < end)]
+    out["considered"] = [c | {"picked": c["label"] == p["array"]["label"] and c["bottom"] == p["array"]["bottom"]}
+                         for c in p["considered"]]
+    out["touch"] = {"r": rr["r_tp1"], "runner_r": rr["runner_r"], "outcome": rr["outcome"]}
+    out["conf"] = {k: (round(float(v), 2) if isinstance(v, float) else v) for k, v in cf.items() if k != "events"}
+    out["ctf"] = CTF[p["rtf"]]
     out.update(side=p["side"], entry=p["entry"], stop=p["stop"], tp1=p["tp1"], final=p["final"], tp1_name=p["tp1_name"],
                final_name=p["final_name"], risk=p["risk"], array=p["array"], why=p["why"], range=p["range"], rtf=p["rtf"],
                poi=f"{p['array']['label']} {p['array']['bottom']:.2f}–{p['array']['top']:.2f}",
@@ -198,34 +325,168 @@ def days():
     return [d for d in ds if d.weekday() < 5 and d not in CLOSED]
 
 
+CACHE = Path("reports/cache")
+_W: dict = {}
+
+
+def at_of(d: date) -> pd.Timestamp:
+    return pd.Timestamp(datetime.combine(d, time(8, 30)), tz=NY)
+
+
+def _init(asset: str):
+    _W["asset"], _W["bars"] = asset, dukascopy.load(asset, HIST, CUT + timedelta(days=30))
+
+
+def _pin(d: date):
+    try:
+        it = read(_W["asset"], _W["bars"], d, at=at_of(d))
+    except (ValueError, KeyError, IndexError):
+        return None
+    return None if not it else {"asset": _W["asset"], "day": d, "at": at_of(d), "pin": it["_plan"]}
+
+
+def cache_pins(asset: str, workers: int):
+    """The read's plan inputs for every in-sample day at 08:30 (slow: ~6 s a day) → reports/cache/pins-<asset>.pkl."""
+    import multiprocessing as mp
+    import pickle
+    f = CACHE / f"pins-{asset}.pkl"
+    if f.exists():
+        print(f, "cached", flush=True)
+        return
+    CACHE.mkdir(parents=True, exist_ok=True)
+    with mp.get_context("fork").Pool(min(workers, 10), initializer=_init, initargs=(asset,)) as pool:
+        rows = [r for r in pool.imap(_pin, days(), chunksize=4) if r]
+    f.write_bytes(pickle.dumps(rows))
+    print(asset, len(rows), "reads →", f, flush=True)
+
+
+MODES = ("touch", "confirm", "confirm_flip")
+
+
+def simulate(assets: list[str]) -> pd.DataFrame:
+    """Every cached read → the plan → three entry modes on 1m (in-sample, descriptive):
+      touch         fill at the array's near edge (the first plan)
+      confirm       wait in the zone for a lower-TF FVG our way; a close through the zone = no trade
+      confirm_flip  as confirm, and a close through the zone flips to the other side on the retest"""
+    import pickle
+    rows = []
+    for x in assets:
+        bars = dukascopy.load(x, HIST, CUT + timedelta(days=30))
+        for r in pickle.loads((CACHE / f"pins-{x}.pkl").read_bytes()):
+            p = plan(r["pin"])
+            base = {"asset": x, "day": str(r["day"]), "read_kind": r["pin"]["kind"], "rtf": r["pin"]["rtf"]}
+            if "wait" in p:
+                rows.append(base | {"mode": "wait", "wait": p["wait"]})
+                continue
+            base |= {"side": p["side"], "array": p["array"]["label"], "src": p["array"]["src"], "fast": p["fast"],
+                     "risk_adr": round(p["risk"] / p["adr"], 3)}
+            t = replay(bars, r["at"], p)
+            rows.append(base | {"mode": "touch", "stage": "touch", "trade": "filled" in t, "outcome": t["outcome"],
+                                "r_tp1": t["r_tp1"], "runner_r": t["runner_r"]})
+            for flip in (False, True):
+                c = replay_confirm(bars, r["at"], p, flip=flip)
+                rows.append(base | {"mode": c["mode"], "stage": c["stage"], "trade": "filled" in c,
+                                    "outcome": c["outcome"], "r_tp1": c["r_tp1"], "runner_r": c["runner_r"],
+                                    "trade_side": c.get("side", p["side"]) if "filled" in c else None})
+        print(x, "simulated", flush=True)
+    df = pd.DataFrame(rows)
+    df.to_parquet("reports/plans-sim.parquet")
+    report(df)
+    return df
+
+
+def _stats(g: pd.DataFrame) -> dict:
+    t = g[g.trade == True]  # noqa: E712
+    n = len(t)
+    r = t.runner_r
+    sd = float(r.std()) if n > 1 else 0.0
+    return {"days": len(g), "trades": n, "win%": round(100 * (r > 0).mean(), 1) if n else None,
+            "tp1_hit%": round(100 * (t.r_tp1 > 0).mean(), 1) if n else None,
+            "sum_R": round(float(r.sum()), 1), "mean_R": round(float(r.mean()), 3) if n else None,
+            "z": round(float(r.mean()) / sd * n ** 0.5, 2) if n > 1 and sd > 0 else None,
+            "sum_R_tp1only": round(float(t.r_tp1.sum()), 1)}
+
+
+def report(df: pd.DataFrame):
+    pd.set_option("display.width", 200)
+    tr = df[df["mode"] != "wait"]
+    days_n = len(df[df["mode"].isin(["wait", "touch"])])
+    print(f"\nreads: {days_n}, waits: {(df['mode'] == 'wait').sum()}, plans: {(df['mode'] == 'touch').sum()}")
+    print("\n== by mode ==")
+    print(pd.DataFrame({m: _stats(tr[tr["mode"] == m]) for m in MODES}).T)
+    for key in ("asset", "src", "fast", "rtf", "stage"):
+        print(f"\n== mode × {key} ==")
+        print(pd.DataFrame({(m, k): _stats(g) for (m, k), g in tr.groupby(["mode", key])}).T)
+
+
+BUCKETS = (("support win", lambda r: r.stage == "support" and r.trade and r.runner_r > 0),
+           ("support loss", lambda r: r.stage == "support" and r.trade and r.runner_r <= 0),
+           ("flip", lambda r: r.stage == "flip" and r.trade),
+           ("no confirmation / no fill", lambda r: r["mode"] == "confirm_flip" and not r.trade and r.stage != "none"),
+           ("missed / zone not reached", lambda r: r["mode"] == "confirm_flip" and r.stage == "none"),
+           ("wait", lambda r: r["mode"] == "wait"))
+
+
+def sample_trades(n: int, seed: int, out_dir: Path):
+    """A stratified review set from reports/plans-sim.parquet: confirmed wins, losses, flips, no-confirmation days,
+    missed days and waits — the engine's full process on each (zone, considered areas, confirmation, entry, stop)."""
+    df = pd.read_parquet("reports/plans-sim.parquet")
+    df = df[df["mode"].isin(["confirm_flip", "wait"])].reset_index(drop=True)
+    rnd = random.Random(seed)
+    per = {"support win": 3, "support loss": 3, "flip": 2, "no confirmation / no fill": 2,
+           "missed / zone not reached": 1, "wait": 1}
+    scale = n / sum(per.values())
+    bars, items, used = {}, [], []
+    for name, f in BUCKETS:
+        rows = [r for _, r in df.iterrows() if f(r)]
+        rnd.shuffle(rows)
+        k = 0
+        for r in rows:
+            if k >= max(1, round(per[name] * scale)):
+                break
+            d = date.fromisoformat(r.day)
+            if any(x == r.asset and abs((d - u).days) < 14 for x, u in used):
+                continue
+            if r.asset not in bars:
+                bars[r.asset] = dukascopy.load(r.asset, HIST, CUT + timedelta(days=30))
+            it = item(r.asset, bars[r.asset], d, at_of(d))
+            if not it:
+                continue
+            it["bucket"] = name
+            items.append(it); used.append((r.asset, d)); k += 1
+            print(name, "·", it["id"], it.get("conf", {}).get("outcome") or it.get("wait"), flush=True)
+    rnd.shuffle(items)                              # no bucket order on the page: the outcome stays hidden
+    (out_dir / "s").mkdir(parents=True, exist_ok=True)
+    for it in items:
+        (out_dir / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":"), default=str))
+    (out_dir / "index.json").write_text(json.dumps({"generated": str(date.today()), "seed": seed,
+                                                    "ids": [it["id"] for it in items]}, indent=1))
+    print(len(items), "trades →", out_dir / "index.json")
+
+
+def main_all(a, assets):
+    if a.all:
+        for x in assets:
+            cache_pins(x, a.workers)
+    simulate(assets)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--all", action="store_true", help="every in-sample day at 08:30 → reports/plans-insample.parquet")
     ap.add_argument("--assets", default=",".join(ASSETS))
+    ap.add_argument("--sim", action="store_true", help="re-run the entry modes on the cached reads → reports/plans-sim.parquet")
+    ap.add_argument("--workers", type=int, default=9)
+    ap.add_argument("--trades", action="store_true", help="stratified review set of confirmed trades → out/trades")
     a = ap.parse_args()
     assets = a.assets.split(",")
+    if a.all or a.sim:
+        return main_all(a, assets)
+    if a.trades:
+        return sample_trades(a.n, a.seed, Path("out/trades"))
     bars = {x: dukascopy.load(x, HIST, CUT + timedelta(days=30)) for x in assets}
-    at_of = lambda d: pd.Timestamp(datetime.combine(d, time(8, 30)), tz=NY)
-    if a.all:
-        rows = []
-        for x in assets:
-            for d in days():
-                try:
-                    it = item(x, bars[x], d, at_of(d))
-                except (ValueError, KeyError, IndexError):
-                    continue
-                if it:
-                    rows.append({k: it.get(k) for k in ("asset", "day", "side", "read_kind", "wait", "entry", "stop", "tp1",
-                                                         "final", "risk", "rtf", "why", "outcome", "r", "runner_r")}
-                                | {"array": (it.get("array") or {}).get("label")})
-            print(x, len(rows), flush=True)
-        df = pd.DataFrame(rows)
-        Path("reports").mkdir(exist_ok=True)
-        df.to_parquet(f"reports/plans-insample-{'-'.join(assets)}.parquet")
-        print(df.groupby("asset").size())
-        return
     rnd = random.Random(a.seed)
     pool = [(x, d) for x in assets for d in days()]
     rnd.shuffle(pool)
