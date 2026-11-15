@@ -13,14 +13,16 @@
 const MARK_PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
-  ["", "level", ["BOS", "grab"]],
+  ["", "level", ["BOS"]],
   ["", "trend", ["trendline"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
 ];
 
 function marksLayer(chart, series, el, o) {
-  const GRAB = 6, STUB = 36;
+  const STUB = 36;
+  let grab = false;                                   // ✋ grab mode: chart holds still, a wide reach picks objects up
+  const G = () => grab ? 16 : 6;
   let place = null, sel = null, held = null, dirty = 1, sig = "";
   const ts = chart.timeScale();
   const T = () => o.times() || [];
@@ -55,19 +57,27 @@ function marksLayer(chart, series, el, o) {
   // ---- palette
   function palette() {
     if (!o.paletteEl) return;
-    o.paletteEl.innerHTML = '<span class="muted">place:</span>' + MARK_PALETTE.map(([side, shape, kinds]) => kinds.map(k =>
+    o.paletteEl.innerHTML = `<span class="mtool grab ${grab ? "on" : ""}" data-grab="1" title="grab (G): the chart holds still; press near any mark to move it">✋ grab</span><span style="width:6px"></span>` +
+      '<span class="muted">place:</span>' + MARK_PALETTE.map(([side, shape, kinds]) => kinds.map(k =>
       `<span class="mtool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side] || ""} ${place && place.kind === k && place.side === side ? "on" : ""}"
         data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
       '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click removes</span>';
     o.paletteEl.querySelectorAll(".mtool").forEach(b => b.onclick = () => {
+      if (b.dataset.grab) return setGrab(!grab);
       const same = place && place.kind === b.dataset.kind && place.side === b.dataset.side;
       setPlace(same ? null : { side: b.dataset.side, shape: b.dataset.shape, kind: b.dataset.kind });
     });
   }
+  function setGrab(on) {
+    grab = on; place = null; palette();
+    chart.applyOptions({ handleScroll: !on, handleScale: !on });
+    el.style.cursor = on ? "grab" : "";
+    if (o.onPlace) o.onPlace(on);
+  }
   function setPlace(p) {
-    place = p; palette();
-    chart.applyOptions({ handleScroll: !p, handleScale: !p });
-    el.style.cursor = p ? "crosshair" : "";
+    place = p; if (p) grab = false; palette();
+    chart.applyOptions({ handleScroll: !p && !grab, handleScale: !p && !grab });
+    el.style.cursor = p ? "crosshair" : grab ? "grab" : "";
     if (o.onPlace) o.onPlace(!!p);
   }
 
@@ -131,22 +141,22 @@ function marksLayer(chart, series, el, o) {
     const take = (i, part, d) => { if (!best || d < best.d) best = { i, part, d }; };
     o.list().forEach((m, i) => {
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m);
-      if (x0 == null || x1 == null || px < Math.min(x0, x1) - GRAB || px > Math.max(x0, x1) + GRAB) return;
-      const end = Math.abs(px - x0) <= GRAB ? "start" : Math.abs(px - x1) <= GRAB ? "end" : null;
+      if (x0 == null || x1 == null || px < Math.min(x0, x1) - G() || px > Math.max(x0, x1) + G()) return;
+      const end = Math.abs(px - x0) <= G() ? "start" : Math.abs(px - x1) <= G() ? "end" : null;
       if (m.shape === "trend") {
         const y0 = yOf(m.p0), y1 = yOf(m.p1); if (y0 == null || y1 == null) return;
-        if (Math.hypot(px - x0, py - y0) <= GRAB + 2) return take(i, "start", 0);
-        if (Math.hypot(px - x1, py - y1) <= GRAB + 2) return take(i, "end", 0);
+        if (Math.hypot(px - x0, py - y0) <= G() + 2) return take(i, "start", 0);
+        if (Math.hypot(px - x1, py - y1) <= G() + 2) return take(i, "end", 0);
         const L = Math.hypot(x1 - x0, y1 - y0) || 1, d = Math.abs((y1 - y0) * px - (x1 - x0) * py + x1 * y0 - y1 * x0) / L;
-        if (d <= GRAB) take(i, "body", d);
+        if (d <= G()) take(i, "body", d);
       } else if (m.shape === "zone") {
         const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) return;
-        if (end && py >= a - GRAB && py <= b + GRAB) take(i, end, 0);
-        else if (Math.abs(py - a) <= GRAB) take(i, "top", Math.abs(py - a));
-        else if (Math.abs(py - b) <= GRAB) take(i, "bottom", Math.abs(py - b));
-        else if (py > a && py < b) take(i, "inside", GRAB);
+        if (end && py >= a - G() && py <= b + G()) take(i, end, 0);
+        else if (Math.abs(py - a) <= G()) take(i, "top", Math.abs(py - a));
+        else if (Math.abs(py - b) <= G()) take(i, "bottom", Math.abs(py - b));
+        else if (py > a && py < b) take(i, "inside", G());
       } else {
-        const y = yOf(m.price); if (y == null || Math.abs(py - y) > GRAB) return;
+        const y = yOf(m.price); if (y == null || Math.abs(py - y) > G()) return;
         take(i, end || "body", Math.abs(py - y));
       }
     });
@@ -154,7 +164,7 @@ function marksLayer(chart, series, el, o) {
   }
   const pos = e => { const b = el.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
   const inPane = ([x, y]) => x >= 0 && x <= ts.width() && y >= 0 && y <= el.clientHeight - ts.height();
-  const freeze = on => { if (!place) chart.applyOptions({ handleScroll: !on, handleScale: !on }); };
+  const freeze = on => { if (!place && !grab) chart.applyOptions({ handleScroll: !on, handleScale: !on }); };
   const r2 = v => Math.round(v * 100) / 100;
   el.addEventListener("pointerdown", e => {
     if (e.button !== 0) return;
@@ -177,7 +187,7 @@ function marksLayer(chart, series, el, o) {
   el.addEventListener("mousedown", e => { if (held) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener("pointermove", e => {
     const [px, py] = pos(e);
-    if (!held) { if (!place && inPane([px, py]) && hit(px, py)) el.style.cursor = "move"; else if (!place && el.style.cursor === "move") el.style.cursor = ""; return; }
+    if (!held) { if (!place && inPane([px, py]) && hit(px, py)) el.style.cursor = "move"; else if (!place && el.style.cursor === "move") el.style.cursor = grab ? "grab" : ""; return; }
     if (Math.hypot(px - held.x0, py - held.y0) > 3) held.moved = true;
     if (!held.moved) return;
     const p = pOfY(py), t = tOfX(px); if (p == null || t == null) return;
@@ -220,8 +230,9 @@ function marksLayer(chart, series, el, o) {
   document.addEventListener("keydown", e => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
     if ((e.key === "Delete" || e.key === "Backspace") && sel != null) { e.preventDefault(); o.list().splice(sel, 1); sel = null; redraw(); o.changed(); }
-    else if (e.key === "Escape") { sel = null; setPlace(null); redraw(); }
+    else if (e.key === "Escape") { sel = null; grab = false; setPlace(null); redraw(); }
+    else if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey) setGrab(!grab);
   });
   palette();
-  return { redraw, setPlace, placing: () => !!place, deselect: () => { sel = null; redraw(); } };
+  return { redraw, setPlace, setGrab, placing: () => !!place || grab, deselect: () => { sel = null; redraw(); } };
 }
