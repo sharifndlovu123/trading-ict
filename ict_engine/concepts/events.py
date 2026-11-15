@@ -195,13 +195,15 @@ def _tf_close_beyond(g: Event, bars: pd.DataFrame) -> pd.Timestamp | None:
 BLOCK_KINDS = ("ob", "breaker", "mitigation")
 
 
-def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5, confirm: str = "extreme") -> list[Event]:
+def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5, confirm: str = "extreme", single: bool = False) -> list[Event]:
     """Bullish OB: the last down-close candle(s) before a candle CLOSES above their high (the close that
     validates it, Bible p.16 step 3, is ``ts``). Bearish is the mirror (last up-close candles, close below
     their low). ``confirm="open"`` validates earlier, on a close through the block's opening price (Sharif,
     2026-11-14: the sell candle "closing the green candle"). ``max_wait``: the validating close must come
     within this many bars of the block. ``meta['fvg']``: a FVG formed in the move away by the validating bar
-    (a higher-quality OB, p.17 step 4). ``meta['body']`` = (body top, body bottom) for quadrant levels."""
+    (a higher-quality OB, p.17 step 4). ``meta['body']`` = (body top, body bottom) for quadrant levels.
+    ``single=True``: the block is only the LAST opposite-close candle of the run (Sharif 2026-11-16: September alone,
+    not August + September). Whether it is a real OB (a transitional event, the place) is ``ob_context``'s job."""
     if confirm not in ("extreme", "open"):
         raise ValueError(f"confirm must be 'extreme' or 'open', got {confirm!r}")
     o, h, l, c, cts = (*(_arr(df, x) for x in ("open", "high", "low", "close")), _close_ts(df).to_numpy())
@@ -216,6 +218,8 @@ def order_blocks(df: pd.DataFrame, tf: str, max_wait: int = 5, confirm: str = "e
             if run is None:
                 continue
             a, b = run
+            if single:
+                a = b
             if i - b > max_wait:
                 run = None
                 continue
