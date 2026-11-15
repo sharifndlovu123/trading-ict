@@ -267,17 +267,19 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
             "fwd": {tf: panel(fwd_bars, tf, at, at + FWD[tf]) for tf in PANELS}}
 
 
-def live(at: pd.Timestamp):
+def live(at: pd.Timestamp, assets=("US100", "US500")):
     """The current chart (US100, US500): a live read, not a test — no selection is made from it."""
     out = Path("out/read-live")
     (out / "s").mkdir(parents=True, exist_ok=True)
     ids = []
-    for x in ("US100", "US500"):
+    for x in assets:
         bars = dukascopy.load(x, at.date() - timedelta(days=1000), at.date() + timedelta(days=1))
         it = read(x, bars, at.date(), at=at)
         it["id"] = f"{x}-live-{at:%Y%m%d}"
         (out / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":")))
         ids.append(it["id"]); print(it["id"], it["kind"])
+    old = json.loads((out / "index.json").read_text())["ids"] if (out / "index.json").exists() else []
+    ids = list(dict.fromkeys(old + ids))
     (out / "index.json").write_text(json.dumps({"generated": str(date.today()), "live": str(at), "ids": ids}, indent=1))
 
 
@@ -285,11 +287,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--seed", type=int, default=5)
+    ap.add_argument("--assets", default="US100,US500", help="--live only: comma-separated assets")
     ap.add_argument("--live", help="one read per index as of this NY time, e.g. '2026-11-15 18:00' (Sunday open: "
                                    "Friday's day and week count as closed) → out/read-live")
     a = ap.parse_args()
     if a.live:
-        return live(pd.Timestamp(a.live, tz=NY))
+        return live(pd.Timestamp(a.live, tz=NY), tuple(a.assets.split(",")))
     rnd = random.Random(a.seed)
     bars = {x: dukascopy.load(x, HIST, CUT + timedelta(days=60)) for x in ASSETS}
     days = [START + timedelta(days=i) for i in range((CUT - START).days)]

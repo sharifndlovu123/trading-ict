@@ -68,10 +68,20 @@ def _event(bars: pd.DataFrame, ob, tf: str) -> dict | None:
         best = (max if bear else min)(eq or taken, key=lambda x: x.price)
         return {"kind": "liquidity", "what": "equal highs" if bear and eq else "equal lows" if eq else
                 ("swing high" if bear else "swing low"), "price": round(float(best.price), 2), "extreme": round(float(ext), 2)}
-    for g in fvgs(hist, tf):
-        if g.direction == ("bear" if bear else "bull") and ((g.bottom <= ext) if bear else (g.top >= ext)):
-            return {"kind": "inefficiency", "what": f"{tf} {'bearish' if bear else 'bullish'} FVG revisited",
-                    "price": round(float(g.bottom if bear else g.top), 2), "extreme": round(float(ext), 2)}
+    hit = []
+    for g in fvgs(hist, tf):                      # an open gap beyond the OB body that the move reached into
+        if g.direction != ("bear" if bear else "bull"):
+            continue
+        if not ((body_bot < g.bottom <= ext) if bear else (ext <= g.top < body_top)):   # reached; may overlap the body
+            continue
+        later = hist[hist.index > g.origin_ts].iloc[1:]
+        if len(later) and ((later.high.max() >= g.bottom) if bear else (later.low.min() <= g.top)):
+            continue                              # already revisited before: not this move's event
+        hit.append(g)
+    if hit:
+        g = min(hit, key=lambda x: x.bottom) if bear else max(hit, key=lambda x: x.top)
+        return {"kind": "inefficiency", "what": f"{tf} {'bearish' if bear else 'bullish'} FVG revisited",
+                "price": round(float(g.bottom if bear else g.top), 2), "extreme": round(float(ext), 2)}
     return None
 
 
@@ -120,8 +130,10 @@ def _draw(bars: pd.DataFrame, ob, tf: str, as_of: pd.Timestamp, fine: pd.DataFra
             into = (lo <= g.top) if bear else (hi >= g.bottom)
             if into:
                 depth = ((g.top - lo) / (g.top - g.bottom)) if bear else ((hi - g.bottom) / (g.top - g.bottom))
-                pending = (f"; the current {tf} candle (close pending) reached {lo if bear else hi:.2f} = "
-                           f"{depth:.0%} into it{' — past its midpoint' if depth > 0.5 else ''}, now {float(cur.close.iloc[-1]):.2f}")
+                how = ("right through it (wick)" if depth > 1 else f"{depth:.0%} into it"
+                       + (" — past its midpoint" if depth > 0.5 else ""))
+                pending = (f"; the current {tf} candle (close pending) reached {lo if bear else hi:.2f} = {how}, "
+                           f"now {float(cur.close.iloc[-1]):.2f}")
     if since.empty or ((since.low.min() > g.top) if bear else (since.high.max() < g.bottom)):
         state = "not reached yet"
     elif (since.close < g.bottom).any() if bear else (since.close > g.top).any():
