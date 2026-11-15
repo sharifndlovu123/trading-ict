@@ -79,6 +79,10 @@ textarea { width: 100%; min-height: 60px; }
       <span class="tab" data-tf="1M">M</span><span class="tab" data-tf="1w">W</span><span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span><span class="tab" data-tf="5m">5m</span>
       <span class="muted" style="margin-left:10px">show:</span>
       <span class="chip on" data-f="engine">engine plan</span><span class="chip" data-f="range">range (EQ / OTE)</span>
+      <span class="muted" style="margin-left:10px">watch:</span>
+      <button id="w1" title="one candle of this timeframe (N)">+1 candle</button><button id="w60" title="one hour">+1h</button>
+      <button id="wzone" title="jump to the first touch of the zone (the engine's array, or your last zone mark)">to the zone</button>
+      <button id="wreset" title="back to the decision">reset</button><span id="wat" class="pill"></span>
     </div>
     <div class="tabs" id="palette"></div>
     <div id="hint"></div>
@@ -93,6 +97,9 @@ textarea { width: 100%; min-height: 60px; }
       <option value="adjust">right idea — different array / entry / stop / TP (move the lines)</option>
       <option value="wrong_array">right side, wrong array — mark the one you'd use</option>
       <option value="wrong_side">wrong side — I'd trade the other way (place it)</option>
+      <option value="watch">wait for more at the zone — I stepped forward and entered on confirmation</option>
+      <option value="flip">waiting for more flipped it — the trade became the other side</option>
+      <option value="missed">waiting for more = missed — the trade left without me</option>
       <option value="wait">no trade here — wait</option>
       <option value="engine_wait_ok">engine waited — agree</option>
       <option value="engine_wait_trade">engine waited — I'd trade (place it)</option>
@@ -185,11 +192,37 @@ function drawLines() {
 
 // re-entry review: everything after the re-entry decision stays hidden until you save (closed candles only)
 const TF_SEC = { "1M": 2678400, "1w": 604800, "1d": 86400, "4h": 14400, "1h": 3600, "15m": 900, "5m": 300 };
-const hidden = () => st.it && !st.answers[st.it.id];   // everything after the decision stays hidden until you save
+const hidden = () => st.it && !st.answers[st.it.id];   // everything after the watch point stays hidden until you save
+// watch mode: step price forward from the decision (closed candles + the forming one from 5m), act when you would
+const cut = () => { const d = draft(); return d.cut || st.it.decided; };
+function visible(tf) {
+  const all = st.it.panels[tf] || [];
+  if (!hidden()) return all;
+  const c = cut(), f5 = st.it.panels["5m"] || [];
+  if (tf === "1M") {
+    const pre = (st.it.panels["1M_pre"] || []).map(x => x.slice()), extra = f5.filter(x => x[0] >= st.it.decided && x[0] + 300 <= c);
+    if (pre.length) { const L = pre[pre.length - 1]; for (const x of extra) { L[2] = Math.max(L[2], x[2]); L[3] = Math.min(L[3], x[3]); L[4] = x[4]; } }
+    return pre;
+  }
+  const rows = all.filter(x => x[0] + TF_SEC[tf] <= c);
+  const forming = all.find(x => x[0] < c && x[0] + TF_SEC[tf] > c);
+  if (forming && tf !== "5m") {
+    const parts = f5.filter(x => x[0] >= forming[0] && x[0] + 300 <= c);
+    if (parts.length) rows.push([forming[0], parts[0][1], Math.max(...parts.map(x => x[2])), Math.min(...parts.map(x => x[3])), parts[parts.length - 1][4]]);
+  }
+  return rows;
+}
+function watchTo(t) { const d = draft(), end = (st.it.panels["5m"] || []).slice(-1)[0];
+  d.cut = Math.max(st.it.decided, Math.min(t, end ? end[0] + 300 : t)); saveDrafts(); setData(); resBox(); }
+function toZone() {
+  const d = draft(), z = st.it.array || [...d.marks].reverse().find(m => m.shape === "zone");
+  if (!z) { $("wat").textContent = "no zone: mark one first"; return; }
+  const hit = (st.it.panels["5m"] || []).find(x => x[0] >= cut() && x[3] <= z.top && x[2] >= z.bottom);
+  if (hit) watchTo(hit[0] + 300); else $("wat").textContent = "the zone is not reached";
+}
 function setData() {
-  const all = st.it.panels[st.tf] || [];
-  const pre = st.it.panels[st.tf + "_pre"];             // monthly: the unfinished month up to the decision
-  const rows = hidden() ? (pre || all.filter(c => c[0] + TF_SEC[st.tf] <= st.it.decided)) : all;
+  const rows = visible(st.tf);
+  const w = cut(); $("wat").textContent = hidden() ? (w > st.it.decided ? "watching: " + new Date(w * 1000).toISOString().slice(5, 16).replace("T", " ") + " (NY wall)" : "at the decision") : "revealed";
   st.times = rows.map(c => c[0]);
   series.setData(rows.map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
   const P = null, mk = [];
@@ -200,8 +233,9 @@ function setData() {
   mk.push({ time: snap(st.it.decided), position: st.it.side === "long" ? "belowBar" : "aboveBar", color: css("--key"), shape: st.it.side === "long" ? "arrowUp" : st.it.side === "short" ? "arrowDown" : "circle", text: "now" });
   if (st.it.filled && !hidden()) mk.push({ time: snap(st.it.filled), position: "inBar", color: css("--entry"), shape: "circle", text: "fill" });
   if (st.it.exit_at && !hidden()) mk.push({ time: snap(st.it.exit_at), position: "inBar", color: st.it.exit === "stop" ? css("--stop") : css("--tp"), shape: "square", text: st.it.exit });
-  series.setMarkers(mk.filter(m => m.time != null && (!hidden() || m.time <= st.it.decided)).sort((a, b) => a.time - b.time));
-  chart.timeScale().fitContent();
+  series.setMarkers(mk.filter(m => m.time != null && (!hidden() || m.time <= cut())).sort((a, b) => a.time - b.time));
+  const fk = st.it.id + st.tf;                       // keep the zoom while stepping forward
+  if (st.fitKey !== fk) { chart.timeScale().fitContent(); st.fitKey = fk; }
   drawLines();
 }
 function snap(t) {   // marker time → the bar that contains it on this panel
@@ -224,7 +258,7 @@ function replay() {
   tps.sort((a, b) => (a.price - b.price) * sgn);
   const total = tps.reduce((s, t) => s + (+t.pct || 0), 0) || 100;
   let filled = null, cur = stop, left = 1, r = 0, k = 0, ev = [];
-  const start = d.entry != null ? it.decided : (it.filled || it.decided);
+  const start = d.entry != null ? (d.entry_at || it.decided) : (it.filled || it.decided);   // your entry: from when you placed it
   for (const [t, h, l] of it.path) {
     if (t < start) continue;
     if (filled == null) {
@@ -336,7 +370,7 @@ lineDrag(chart, series, $("chart"), {
   },
   move: (key, price) => {
     const d = draft();
-    if (key === "entry") d.entry = price;
+    if (key === "entry") { d.entry = price; d.entry_at = cut(); }
     else if (key === "stop") d.stop = { price, why: d.stop ? d.stop.why : STOP_WHY[0] };
     else if (key.startsWith("tp")) d.tps[+key.slice(2)].price = price;
     else if (key === "eng-tp1" || key === "eng-final") {
@@ -355,7 +389,7 @@ chart.subscribeClick(p => {
   const price = series.coordinateToPrice(p.point.y); if (price == null) return;
   const v = Math.round(price * 100) / 100, d = draft();
   if (st.tool === "stop") d.stop = { price: v, why: d.stop ? d.stop.why : STOP_WHY[0] };
-  else if (st.tool === "entry") d.entry = v;
+  else if (st.tool === "entry") { d.entry = v; d.entry_at = cut(); }
   else d.tps.push({ price: v, pct: d.tps.length ? 25 : 50, why: TP_WHY[0] });
   setTool(null);                                            // one placement per pick
   saveDrafts(); refresh();
@@ -367,6 +401,10 @@ $("verdict").onchange = () => { draft().verdict = $("verdict").value; saveDrafts
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => { st.tf = t.dataset.tf; render(); });
 document.querySelectorAll(".chip").forEach(c => c.onclick = () => { st.filt[c.dataset.f] = !st.filt[c.dataset.f];
   try { localStorage.setItem("plan-filt", JSON.stringify(st.filt)); } catch (e) {} render(); });
+$("w1").onclick = () => watchTo(cut() + Math.max(300, TF_SEC[st.tf]));
+$("w60").onclick = () => watchTo(cut() + 3600);
+$("wzone").onclick = toZone;
+$("wreset").onclick = () => { const d = draft(); d.cut = null; saveDrafts(); setData(); resBox(); };
 $("prev").onclick = () => load(st.i - 1); $("next").onclick = () => load(st.i + 1);
 $("pick").onchange = () => load(st.ids.indexOf($("pick").value));
 document.addEventListener("keydown", e => {
@@ -374,11 +412,12 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") load(st.i - 1); else if (e.key === "ArrowRight") load(st.i + 1);
   else if ("1234567".includes(e.key)) { st.tf = ["1M", "1w", "1d", "4h", "1h", "15m", "5m"][+e.key - 1]; render(); }
   else if (e.key === "Escape") setTool(null);
+  else if (e.key === "n" && hidden()) watchTo(cut() + Math.max(300, TF_SEC[st.tf]));
   else if (e.key === "s") setTool("stop"); else if (e.key === "t") setTool("tp"); else if (e.key === "e") setTool("entry");
 });
 $("save").onclick = async () => {
   const d = draft(), x = replay();
-  const body = { id: st.it.id, asset: st.it.asset, side: st.it.side, kind: st.it.kind, engine: { entry: st.it.entry, stop: st.it.stop, tp1: st.it.tp1, final: st.it.final, runner_r: st.it.runner_r, array: st.it.array || null, wait: st.it.wait || null, outcome: st.it.outcome || null },
+  const body = { watched_to: cut(), entry_at: d.entry_at || null, id: st.it.id, asset: st.it.asset, side: st.it.side, kind: st.it.kind, engine: { entry: st.it.entry, stop: st.it.stop, tp1: st.it.tp1, final: st.it.final, runner_r: st.it.runner_r, array: st.it.array || null, wait: st.it.wait || null, outcome: st.it.outcome || null },
                  entry: d.entry, stop: d.stop, tps: d.tps, be: d.be, notes: d.notes, verdict: d.verdict || null, marks: d.marks, steps: d.steps, replay_r: x.r ?? null, replay_events: x.ev ?? [] };
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { $("saved").textContent = "save failed — is the server running?"; return; }

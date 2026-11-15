@@ -40,7 +40,7 @@ OUT = Path("out/plans")
 HORIZON = {"4h": timedelta(days=5), "1h": timedelta(days=2), "1d": timedelta(days=10)}
 FAST = {"4h": 0.2, "1h": 0.1, "1d": 0.5}          # ADR per candle of the move = fast
 SPAN = {"1w": timedelta(days=730), "1d": timedelta(days=170), "4h": timedelta(days=20), "1h": timedelta(days=5),
-        "15m": timedelta(hours=40), "5m": timedelta(hours=14)}
+        "15m": timedelta(hours=40), "5m": timedelta(days=7)}       # 5m back a week: builds the forming candle in watch mode
 
 
 def months(bars: pd.DataFrame, a: pd.Timestamp, b: pd.Timestamp) -> list:
