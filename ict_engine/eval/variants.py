@@ -74,6 +74,8 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     "counter: after a bias trade's TP1": replace(BASE, counter_after="tp1"),
     "counter: after the daily draw": replace(BASE, counter_after="draw"),
     "trigger: hold within 2 bp": replace(BASE, liquidity_hold_bp=2.0),
+    "stop: 15m swing + daily draw": replace(BASE, stop_tf="15m"),
+    "stop: 1h swing + daily draw": replace(BASE, stop_tf="1h"),
 }
 
 
@@ -121,6 +123,8 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "counter: after the daily draw": replace(MB, counter_after="draw"),
     "purge: hold within 2 bp": replace(MB, liquidity_hold_bp=2.0),
     "entry: retest of the broken OC": replace(MB, entry="oc_retest"),
+    "stop: 15m swing + daily draw": replace(MB, stop_tf="15m"),
+    "stop: 1h swing + daily draw": replace(MB, stop_tf="1h"),
 }
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {

@@ -431,3 +431,41 @@ def test_oc_retest_on_real_bars_us100_q3_2023():
                 again = [x.plan for x in run_day(cut, day, "US100", p) if x.plan and x.decided_at == s.decided_at]
                 assert any(a.entry == pl.entry and a.stop == pl.stop and a.tp1 == pl.tp1 for a in again)
     assert plans >= 10
+
+
+def test_htf_stop_on_real_bars_us100_sep_2023():
+    """HTF-stop pre-reg on real US100 bars (Sep 2023, in-sample), both models and both timeframes: a moved stop lies
+    beyond the model's stop at a swing confirmed before the decision; entry and TP1 keep their price; a new final is
+    PDH/PWH (PDL/PWL) beyond TP1 and untaken from 00:00 to the decision."""
+    from dataclasses import replace
+    from datetime import datetime, time
+    from ict_engine.eval.backtest import load_range
+    from ict_engine.models import model_2022, model_mmxm
+    from ict_engine.sim.run import run_day
+    try:
+        bars = load_range("US100", date(2023, 8, 1), date(2023, 9, 29))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    moved = 0
+    for mod in (model_2022, model_mmxm):
+        for tf in ("15m", "1h"):
+            p = replace(mod.Params(), stop_tf=tf)
+            for day in pd.date_range("2023-09-01", "2023-09-28").date:
+                if day.weekday() >= 5:
+                    continue
+                ctx = build_context(bars, day)
+                for s in run_day(bars, day, "US100", p, ctx=ctx):
+                    g = next((g for g in s.gates if g.name == "stop_tf"), None)
+                    if not s.plan or g is None or "→" not in g.detail:
+                        continue
+                    moved += 1
+                    long, a, b = s.side == "long", s.would_plan, s.plan
+                    assert b.entry == a.entry and b.tp1 == a.tp1
+                    assert (b.stop < a.stop) if long else (b.stop > a.stop)
+                    if b.final_name in ("pdh", "pwh", "pdl", "pwl"):
+                        lvl = ctx.levels[b.final_name]
+                        assert b.final_target == lvl and ((lvl > b.tp1) if long else (lvl < b.tp1))
+                        d0 = pd.Timestamp(datetime.combine(day, time(0)), tz="America/New_York")
+                        seen = bars[(bars.index >= d0) & (bars.index < b.placed_at)]
+                        assert (seen.high.max() < lvl) if long else (seen.low.min() > lvl)
+    assert moved >= 10

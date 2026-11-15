@@ -84,6 +84,16 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
                 s.plan = None
                 continue
             s.plan = plan
+        stf = getattr(params, "stop_tf", None)
+        if stf:
+            from ict_engine.models import htf_stop
+            ok, why, plan = htf_stop.apply(stf, s.plan, bars_1m, ctx, stop_buffer=getattr(params, "stop_buffer", 0.0),
+                                           asset=asset, max_cost_r=getattr(params, "max_cost_r", None))
+            s.gates.append(Gate("stop_tf", ok, why))
+            if not ok:
+                s.plan = None
+                continue
+            s.plan = plan
         scope = "day" if cap_scope == "day" else (s.tags.get("window") or "day")
         # A newer setup replaces a pending order that has not filled yet (stale limit is cancelled).
         if prev is not None and s.decided_at < busy_until and (

@@ -82,6 +82,7 @@ class Params:
     # no sweep before the MSS → accept a turn that held within this many bp above (below) an untaken 5m swing /
     # context level inside a window (liquidity-hold pre-registration); None = off
     liquidity_hold_bp: float | None = None
+    stop_tf: str | None = None           # htf_stop.TFS: structural stop + PDH/PWH draw (htf-stop pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
@@ -110,6 +111,8 @@ class Params:
             extra.append(f"counter_{self.counter_after}")
         if self.liquidity_hold_bp:
             extra.append(f"hold{self.liquidity_hold_bp:g}bp")
+        if self.stop_tf:
+            extra.append(f"stop{self.stop_tf}")
         if self.invalidate_tf:
             extra.append(f"inval{self.invalidate_tf}")
         if self.news_blackout:
