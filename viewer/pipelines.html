@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Engine Pipelines</title>
+<style>
+:root { --bg:#f2f3f0; --panel:#fcfcfb; --ink:#141614; --ink2:#52514e; --line:#d9ddd7;
+  --run:#e8ebe5; --review:#dbe9f8; --pattern:#fde9cf; --audit:#e6def5; --gate:#d8efe2; --you:#fbdcd7;
+  --review-b:#2a78d6; --pattern-b:#c98500; --audit-b:#6250d6; --gate-b:#1f7a55; --you-b:#b23b3b; --run-b:#8a8f88; }
+:root[data-theme="dark"] { --bg:#111110; --panel:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --line:#34342f;
+  --run:#262624; --review:#1b2c42; --pattern:#3a2d14; --audit:#2a2444; --gate:#17301f; --you:#40201c;
+  --review-b:#3987e5; --pattern-b:#c98500; --audit-b:#9085e9; --gate-b:#4cc28c; --you-b:#e66767; --run-b:#75746f; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
+main { max-width:1180px; margin:0 auto; padding:20px 16px 60px; }
+h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:15px; margin:26px 0 8px; }
+.sub { color:var(--ink2); margin:0 0 14px; }
+button { float:right; font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:3px 9px; cursor:pointer; }
+.legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin:10px 0 4px; font-size:13px; color:var(--ink2); }
+.sw { display:inline-block; width:12px; height:12px; border-radius:3px; border:2px solid; vertical-align:-2px; margin-right:5px; }
+.lane { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:10px 0; }
+.lane h3 { margin:0 0 2px; font-size:15px; } .lane .when { color:var(--ink2); font-size:13px; margin-bottom:10px; }
+.flow { display:flex; flex-wrap:wrap; align-items:stretch; gap:6px 0; }
+.step { flex:1 1 150px; min-width:140px; max-width:230px; border:2px solid; border-radius:8px; padding:7px 9px; font-size:12.5px; }
+.step b { display:block; font-size:13px; margin-bottom:2px; }
+.arrow { align-self:center; padding:0 5px; color:var(--ink2); font-size:16px; }
+.run { background:var(--run); border-color:var(--run-b); } .review { background:var(--review); border-color:var(--review-b); }
+.pattern { background:var(--pattern); border-color:var(--pattern-b); } .audit { background:var(--audit); border-color:var(--audit-b); }
+.gate { background:var(--gate); border-color:var(--gate-b); } .you { background:var(--you); border-color:var(--you-b); }
+.cond { border-style:dashed; }
+table { border-collapse:collapse; width:100%; font-size:13px; background:var(--panel); }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top; }
+th { color:var(--ink2); font-weight:500; }
+.scroll { overflow-x:auto; }
+@media (max-width:700px) { .arrow { display:none; } .step { max-width:none; } }
+</style>
+</head>
+<body>
+<main>
+  <button id="theme">☾ dark</button>
+  <h1>Engine pipelines</h1>
+  <p class="sub">Which skill runs when, for each kind of job. Goal: ≥ 50% win rate (TP1 before the stop) with positive R, day-only holds, proven on unseen data.</p>
+  <div class="legend">
+    <span><span class="sw run"></span>run / score</span><span><span class="sw review"></span>trade-review</span>
+    <span><span class="sw pattern"></span>pattern-finder</span><span><span class="sw audit"></span>pd-array-audit</span>
+    <span><span class="sw gate"></span>change-gate</span><span><span class="sw you"></span>your decision</span>
+    <span>dashed = only when its trigger fires</span>
+  </div>
+
+  <div class="lane"><h3>A · Backtest</h3><div class="when">After any backtest, sweep or simulation.</div>
+    <div class="flow">
+      <div class="step run"><b>1 Run</b>In-sample only, futures cost. Keep the previous result to compare.</div><span class="arrow">→</span>
+      <div class="step run"><b>2 Score</b>Trades, win % (range), mean R, z, capped R, change vs before.</div><span class="arrow">→</span>
+      <div class="step review"><b>3 Review facts, all trades</b>Side vs read, range half, sweep before, stop vs pools, pools before TP1.</div><span class="arrow">→</span>
+      <div class="step pattern"><b>4 Pattern finder</b>Which facts separate wins from losses. On R and on win rate.</div><span class="arrow">→</span>
+      <div class="step review"><b>5 Written reviews, subset</b>12 trades: worst, typical losers, winners. The reason behind the numbers.</div><span class="arrow">→</span>
+      <div class="step audit cond"><b>6 Array audit</b>If problems cluster on one array, or a trade can't be explained.</div><span class="arrow">→</span>
+      <div class="step gate"><b>7 Findings → B</b>Each recommendation goes through the change gate.</div>
+    </div></div>
+
+  <div class="lane"><h3>B · Code change</h3><div class="when">Any recommendation that might touch the code.</div>
+    <div class="flow">
+      <div class="step gate"><b>1 Classify</b>No change · measure first · bug fix · option (flag) · new default.</div><span class="arrow">→</span>
+      <div class="step pattern"><b>2 Witnesses</b>Pattern finder, array audit, trade reviews, review log, your saves. Do they agree?</div><span class="arrow">→</span>
+      <div class="step you cond"><b>Disagree?</b>Both sides with numbers go to you.</div><span class="arrow">→</span>
+      <div class="step gate"><b>3 Test first, then change</b>Options keep the current default. Full test suite.</div><span class="arrow">→</span>
+      <div class="step run"><b>4 Re-run backtest</b>Before → after. No intended change = results must match.</div><span class="arrow">→</span>
+      <div class="step gate"><b>5 Decision record</b>research/decisions/</div>
+    </div></div>
+
+  <div class="lane"><h3>C · Full review</h3><div class="when">"Evaluate everything again."</div>
+    <div class="flow">
+      <div class="step audit"><b>1 Array audit first</b>Everything rests on the arrays.</div><span class="arrow">→</span>
+      <div class="step run"><b>2 Pipeline A per model</b>2022 model, MMxM, silver bullet, cameron, engine plan.</div><span class="arrow">→</span>
+      <div class="step pattern"><b>3 Ledger</b>Works · promising · no edge · consistent loser.</div><span class="arrow">→</span>
+      <div class="step run"><b>4 Gap to the goal</b>Best honest variant vs 50% win, positive R, day-only.</div><span class="arrow">→</span>
+      <div class="step gate"><b>5 Ranked next actions</b>Each through pipeline B.</div>
+    </div></div>
+
+  <div class="lane"><h3>D · Single trade</h3><div class="when">Your trade, ICT's, or one engine trade.</div>
+    <div class="flow">
+      <div class="step review"><b>1 Trade review</b>What was tried, what happened, what was missed (known at entry vs hindsight).</div><span class="arrow">→</span>
+      <div class="step audit cond"><b>2 Array audit, that moment</b>If the array is in doubt or the trade can't be explained.</div><span class="arrow">→</span>
+      <div class="step pattern cond"><b>3 Pattern finder</b>Every 10 logged reviews: which steps keep failing.</div><span class="arrow">→</span>
+      <div class="step gate cond"><b>4 Engine idea → B</b></div>
+    </div></div>
+
+  <div class="lane"><h3>E · Confirmation</h3><div class="when">Spending unseen data (2024-07 onward). Once.</div>
+    <div class="flow">
+      <div class="step run"><b>1 Pre-register</b>The exact rule, the data, the pass bar (≥ 30 trades, z ≥ 2.4).</div><span class="arrow">→</span>
+      <div class="step you"><b>2 You approve</b></div><span class="arrow">→</span>
+      <div class="step run"><b>3 One run on unseen data</b></div><span class="arrow">→</span>
+      <div class="step gate"><b>4 Pass → new default (B)</b>Fail → logged as failed, not re-tuned.</div>
+    </div></div>
+
+  <h2>Decision rules: scores → next step</h2>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>When the scores show</th><th>Next step</th></tr>
+    <tr><td>R1</td><td>Win ≥ 50%, mean R &gt; 0, z ≥ 2, holds capped and in both halves</td><td>Candidate → pipeline E. No more tuning in-sample.</td></tr>
+    <tr><td>R2</td><td>Mean R &lt; 0 with z ≤ −2, or negative in most cuts</td><td>Consistent loser: stop tuning. One pattern-finder pass for a "do less" filter; if none holds, park it.</td></tr>
+    <tr><td>R3</td><td>No edge (|z| &lt; 2)</td><td>Review facts + pattern finder + written reviews. The checklist step that fails most becomes the next option to test.</td></tr>
+    <tr><td>R4</td><td>"Do less" on one array kind/TF (n ≥ 30), or ≥ 3 of 12 reviews fail the array step</td><td>Array audit before concluding anything about that array.</td></tr>
+    <tr><td>R5</td><td>One trade the review can't explain, or the array disagrees with the chart</td><td>Array audit for that moment; wrong array → bug fix through B.</td></tr>
+    <tr><td>R6</td><td>Any recommendation to change code</td><td>Pipeline B. Never straight from a finding.</td></tr>
+    <tr><td>R7</td><td>A code change landed</td><td>Re-run the affected backtest and compare.</td></tr>
+    <tr><td>R8</td><td>Win rate and R disagree</td><td>Check target and stop distance first; test smaller targets / structure stops as options.</td></tr>
+    <tr><td>R9</td><td>Day-only R very different from held R</td><td>Report both. A rule that only works overnight is not a candidate.</td></tr>
+  </table></div>
+
+  <h2>What stops for you</h2>
+  <div class="scroll"><table>
+    <tr><td>Witnesses disagree, with evidence on both sides</td><td>An ICT definition question (after ictindex.io)</td><td>Approving a pre-registration</td><td>Dropping or parking a whole model</td></tr>
+  </table></div>
+</main>
+<script>
+(function(){ let t="light"; try{ t=localStorage.getItem("pl-theme")||"light"; }catch(e){}
+  const b=document.getElementById("theme"), set=v=>{ document.documentElement.dataset.theme=v; b.textContent=v==="light"?"☾ dark":"☀ light"; };
+  set(t); b.onclick=()=>{ t=t==="light"?"dark":"light"; set(t); try{ localStorage.setItem("pl-theme",t); }catch(e){} }; })();
+</script>
+</body>
+</html>
