@@ -181,7 +181,8 @@ function drawLines() {
 
 // re-entry review: everything after the re-entry decision stays hidden until you save (closed candles only)
 const TF_SEC = { "1w": 604800, "1d": 86400, "4h": 14400, "1h": 3600, "15m": 900, "5m": 300 };
-const hidden = () => st.it && st.it.kind === "reentry" && !st.answers[st.it.id];
+const REVEAL = false;                 // hide the outcome until saved (off for now: Sharif 2026-11-16, small-TF re-entries were confusing)
+const hidden = () => REVEAL && st.it && st.it.kind === "reentry" && !st.answers[st.it.id];
 function setData() {
   const all = st.it.panels[st.tf] || [];
   const rows = hidden() ? all.filter(c => c[0] + TF_SEC[st.tf] <= st.it.decided) : all;
@@ -277,7 +278,7 @@ function facts() {
       + `<div class="muted">1st trade: entry ${fmt(it.prior.entry)} · stop ${fmt(it.prior.stop)} · filled ${t(it.prior.filled)} · stopped ${t(it.prior.exit_at)} (${it.prior.r} R) — grey dashed lines, markers “1st trade” / “1st stopped”</div>`
     : `<span class="kind-${it.kind}">${it.kind === "cut" ? "CUT OFF — moved our way, stopped, then ran" : "WON — TP1 before the stop"}</span>`;
   $("facts").innerHTML = `<div>${head}</div>
-    <div>${it.model} · <b>${it.side.toUpperCase()}</b> · ${it.window || ""} · POI ${it.poi || "–"}</div>
+    <div>${it.model} · <b>${it.side.toUpperCase()}</b> · ${it.window || ""} · POI ${it.poi || "–"} · entry on a <b>${/mmxm/i.test(it.model) ? "5m" : "1m"} FVG</b></div>
     <div class="mono">entry ${fmt(it.entry)} · stop ${fmt(it.stop)} (risk ${fmt(it.risk)}) · TP1 ${fmt(it.tp1)} ${it.tp1_name || ""} · final ${fmt(it.final)}</div>
     ${it.mfe_close != null ? `<div>best move our way: <b>${it.mfe_before_stop} R</b> before the stop, <b>${it.mfe_close} R</b> by the close (against: ${it.mae_close} R)</div>` : ""}
     <div class="muted">swept: ${it.liquidity || "–"} · bias ${b.prev_day_dol || "?"} / weekly ${b.dol_weekly || "?"}${k.daily_range ? ` · daily range ${Math.round(k.daily_range.fraction * 100)}% (${k.daily_range.zone})` : ""}</div>`;
