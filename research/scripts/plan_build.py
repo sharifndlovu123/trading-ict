@@ -115,8 +115,34 @@ def plan(pin: dict) -> dict:
             "pools_against": [x["price"] for x in (pin["bs"] if bear else pin["ss"])], "considered": considered}
 
 
-def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
-    end = at + HORIZON[p["rtf"]]
+FLAT, LAST_ENTRY = time(16, 55), time(15, 0)        # intraday option: flat time (= the futures cost model) / last fill
+
+
+def day_window(at: pd.Timestamp) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """(flat, last entry) of the decision day: everything is closed at the last 1m close before 16:55 NY, no fill
+    after 15:00 (Sharif 2026-11-16: "hold a trade for the day and that's it")."""
+    d = at.normalize()
+    return (d + pd.Timedelta(hours=FLAT.hour, minutes=FLAT.minute),
+            d + pd.Timedelta(hours=LAST_ENTRY.hour, minutes=LAST_ENTRY.minute))
+
+
+def zone_stop(p: dict) -> float:
+    """A stop just beyond the entry array (far edge + 0.05 ADR), never tighter than MIN_RISK ADR from the entry."""
+    long, a, adr, e = p["side"] == "long", p["array"], p["adr"], p["entry"]
+    s = a["bottom"] - 0.05 * adr if long else a["top"] + 0.05 * adr
+    if abs(e - s) < MIN_RISK * adr:
+        s = e - MIN_RISK * adr if long else e + MIN_RISK * adr
+    return s
+
+
+def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict, *, day_only: bool = False, stop_at: str = "range",
+           manage_fn=None) -> dict:
+    """Fill on the first touch. Options (defaults = the first plan, unchanged): ``day_only`` = flat at 16:55 NY of the
+    decision day and no fill after 15:00; ``stop_at`` "range" (beyond the fake-out) | "zone" (beyond the array; the
+    range stop still cancels the plan before the fill); ``manage_fn`` replaces ``manage`` (sweeps)."""
+    if stop_at not in ("range", "zone"):
+        raise ValueError(f"stop_at {stop_at!r}")
+    end, last = day_window(at) if day_only else (at + HORIZON[p["rtf"]], None)
     path = bars[(bars.index >= at) & (bars.index < end)]
     long = p["side"] == "long"
     sg = 1 if long else -1
@@ -124,6 +150,8 @@ def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
     risk = (e - s) * sg
     filled = None
     for ts, h, l in zip(path.index, path.high, path.low):
+        if last is not None and ts > last:
+            return {"outcome": "not filled before the entry cutoff", "r_tp1": 0.0, "runner_r": 0.0}
         if filled is None:
             if (h >= s) if not long else (l <= s):
                 if (l <= e) if long else (h >= e):
@@ -139,33 +167,37 @@ def replay(bars: pd.DataFrame, at: pd.Timestamp, p: dict) -> dict:
         break
     if filled is None:
         return {"outcome": "not filled before the horizon", "r_tp1": 0.0, "runner_r": 0.0}
-    return {**manage(path[path.index >= filled], e, s, t1, fn, long), "filled": wall(filled)}
+    if stop_at == "zone":
+        s = zone_stop(p)
+    return {**(manage_fn or manage)(path[path.index >= filled], e, s, t1, fn, long), "filled": wall(filled)}
 
 
-def manage(after: pd.DataFrame, e: float, s: float, t1: float, fn: float, long: bool) -> dict:
-    """From the fill bar on: 50 % at TP1, stop to entry, the rest to final; same bar stop + target → stop first;
-    whatever is open at the end of ``after`` closes at its last close."""
+def manage(after: pd.DataFrame, e: float, s: float, t1: float, fn: float, long: bool, partial: float = 0.5) -> dict:
+    """From the fill bar on: ``partial`` (50 %) at TP1, stop to entry, the rest to final; same bar stop + target → stop
+    first; whatever is open at the end of ``after`` closes at its last close. ``partial`` = 1 → all out at TP1."""
+    if partial >= 1:
+        fn = t1
     sg = 1 if long else -1
     risk = (e - s) * sg
     cur, half, r, ev, exit_at = s, False, 0.0, [], None
     for ts, h, l in zip(after.index, after.high, after.low):
         if (l <= cur) if long else (h >= cur):
-            r += (0.5 if half else 1.0) * (cur - e) * sg / risk
+            r += ((1 - partial) if half else 1.0) * (cur - e) * sg / risk
             ev.append(f"{'stop at entry' if half else 'stopped'} {ts:%a %H:%M}")
             exit_at = ts
             break
         if not half and ((h >= t1) if long else (l <= t1)):
             half, cur = True, e
-            r += 0.5 * (t1 - e) * sg / risk
+            r += partial * (t1 - e) * sg / risk
             ev.append(f"TP1 {ts:%a %H:%M}")
         if half and ((h >= fn) if long else (l <= fn)):
-            r += 0.5 * (fn - e) * sg / risk
+            r += (1 - partial) * (fn - e) * sg / risk
             ev.append(f"final {ts:%a %H:%M}")
             exit_at = ts
             break
     else:
         px = float(after.close.iloc[-1])
-        r += (0.5 if half else 1.0) * (px - e) * sg / risk
+        r += ((1 - partial) if half else 1.0) * (px - e) * sg / risk
         ev.append(f"horizon end, closed ≈ {px:.2f}")
         exit_at = after.index[-1]
     r_tp1 = (t1 - e) * sg / risk if half else (-1.0 if "stopped" in " ".join(ev) else r)
@@ -178,10 +210,13 @@ CTF = {"1h": "5m", "4h": "5m", "1d": "15m"}       # the lower timeframe that mus
 MIN_RISK = 0.1                                     # ADR: a confirmation stop is never tighter than this
 
 
-def _limit(path: pd.DataFrame, long: bool, e: float, s: float, t1: float) -> tuple[pd.Timestamp | None, str | None]:
+def _limit(path: pd.DataFrame, long: bool, e: float, s: float, t1: float,
+           last: pd.Timestamp | None = None) -> tuple[pd.Timestamp | None, str | None]:
     """A resting limit: filled when price trades back to ``e``; cancelled if ``s`` trades first; missed (no chase) if
-    ``t1`` trades first. Returns (fill ts, None) or (None, reason)."""
+    ``t1`` trades first; pulled after ``last`` (the intraday entry cutoff). Returns (fill ts, None) or (None, reason)."""
     for ts, h, l in zip(path.index, path.high, path.low):
+        if last is not None and ts > last:
+            return None, "no retest before the entry cutoff"
         if (l <= s) if long else (h >= s):
             return (ts, None) if ((l <= e) if long else (h >= e)) else (None, "cancelled: stop traded before the retest")
         if (l <= e) if long else (h >= e):
@@ -191,7 +226,8 @@ def _limit(path: pd.DataFrame, long: bool, e: float, s: float, t1: float) -> tup
     return None, "no retest before the horizon"
 
 
-def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = True, stop_at: str = "zone") -> dict:
+def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = True, stop_at: str = "zone", *,
+                   day_only: bool = False, min_rr: float = 1.0, min_disp: float = 0.0, manage_fn=None) -> dict:
     """Sharif 2026-11-16: "we wait for any PD array action that supports what we are aiming to achieve or against."
       arm      the first 1m touch of the array's near edge (before it: stop traded → cancelled, TP1 → missed)
       support  a new FVG our way on the confirmation TF (CTF), its third candle closing after the arm → limit at its
@@ -202,9 +238,14 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
                that far edge (the inversion), stop beyond the array's other edge + 0.05 ADR, TP1 = the range
                fake-out the first plan used as its stop (≥ 1 R, else the next pool), final = the next pool
       neither  the stop level / TP1 trades with no confirmation → no trade
-    Each closed CTF candle is used only from its close (no look-ahead); fills and management on 1m."""
+    Each closed CTF candle is used only from its close (no look-ahead); fills and management on 1m.
+    Options (defaults unchanged): ``day_only`` = flat at 16:55 NY of the decision day, no arm / fill after 15:00;
+    ``min_rr`` = the room a structural TP1 must give (1 R; 0 lets a sweep choose its own target); ``min_disp`` > 0 =
+    the support FVG counts only when its middle candle is a displacement: body ≥ ``min_disp`` × the mean body of the 14
+    CTF candles before it (0 = any FVG, the first version); ``manage_fn`` replaces ``manage``."""
     from ict_engine.concepts.bars import resample
-    end = at + HORIZON[p["rtf"]]
+    manage_ = manage_fn or manage
+    end, last = day_window(at) if day_only else (at + HORIZON[p["rtf"]], None)
     path = bars[(bars.index >= at) & (bars.index < end)]
     long = p["side"] == "long"
     e, s, t1, fn, adr = p["entry"], p["stop"], p["tp1"], p["final"], p["adr"]
@@ -216,6 +257,8 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
             "r_tp1": 0.0, "runner_r": 0.0, "stage": "none"}
     armed = None
     for ts, h, l in zip(path.index, path.high, path.low):
+        if last is not None and ts > last:
+            return {**base, "outcome": "zone not reached before the entry cutoff"}
         if (l <= s) if long else (h >= s):
             if (l <= e) if long else (h >= e):
                 armed = ts
@@ -230,6 +273,11 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
         return {**base, "outcome": "zone not reached before the horizon"}
     c = resample(path[path.index >= armed.floor(CTF[p["rtf"]].replace("m", "min"))], CTF[p["rtf"]])
     cts = c["close_ts"] + pd.Timedelta(minutes=1)          # close_ts = its last 1m bar; known at that bar's end
+    if min_disp > 0:                                       # mean body of the 14 CTF candles before each candle (past only)
+        step = pd.Timedelta(CTF[p["rtf"]].replace("m", "min"))
+        hist = resample(bars[(bars.index >= c.index[0] - 16 * step) & (bars.index < end)], CTF[p["rtf"]]) if len(c) else c
+        body = (hist.close - hist.open).abs()
+        mean14 = body.rolling(14, min_periods=5).mean().shift(1)
     for i in range(len(c)):
         bar = c.iloc[i]
         seen = path[(path.index >= armed) & (path.index < cts.iloc[i])]
@@ -250,23 +298,28 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
             fake = p["range"]["hi"] if fl else p["range"]["lo"]
             tps = sorted({fake, *pools}, reverse=not fl)
             tps = [x for x in tps if ((x > fe) if fl else (x < fe))]
-            ft1 = next((x for x in tps if abs(x - fe) >= frisk), None)
+            ft1 = next((x for x in tps if abs(x - fe) >= min_rr * frisk), None)
             if ft1 is None:
                 return {**base, "stage": "against", "armed": wall(armed), "outcome": "against: flip has no room (< 1 R)"}
             nxt = [x for x in tps if ((x > ft1) if fl else (x < ft1))]
             ffn = nxt[0] if nxt else ft1
             rest = path[path.index >= cts.iloc[i]]
-            fill, why = _limit(rest, fl, fe, fs, ft1)
+            fill, why = _limit(rest, fl, fe, fs, ft1, last)
             info = {**base, "stage": "flip", "armed": wall(armed), "side": "long" if fl else "short", "entry": round(fe, 2),
                     "stop": round(fs, 2), "tp1": round(ft1, 2), "final": round(ffn, 2), "confirmed": wall(cts.iloc[i])}
             if fill is None:
                 return {**info, "outcome": "flip " + why}
-            m = manage(rest[rest.index >= fill], fe, fs, ft1, ffn, fl)
+            m = manage_(rest[rest.index >= fill], fe, fs, ft1, ffn, fl)
             return {**info, **m, "outcome": "flip: " + m["outcome"], "filled": wall(fill)}
         # 3) support: a new FVG our way whose third candle closed after the arm
         if i >= 2:
             c0, c2 = c.iloc[i - 2], bar
             gap = (c2.low > c0.high) if long else (c2.high < c0.low)
+            if gap and min_disp > 0:
+                mid = c.index[i - 1]
+                ref = mean14.get(mid)
+                gap = bool(pd.notna(ref) and body[mid] >= min_disp * ref
+                           and ((hist.close[mid] > hist.open[mid]) if long else (hist.close[mid] < hist.open[mid])))
             if gap:
                 ge = c2.low if long else c2.high                     # the gap's near edge from above (long) / below (short)
                 react = path[(path.index >= armed) & (path.index < cts.iloc[i])]
@@ -278,18 +331,18 @@ def replay_confirm(bars: pd.DataFrame, at: pd.Timestamp, p: dict, flip: bool = T
                 if abs(ge - cs) < MIN_RISK * adr:
                     cs = ge - MIN_RISK * adr if long else ge + MIN_RISK * adr
                 crisk = abs(ge - cs)
-                tps = [t1, fn] if abs(t1 - ge) >= crisk else [fn]
+                tps = [t1, fn] if abs(t1 - ge) >= min_rr * crisk else [fn]
                 ct1 = tps[0]
-                if abs(ct1 - ge) < crisk:
+                if abs(ct1 - ge) < min_rr * crisk:
                     return {**base, "stage": "support", "armed": wall(armed), "outcome": "support but < 1 R to the targets"}
                 rest = path[path.index >= cts.iloc[i]]
-                fill, why = _limit(rest, long, ge, cs, ct1)
+                fill, why = _limit(rest, long, ge, cs, ct1, last)
                 info = {**base, "stage": "support", "armed": wall(armed), "side": p["side"], "entry": round(float(ge), 2),
                         "stop": round(float(cs), 2), "tp1": round(ct1, 2), "final": round(fn, 2),
                         "confirmed": wall(cts.iloc[i])}
                 if fill is None:
                     return {**info, "outcome": "support " + why}
-                m = manage(rest[rest.index >= fill], ge, cs, ct1, fn, long)
+                m = manage_(rest[rest.index >= fill], ge, cs, ct1, fn, long)
                 return {**info, **m, "outcome": "support: " + m["outcome"], "filled": wall(fill)}
     return {**base, "stage": "armed", "armed": wall(armed), "outcome": "no confirmation before the horizon"}
 
