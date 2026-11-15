@@ -469,3 +469,27 @@ def test_htf_stop_on_real_bars_us100_sep_2023():
                         seen = bars[(bars.index >= d0) & (bars.index < b.placed_at)]
                         assert (seen.high.max() < lvl) if long else (seen.low.min() > lvl)
     assert moved >= 10
+
+
+def test_liquidity_map_on_real_bars_us100_mar_15_2023():
+    """Liquidity map on real US100 bars at 08:30 NY, Mar 15 2023: PDL 11898.52 is sellside below with the 4h swing low
+    at the same price merged into it; every buyside/sellside level is untaken from its formation to 08:30; the
+    daily dealing range and the prev_day_dol daily draw are reported; nothing after 08:30 is read."""
+    from ict_engine.concepts.liquidity_map import build
+    from ict_engine.data import dukascopy
+    try:
+        bars = dukascopy.load("US100", date(2022, 9, 1), date(2023, 3, 20))
+    except FileNotFoundError:
+        pytest.skip("US100 bars not downloaded")
+    at = pd.Timestamp("2023-03-15 08:30", tz="America/New_York")
+    m = build(bars, at)
+    pdl = next(it for it in m["items"] if it["kind"] == "pdl")
+    assert pdl["where"] == "below" and abs(pdl["price"] - 11898.52) < 0.01 and "4h swing_low" in pdl["also"]
+    assert m["key"]["daily_range"]["zone"] in ("premium", "discount") and m["key"]["daily_draw"]
+    seen = bars[bars.index < at]
+    for it in m["items"]:
+        if it["role"] in ("buyside", "sellside") and it["formed"]:
+            after = seen[seen.index > pd.Timestamp(it["formed"]) + pd.Timedelta(days=1 if it["tf"] == "1d" else 0.2)]
+            if len(after):
+                assert (after.high.max() < it["price"]) if it["role"] == "buyside" else (after.low.min() > it["price"])
+    assert build(bars[bars.index < at], at) == m
