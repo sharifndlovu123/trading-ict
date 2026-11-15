@@ -502,13 +502,14 @@ st.tool = "move"; st.place = null;
 const PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
+  ["", "level", ["BOS"]],
   ["", "trend", ["trendline"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
 ];
 const placeKey = (side, kind) => side + "|" + kind;
 $("palette").innerHTML = '<span class="muted">place:</span>' + PALETTE.map(([side, shape, kinds]) =>
-  kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : "↓ "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
+  kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
   '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click = remove</span>';
 const GRAB = 6;
 function hit(px, py) {

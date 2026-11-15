@@ -13,6 +13,7 @@
 const MARK_PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
+  ["", "level", ["BOS"]],
   ["", "trend", ["trendline"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
@@ -56,7 +57,7 @@ function marksLayer(chart, series, el, o) {
     if (!o.paletteEl) return;
     o.paletteEl.innerHTML = '<span class="muted">place:</span>' + MARK_PALETTE.map(([side, shape, kinds]) => kinds.map(k =>
       `<span class="mtool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side] || ""} ${place && place.kind === k && place.side === side ? "on" : ""}"
-        data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : "↓ "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
+        data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
       '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click removes</span>';
     o.paletteEl.querySelectorAll(".mtool").forEach(b => b.onclick = () => {
       const same = place && place.kind === b.dataset.kind && place.side === b.dataset.side;

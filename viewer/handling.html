@@ -168,7 +168,7 @@ function drawLines() {
     else lines.push(series.createPriceLine({ price: x.price, color: c, lineWidth: 1, lineStyle: 0, axisLabelVisible: false, title: `${x.tf === "session" ? "" : x.tf + " "}${x.kind}` }));
   }
   if (it.prior) {                     // the stopped first trade of this window (re-entry review)
-    line(it.prior.entry, css("--muted"), 1, 2, "1st entry"); line(it.prior.stop, css("--muted"), 1, 2, "1st stop");
+    line(it.prior.entry, css("--muted"), 2, 2, "1st trade entry"); line(it.prior.stop, css("--muted"), 2, 2, "1st trade stop (hit)");
   }
   if (st.filt.engine) {
     line(it.entry, css("--entry"), 1, 0, "engine entry"); line(it.stop, css("--stop"), 1, 0, "engine stop");
@@ -179,14 +179,23 @@ function drawLines() {
   d.tps.forEach((t, i) => line(t.price, css("--mine"), 3, 1, `your TP${i + 1} ${t.pct}%`));
 }
 
+// re-entry review: everything after the re-entry decision stays hidden until you save (closed candles only)
+const TF_SEC = { "1w": 604800, "1d": 86400, "4h": 14400, "1h": 3600, "15m": 900, "5m": 300 };
+const hidden = () => st.it && st.it.kind === "reentry" && !st.answers[st.it.id];
 function setData() {
-  const rows = st.it.panels[st.tf] || [];
+  const all = st.it.panels[st.tf] || [];
+  const rows = hidden() ? all.filter(c => c[0] + TF_SEC[st.tf] <= st.it.decided) : all;
   st.times = rows.map(c => c[0]);
   series.setData(rows.map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
-  const mk = [{ time: snap(st.it.decided), position: st.it.side === "long" ? "belowBar" : "aboveBar", color: css("--key"), shape: st.it.side === "long" ? "arrowUp" : "arrowDown", text: "decision" }];
-  if (st.it.filled) mk.push({ time: snap(st.it.filled), position: "inBar", color: css("--entry"), shape: "circle", text: "fill" });
-  if (st.it.exit_at) mk.push({ time: snap(st.it.exit_at), position: "inBar", color: st.it.exit === "stop" ? css("--stop") : css("--tp"), shape: "square", text: st.it.exit });
-  series.setMarkers(mk.filter(m => m.time != null).sort((a, b) => a.time - b.time));
+  const P = st.it.prior, mk = [];
+  if (P) {                                   // the first (stopped) trade of this window
+    if (P.filled) mk.push({ time: snap(P.filled), position: P.side === "long" ? "belowBar" : "aboveBar", color: css("--muted"), shape: P.side === "long" ? "arrowUp" : "arrowDown", text: "1st trade" });
+    if (P.exit_at) mk.push({ time: snap(P.exit_at), position: "inBar", color: css("--stop"), shape: "square", text: "1st stopped" });
+  }
+  mk.push({ time: snap(st.it.decided), position: st.it.side === "long" ? "belowBar" : "aboveBar", color: css("--key"), shape: st.it.side === "long" ? "arrowUp" : "arrowDown", text: P ? "re-entry" : "decision" });
+  if (st.it.filled && !hidden()) mk.push({ time: snap(st.it.filled), position: "inBar", color: css("--entry"), shape: "circle", text: "fill" });
+  if (st.it.exit_at && !hidden()) mk.push({ time: snap(st.it.exit_at), position: "inBar", color: st.it.exit === "stop" ? css("--stop") : css("--tp"), shape: "square", text: st.it.exit });
+  series.setMarkers(mk.filter(m => m.time != null && (!hidden() || m.time <= st.it.decided)).sort((a, b) => a.time - b.time));
   chart.timeScale().fitContent();
   drawLines();
 }
@@ -249,6 +258,7 @@ function levelsBox() {
 }
 
 function resBox() {
+  if (hidden()) { $("res").innerHTML = '<div class="muted">What happened after the re-entry — the engine\'s result and the replay of your plan — is revealed when you save.</div>'; return; }
   const x = replay(), d = draft(), mine = d.stop || d.tps.length || d.entry != null;
   if (x.error) { $("res").innerHTML = `<b style="color:var(--mystop)">${x.error}</b>`; return; }
   $("res").innerHTML = `<div class="muted">${mine ? "Your handling, replayed on the 1m path:" : "Engine plan replayed (place your own levels to compare):"}</div>
@@ -262,8 +272,9 @@ function facts() {
   const it = st.it, k = it.map.key || {}, b = k.bias || {};
   const t = x => x == null ? "–" : new Date(x * 1000).toISOString().slice(11, 16);
   const head = it.kind === "reentry"
-    ? `<span class="kind-${it.outcome === "won" ? "won" : "cut"}">RE-ENTRY after a stopped ${it.prior.side} — the engine's re-entry ${it.outcome === "won" ? "made money" : "lost"} (${(+it.runner_r).toFixed(2)} R)</span>
-       <div class="muted">1st trade: entry ${fmt(it.prior.entry)} · stop ${fmt(it.prior.stop)} · filled ${t(it.prior.filled)} · stopped ${t(it.prior.exit_at)} (${it.prior.r} R) — grey dashed lines</div>`
+    ? (hidden() ? `<span class="kind-won">RE-ENTRY after a stopped ${it.prior.side} — the outcome is hidden until you save</span>`
+       : `<span class="kind-${it.outcome === "won" ? "won" : "cut"}">RE-ENTRY after a stopped ${it.prior.side} — the engine's re-entry ${it.outcome === "won" ? "made money" : "lost"} (${(+it.runner_r).toFixed(2)} R)</span>`)
+      + `<div class="muted">1st trade: entry ${fmt(it.prior.entry)} · stop ${fmt(it.prior.stop)} · filled ${t(it.prior.filled)} · stopped ${t(it.prior.exit_at)} (${it.prior.r} R) — grey dashed lines, markers “1st trade” / “1st stopped”</div>`
     : `<span class="kind-${it.kind}">${it.kind === "cut" ? "CUT OFF — moved our way, stopped, then ran" : "WON — TP1 before the stop"}</span>`;
   $("facts").innerHTML = `<div>${head}</div>
     <div>${it.model} · <b>${it.side.toUpperCase()}</b> · ${it.window || ""} · POI ${it.poi || "–"}</div>
