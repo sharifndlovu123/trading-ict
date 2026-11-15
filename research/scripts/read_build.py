@@ -25,7 +25,8 @@ from ict_engine.concepts.liquidity_map import build  # noqa: E402
 from ict_engine.data import dukascopy  # noqa: E402
 from ict_engine.concepts.events import fvgs, swings  # noqa: E402
 from ict_engine.concepts.liquidity_map import _htf_gap  # noqa: E402
-from liqmap_build import NY, num, panel, wall  # noqa: E402
+from ict_engine.concepts.ob_context import ob_reads, period_bars  # noqa: E402
+from liqmap_build import NY, candles, num, panel, wall  # noqa: E402
 
 OUT = Path("out/read")
 ASSETS = ("US100", "US500", "US30")
@@ -116,6 +117,16 @@ def range_arrays(fr: dict, at: pd.Timestamp, side: str, lo: float, hi: float, t0
     now = dep(price)
     ahead = sorted([x for x in out if x["d1"] > now], key=lambda x: x["d0"])            # still on the pullback's way
     return ahead[:6], now
+
+
+def month_panel(mon: pd.DataFrame, daily: pd.DataFrame) -> list:
+    """Completed months + the unfinished current month (from the completed days after the last monthly close)."""
+    rows = candles(mon.drop(columns="close_ts"))
+    cur = daily[daily["close_ts"] > mon["close_ts"].iloc[-1]] if len(mon) else daily
+    if len(cur):
+        t = mon.index[-1] + pd.offsets.MonthBegin(1) if len(mon) else cur.index[0]
+        rows.append([wall(t), num(cur.open.iloc[0]), num(cur.high.max()), num(cur.low.min()), num(cur.close.iloc[-1])])
+    return rows
 
 
 def lab(x: dict) -> str:
@@ -260,10 +271,35 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
     for s_ in ss[:3]:
         marks.append({"type": "level", "tf": s_["tf"] if s_["tf"] in SHORT else "1h", "price": s_["price"], "color": "ss",
                       "label": f"SSL {lab(s_)}"})
+    # monthly panel + order blocks (monthly / weekly) in their place, with their draw (live reads; ruling §22)
+    mon = period_bars(fr["1d"], "M", at)
+    obs = []
+    for tf, x in (("1M", mon), ("1w", period_bars(fr["1d"], "W", at))):
+        for r in ob_reads(x, tf, at, last=2, fine=fr["1d"]):
+            ev = r["event"]
+            ev_t = (f"after {ev['what']} {ev['price']:.2f} (to {ev['extreme']:.2f})" if ev else "no event before it — just a candle")
+            pl = r["place"]
+            fits = "the right place" if pl["fits"] else "the wrong half"
+            dr = r["draw"]
+            dr_t = (f" Draw: the remaining FVG {dr['fvg'][0]:.2f}–{dr['fvg'][1]:.2f} (CE {dr['ce']:.2f})"
+                    + (f", liquidity at its edge {dr['liquidity']:.2f}" if dr["liquidity"] else "") + f" — {dr['state']}." if dr else "")
+            obs.append(f"{tf} {r['direction']}ish OB {r['candle']:%b %Y}{'' if tf == '1M' else ' wk ' + format(r['candle'], '%d')}: body "
+                       f"{r['body'][0]:.2f}–{r['body'][1]:.2f} (MT {r['mt']:.2f}), {ev_t}; {pl['zone']} {pl['fraction']:.2f} of "
+                       f"the look-back range = {fits}.{dr_t}")
+            marks.append({"type": "zone", "grp": "struct", "tf": "1M" if tf == "1M" else "1w", "t": wall(r["candle"]),
+                          "top": r["body"][1], "bottom": r["body"][0],
+                          "label": f"{'M' if tf == '1M' else 'W'} {'bear' if r['direction'] == 'bear' else 'bull'} OB"
+                                   + ("" if ev else " (no event)")})
+            if dr:
+                marks.append({"type": "zone", "grp": "struct", "tf": "1M" if tf == "1M" else "1w", "top": dr["fvg"][1],
+                              "bottom": dr["fvg"][0], "label": f"{'M' if tf == '1M' else 'W'} draw FVG (after the OB)"})
+    if obs:
+        st.insert(0, {"id": "s_ob", "tf": "1M", "text": "Order blocks: " + " | ".join(obs)})
     fwd_bars = bars[(bars.index >= at)]
     return {"id": f"{asset}-{d:%Y%m%d}", "asset": asset, "day": str(d), "at": wall(at), "price": price, "adr": adr,
             "kind": kind, "structure": S, "statements": st, "marks": marks,
-            "panels": {tf: panel(past, tf, at - span, at) for tf, span in PANELS.items()},
+            "panels": {"1M": month_panel(mon, fr["1d"]),
+                       **{tf: panel(past, tf, at - span, at) for tf, span in PANELS.items()}},
             "fwd": {tf: panel(fwd_bars, tf, at, at + FWD[tf]) for tf in PANELS}}
 
 

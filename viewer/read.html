@@ -88,8 +88,9 @@ aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const TFS = [["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
-const RANK = { "1w": 0, "1d": 1, "4h": 2, "1h": 3 };
+const ALL = [["1M", "M"], ["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
+let TFS = ALL;
+const RANK = { "1M": -1, "1w": 0, "1d": 1, "4h": 2, "1h": 3 };
 let drag = null;
 const st = { ids: [], i: 0, it: null, tf: "1d", answers: {}, show: { struct: true, areas: true, liq: true, range: true }, fwd: false };
 let drafts = {};
@@ -145,7 +146,7 @@ function draw() {
 function side() {
   const d = draft();
   $("stmts").innerHTML = st.it.statements.map(s => {
-    const v = d.verdict[s.id], tx = esc(s.text).replace(/^(Weekly|Daily|4H|1H|Areas I'm watching|Liquidity|Where the play is|Current range)/, "<b>$1</b>");
+    const v = d.verdict[s.id], tx = esc(s.text).replace(/^(Order blocks|Weekly|Daily|4H|1H|Areas I'm watching|Liquidity|Where the play is|Current range)/, "<b>$1</b>");
     return `<div class="card stmt ${s.id === "s_play" ? "play" : ""}"><div class="tx" ${s.tf ? `data-tf="${s.tf}"` : ""}>${tx}</div>
       <div class="picks">${["agree", "partly", "disagree"].map(b => `<span class="pick ${b} ${v === b ? "on" : ""}" data-s="${s.id}" data-v="${b}">${b}</span>`).join("")}</div>
       <textarea data-s="${s.id}" placeholder="your read (optional)">${esc(d.comment[s.id] || "")}</textarea></div>`;
@@ -290,6 +291,7 @@ async function load(i) {
   st.i = (i + st.ids.length) % st.ids.length;
   st.it = await (await fetch(`s/${st.ids[st.i]}.json`)).json();
   st.fwd = false;
+  TFS = ALL.filter(([k]) => (st.it.panels[k] || []).length);
   $("pick").value = st.ids[st.i];
   $("where").textContent = `${st.it.asset} · ${new Date(st.it.at * 1000).toISOString().slice(0, 16).replace("T", " ")} NY · price ${st.it.price} · ADR ${st.it.adr.toFixed(1)}`;
   $("count").textContent = `${st.i + 1}/${st.ids.length} · saved ${Object.keys(st.answers).length}`;
