@@ -25,6 +25,11 @@ main { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 10px; padd
 .tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); align-items: center; }
 .tab { padding: 2px 10px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; font-family: ui-monospace, monospace; }
 .tab.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.ctool { padding: 2px 9px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; }
+.ctool.bull { border-color: var(--up); } .ctool.bear { border-color: var(--down); }
+.ctool.bull.on { background: var(--up); color: #fff; } .ctool.bear.on { background: var(--down); color: #fff; }
+.chg { display: flex; gap: 6px; align-items: center; font-family: ui-monospace, monospace; font-size: 12px; }
+.chg .x { cursor: pointer; color: var(--muted); }
 .tab .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 5px; background: var(--line); }
 #chart { flex: 1; min-height: 300px; }
 aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -53,13 +58,15 @@ aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 <main>
   <div class="chartbox">
     <div class="tabs" id="tabs"></div>
-    <div id="chart"></div>
+    <div id="chart" style="position:relative"></div>
   </div>
   <aside>
     <div class="card">
       <div class="muted" style="margin-bottom:6px">Bias per timeframe at this moment (bull / bear / range). Click a timeframe name to view it. The engine's weekly call shows after you save.</div>
       <div id="tfs"></div>
     </div>
+    <div class="card"><div class="muted" style="margin-bottom:4px">Change points (where the structure turned)</div><div id="chlist"></div>
+      <div class="muted" style="margin:6px 0 4px">BOS (the break that confirms it)</div><div id="boslist"></div></div>
     <div class="card"><div class="muted">Overall note</div><textarea id="note" style="width:100%;min-height:60px"></textarea></div>
     <button class="primary" id="save">Save</button>
     <div class="card" id="reveal" style="display:none"></div>
@@ -74,7 +81,8 @@ const st = { ids: [], i: 0, it: null, tf: "1w", answers: {} };
 let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("biasDrafts") || "{}"); } catch (e) { drafts = {}; }
 const saveDrafts = () => { try { localStorage.setItem("biasDrafts", JSON.stringify(drafts)); } catch (e) {} };
-const draft = () => (drafts[st.it.id] ||= { bias: {}, notes: {}, note: "" });
+const draft = () => { const d = (drafts[st.it.id] ||= { bias: {}, notes: {}, note: "" }); d.changes ||= {}; d.bos ||= {}; return d; };
+st.tool = null;                                       // change-point tool: "bull" | "bear" (one placement per pick)
 
 const chart = LightweightCharts.createChart($("chart"), {
   autoSize: true, layout: { background: { color: css("--panel") }, textColor: css("--ink") },
@@ -101,8 +109,14 @@ function draw() {
     const b = draft().bias[k];
     const col = b === "bull" ? css("--up") : b === "bear" ? css("--down") : b === "range" ? css("--range") : css("--line");
     return `<span class="tab ${k === st.tf ? "on" : ""}" data-tf="${k}">${n}<span class="dot" style="background:${col}"></span></span>`;
-  }).join("") + `<span class="muted" style="margin-left:auto">candles before ${new Date(st.it.at * 1000).toISOString().slice(0, 16).replace("T", " ")} NY</span>`;
+  }).join("") + `<span style="width:10px"></span><span class="ctool bull ${st.tool === "bull" ? "on" : ""}" data-to="bull" title="vertical line where the structure turned bullish">| → bull</span><span class="ctool bear ${st.tool === "bear" ? "on" : ""}" data-to="bear" title="vertical line where the structure turned bearish">| → bear</span>` +
+    `<span style="width:6px"></span><span class="ctool bull ${st.tool === "bos_up" ? "on" : ""}" data-to="bos_up" title="BOS up: drag from the swing high to the candle that broke it">— BOS ↑</span><span class="ctool bear ${st.tool === "bos_dn" ? "on" : ""}" data-to="bos_dn" title="BOS down: drag from the swing low to the candle that broke it">— BOS ↓</span>` +
+    `<span class="muted" style="margin-left:auto">candles before ${new Date(st.it.at * 1000).toISOString().slice(0, 16).replace("T", " ")} NY</span>`;
   document.querySelectorAll("#tabs .tab").forEach(e => e.onclick = () => { st.tf = e.dataset.tf; draw(); });
+  document.querySelectorAll("#tabs .ctool").forEach(e => e.onclick = () => { st.tool = st.tool === e.dataset.to ? null : e.dataset.to;
+    $("chart").style.cursor = st.tool ? "crosshair" : ""; const bos = !!st.tool && st.tool.startsWith("bos");
+    chart.applyOptions({ handleScroll: !bos, handleScale: !bos }); draw(); });
+  vdirty++;
 }
 function side() {
   const d = draft();
@@ -113,6 +127,16 @@ function side() {
     const x = draft(); x.bias[e.dataset.tf] = x.bias[e.dataset.tf] === e.dataset.b ? undefined : e.dataset.b; saveDrafts(); side(); draw(); });
   $("tfs").querySelectorAll("textarea").forEach(e => e.oninput = () => { draft().notes[e.dataset.tf] = e.value; saveDrafts(); });
   $("tfs").querySelectorAll("b").forEach(e => e.onclick = () => { st.tf = e.dataset.tf; draw(); });
+  const ch = TFS.flatMap(([k, n]) => (d.changes[k] || []).map((c, i) => ({ k, n, i, ...c })));
+  const bo = TFS.flatMap(([k, n]) => (d.bos[k] || []).map((c, i) => ({ k, n, i, ...c })));
+  $("boslist").innerHTML = bo.length ? bo.map(c => `<div class="chg"><b>${c.n}</b> ${c.price} · ${new Date(c.t0 * 1000).toISOString().slice(0, 10)} → ${c.t1 ? new Date(c.t1 * 1000).toISOString().slice(0, 10) : "now"}
+    <span class="call ${c.dir === "up" ? "bull" : "bear"}">BOS ${c.dir === "up" ? "↑" : "↓"}</span><span class="x" data-k="${c.k}" data-i="${c.i}" title="remove">✕</span></div>`).join("")
+    : '<span class="muted">none yet — pick BOS ↑ / BOS ↓, then drag from the swing to the candle that broke it</span>';
+  $("boslist").querySelectorAll(".x").forEach(e => e.onclick = () => { draft().bos[e.dataset.k].splice(+e.dataset.i, 1); saveDrafts(); side(); vdirty++; });
+  $("chlist").innerHTML = ch.length ? ch.map(c => `<div class="chg"><b>${c.n}</b> ${new Date(c.t * 1000).toISOString().slice(0, 10)}
+    <span class="call ${c.to}">→ ${c.to}</span><span class="x" data-k="${c.k}" data-i="${c.i}" title="remove">✕</span></div>`).join("")
+    : '<span class="muted">none yet — pick | → bull or | → bear above the chart, then click the candle where the structure changed</span>';
+  $("chlist").querySelectorAll(".x").forEach(e => e.onclick = () => { draft().changes[e.dataset.k].splice(+e.dataset.i, 1); saveDrafts(); side(); vdirty++; });
   $("note").value = d.note || "";
   const r = $("reveal");
   if (!saved()) { r.style.display = "none"; return; }
@@ -127,6 +151,79 @@ function side() {
       daily bias (prev_day_dol) <span class="call ${e.daily[0]}">${e.daily[0]}</span></div>
     <div class="muted">swing highs / lows the engine used are marked on W.</div>`;
 }
+// ---- change-point lines (vertical, on the timeframe they were placed on)
+const cv = document.createElement("canvas");
+cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:3";
+$("chart").appendChild(cv);
+let vdirty = 1, vsig = "";
+function paintLines() {
+  const el = $("chart"), r = devicePixelRatio || 1, ts = chart.timeScale(), H = el.clientHeight - ts.height();
+  if (cv.width !== Math.round(el.clientWidth * r) || cv.height !== Math.round(el.clientHeight * r)) {
+    cv.width = Math.round(el.clientWidth * r); cv.height = Math.round(el.clientHeight * r);
+    cv.style.width = el.clientWidth + "px"; cv.style.height = el.clientHeight + "px"; }
+  const g = cv.getContext("2d"); g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, el.clientWidth, el.clientHeight);
+  if (!st.it) return;
+  g.font = "11px ui-monospace, monospace"; g.lineWidth = 2;
+  for (const c of draft().changes[st.tf] || []) {
+    const x = ts.timeToCoordinate(c.t); if (x == null) continue;
+    g.strokeStyle = g.fillStyle = css(c.to === "bull" ? "--up" : "--down");
+    g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); g.setLineDash([]);
+    g.fillText("→ " + c.to, x + 4, 14);
+  }
+  const last = st.it.panels[st.tf] && st.it.panels[st.tf].length ? st.it.panels[st.tf][st.it.panels[st.tf].length - 1][0] : null;
+  for (const b of draft().bos[st.tf] || []) {
+    const x0 = ts.timeToCoordinate(b.t0), x1 = ts.timeToCoordinate(b.t1 || last), y = series.priceToCoordinate(b.price);
+    if (x0 == null || x1 == null || y == null) continue;
+    g.strokeStyle = g.fillStyle = css(b.dir === "up" ? "--up" : "--down");
+    g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    g.beginPath(); g.arc(x0, y, 3, 0, 7); g.fill();
+    g.fillText("BOS " + (b.dir === "up" ? "↑" : "↓"), Math.max(x0, x1) - 46, y + (b.dir === "up" ? -7 : 13));
+  }
+}
+(function loop() {
+  try { const lr = chart.timeScale().getVisibleLogicalRange();
+    const sg = [vdirty, st.tf, lr && lr.from, lr && lr.to, series.priceToCoordinate(1000), series.priceToCoordinate(2000), $("chart").clientWidth, $("chart").clientHeight].join("|");
+    if (sg !== vsig) { vsig = sg; paintLines(); } } catch (e) {}
+  requestAnimationFrame(loop);
+})();
+chart.subscribeClick(p => {
+  if (!st.tool || st.tool.startsWith("bos") || p.time == null) return;
+  const d = draft(); (d.changes[st.tf] ||= []).push({ t: p.time, to: st.tool });
+  d.changes[st.tf].sort((a, b) => a.t - b.t);
+  st.tool = null; $("chart").style.cursor = ""; saveDrafts(); side(); draw();
+});
+// BOS: press at the swing, release at the breaking candle (a click → runs to the latest candle)
+let held = null;
+const snapT = x => { const ts = chart.timeScale(), lg = ts.coordinateToLogical(x); if (lg == null) return null;
+  const rows = st.it.panels[st.tf] || []; const i = Math.max(0, Math.min(rows.length - 1, Math.round(lg))); return rows.length ? rows[i][0] : null; };
+$("chart").addEventListener("pointerdown", e => {
+  if (!st.tool || !st.tool.startsWith("bos") || e.button !== 0) return;
+  const b = $("chart").getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top;
+  const t = snapT(x), pr = series.coordinateToPrice(y); if (t == null || pr == null) return;
+  held = { t0: t, price: Math.round(pr * 100) / 100, x0: x, dir: st.tool === "bos_up" ? "up" : "down" };
+  e.preventDefault(); e.stopImmediatePropagation();
+}, true);
+window.addEventListener("pointerup", e => {
+  if (!held) return;
+  const b = $("chart").getBoundingClientRect(), x = e.clientX - b.left;
+  const t1 = Math.abs(x - held.x0) > 4 ? snapT(x) : null;
+  const m = { t0: held.t0, t1, price: held.price, dir: held.dir };
+  if (m.t1 != null && m.t1 < m.t0) [m.t0, m.t1] = [m.t1, m.t0];
+  const d = draft(); (d.bos[st.tf] ||= []).push(m);
+  held = null; st.tool = null; $("chart").style.cursor = ""; chart.applyOptions({ handleScroll: true, handleScale: true });
+  saveDrafts(); side(); draw();
+});
+$("chart").addEventListener("contextmenu", e => {
+  { const b = $("chart").getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top, B = draft().bos[st.tf] || [];
+    const last = (st.it.panels[st.tf] || []).slice(-1)[0]?.[0];
+    const j = B.findIndex(c => { const x0 = chart.timeScale().timeToCoordinate(c.t0), x1 = chart.timeScale().timeToCoordinate(c.t1 || last), cy = series.priceToCoordinate(c.price);
+      return x0 != null && x1 != null && cy != null && Math.abs(cy - y) <= 6 && x >= Math.min(x0, x1) - 6 && x <= Math.max(x0, x1) + 6; });
+    if (j >= 0) { e.preventDefault(); B.splice(j, 1); saveDrafts(); side(); vdirty++; return; } }
+  const b = $("chart").getBoundingClientRect(), x = e.clientX - b.left, L = draft().changes[st.tf] || [];
+  const i = L.findIndex(c => { const cx = chart.timeScale().timeToCoordinate(c.t); return cx != null && Math.abs(cx - x) <= 6; });
+  if (i >= 0) { e.preventDefault(); L.splice(i, 1); saveDrafts(); side(); vdirty++; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && st.tool) { st.tool = null; $("chart").style.cursor = ""; draw(); } });
 $("note").oninput = () => { draft().note = $("note").value; saveDrafts(); };
 async function load(i) {
   st.i = (i + st.ids.length) % st.ids.length;
@@ -138,7 +235,7 @@ async function load(i) {
 }
 $("save").onclick = async () => {
   const d = draft();
-  const body = { id: st.it.id, asset: st.it.asset, day: st.it.day, bias: d.bias, notes: d.notes, note: d.note,
+  const body = { id: st.it.id, asset: st.it.asset, day: st.it.day, bias: d.bias, notes: d.notes, note: d.note, changes: d.changes, bos: d.bos,
                  engine: { weekly_structure: st.it.engine.weekly_structure[0], htf40: st.it.engine.htf40[0], daily: st.it.engine.daily[0] } };
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { alert("save failed"); return; }
