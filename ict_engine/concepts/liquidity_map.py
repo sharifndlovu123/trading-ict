@@ -63,6 +63,13 @@ def _untaken(bars: pd.DataFrame, since: pd.Timestamp, price: float, high: bool) 
     return seg.empty or (seg.high.max() < price if high else seg.low.min() > price)
 
 
+def _when(bars: pd.DataFrame, before: pd.Timestamp, price: float, high: bool) -> str:
+    """When a context level (PDH, PWL, Asia high …) was made: the last bar before `before` that reached it."""
+    seg = bars[bars.index <= before]
+    hit = seg.index[(seg.high >= price - 1e-9) if high else (seg.low <= price + 1e-9)]
+    return str(hit[-1]) if len(hit) else ""
+
+
 def _daily(hist: pd.DataFrame) -> pd.DataFrame:
     """NY trading days (18:00 → 17:00) as daily bars, index = session date 00:00."""
     h = hist.copy()
@@ -135,7 +142,7 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
             v = ctx.levels.get(n)
             since = d0 if n.startswith("asia") else d0 - pd.Timedelta(hours=6)    # Asia ends at 00:00
             if v is not None and _untaken(hist, since, v, role == "buyside"):
-                add(tf, n, role, v, "", label)
+                add(tf, n, role, v, _when(hist, since, v, role == "buyside"), label)
     month = done[done.index < pd.Timestamp(datetime.combine(day.replace(day=1), time(0)), tz=NY)]
     if len(month):
         pm = month[month.index >= (month.index[-1] - pd.offsets.MonthBegin(1)).normalize()]
@@ -143,13 +150,13 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
         for n, v, role, label in (("pmh", pm.high.max(), "buyside", "previous month high"),
                                   ("pml", pm.low.min(), "sellside", "previous month low")):
             if _untaken(hist, pm.index[-1] + pd.Timedelta(hours=17), v, role == "buyside"):
-                add("1d", n, role, v, "", label)
+                add("1d", n, role, v, _when(hist, pm.index[-1] + pd.Timedelta(hours=17), v, role == "buyside"), label)
     lon = hist[(hist.index >= d0 + pd.Timedelta(hours=2)) & (hist.index < d0 + pd.Timedelta(hours=5))]
     if as_of >= d0 + pd.Timedelta(hours=5) and len(lon):
         for n, v, role, label in (("london_high", lon.high.max(), "buyside", "London high"),
                                   ("london_low", lon.low.min(), "sellside", "London low")):
             if _untaken(hist, d0 + pd.Timedelta(hours=5), v, role == "buyside"):
-                add("session", n, role, v, "", label)
+                add("session", n, role, v, _when(lon, d0 + pd.Timedelta(hours=5), v, role == "buyside"), label)
 
     # swings, equal highs/lows, imbalances per timeframe
     for tf in ("1w", "1d", "4h", "1h"):

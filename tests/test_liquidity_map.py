@@ -66,3 +66,16 @@ def test_key_points_name_existing_items():
             assert v is None or v in ids
     with pytest.raises(ValueError):
         build(bars(), pd.Timestamp("2023-01-01 08:30", tz=NY))
+
+
+def test_every_item_knows_when_it_formed_and_the_level_was_there():
+    """The viewer draws each level from the candle that made it; context levels (PDH, PWH …) included."""
+    b = bars()
+    m = build(b, AS_OF, max_adr=50)
+    for it in m["items"]:
+        assert it["formed"], it["id"]
+        t = pd.Timestamp(it["formed"])
+        assert t < AS_OF, it["id"]
+        if it["kind"] in ("pdh", "pdl", "pwh", "pwl", "pmh", "pml", "asia_high", "asia_low", "london_high", "london_low"):
+            bar = b.loc[t]                                          # context levels: the 1m bar that made them
+            assert (bar.high >= it["price"] - 0.01) if it["role"] == "buyside" else (bar.low <= it["price"] + 0.01), it["id"]

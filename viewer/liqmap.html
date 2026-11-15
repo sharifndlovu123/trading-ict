@@ -32,7 +32,11 @@ button.primary { background: var(--accent); color: var(--panel); border-color: v
 .chip:not(.on) { opacity: .45; }
 .mode { padding: 2px 9px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; }
 .mode.on { background: var(--key); color: #000; border-color: var(--key); font-weight: 600; }
-#chart { flex: 1; min-height: 0; }
+#chart { flex: 1; min-height: 0; position: relative; }
+.tool { padding: 2px 9px; border-radius: 5px; border: 1px solid var(--line); cursor: pointer; user-select: none; }
+#palette { gap: 3px; padding: 4px 6px; } #palette .tool { padding: 0 6px; font-size: 12px; }
+.tool.bs { border-color: var(--bs); } .tool.ss { border-color: var(--ss); } .tool.ar { border-color: var(--area); border-style: dashed; }
+.tool.on { background: var(--mine); color: #fff; border-color: var(--mine); font-weight: 600; }
 #armed { display: none; position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 5; background: var(--mine); color: #fff; padding: 3px 10px; border-radius: 5px; font-weight: 600; }
 aside { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-y: auto; padding: 8px 10px; }
 h3 { margin: 10px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -79,19 +83,21 @@ textarea { width: 100%; min-height: 60px; }
   <div class="chartbox">
     <div class="tabs">
       <span class="tab" data-tf="1w">W</span><span class="tab" data-tf="1d">D</span><span class="tab" data-tf="4h">4H</span><span class="tab" data-tf="1h">1H</span><span class="tab" data-tf="15m">15m</span>
-      <span class="muted" style="margin-left:10px">engine lines:</span>
+      <span class="muted" style="margin-left:10px">draw:</span>
+      <span class="tool on" data-tool="move" title="move / pan (V)">✋ move</span>      <span class="muted" style="margin-left:10px">engine lines:</span>
       <span class="mode" data-mode="clean">clean</span><span class="mode" data-mode="all">all</span><span class="mode" data-mode="off">off</span>
       <span id="allchips" style="display:contents"><span class="chip on" data-f="1w">1w</span><span class="chip on" data-f="1d">1d</span><span class="chip on" data-f="4h">4h</span><span class="chip on" data-f="1h">1h</span><span class="chip on" data-f="session">session</span><span class="chip on" data-f="area">areas</span><span class="chip" data-f="keyonly">key only</span></span>
       <span class="legend muted" style="margin-left:auto"><span><i style="background:var(--bs)"></i>buyside</span><span><i style="background:var(--ss)"></i>sellside</span><span><i style="background:var(--area)"></i>area</span><span><i style="background:var(--mine)"></i>yours</span></span>
     </div>
+    <div class="tabs" id="palette"></div>
     <div id="chart"></div>
   </div>
   <aside>
     <div class="keys" id="keys"></div>
     <h3>Levels and areas — mark them <span class="muted" style="text-transform:none">★ key · ✓ fine · ✗ wrong</span></h3>
     <div id="ladder"></div>
-    <h3>Your levels <span class="muted" style="text-transform:none">— click the chart to add · drag any line to move it</span></h3>
-    <div id="mine"><div class="muted">Anything the engine missed: click its price on the chart, then say what it is. Drag a line to move it (engine lines too — that records a correction).</div></div>
+    <h3>Your levels <span class="muted" style="text-transform:none">— pick a type under the chart, click or drag start→finish · Delete or right-click removes</span></h3>
+    <div id="mine"><div class="muted">Anything the engine missed: pick its type in the <b>place:</b> row under the chart, then click the chart (it runs from there to now) or drag from where it starts to where it ends. L / Z = a plain level / zone, Esc stops placing. Drag a line to move it; drag the ends of yours to change start/finish. Delete: click it then press Delete, or right-click it.</div></div>
     <h3>Where does price draw to next?</h3>
     <select id="draw" style="width:100%"></select>
     <div style="margin-top:4px"><label class="muted">by <select id="horizon"><option value="">—</option><option>today</option><option>this week</option><option>next week+</option></select></label></div>
@@ -104,7 +110,6 @@ textarea { width: 100%; min-height: 60px; }
   </aside>
 </div>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
-<script src="linedrag.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -159,28 +164,139 @@ function shown(it) {
   return true;
 }
 
-function drawLines() {
-  lines.forEach(l => series.removePriceLine(l)); lines = [];
-  const keys = keyIds(), d = draft();
-  for (const it of items()) {
-    if (!shown(it)) continue;
-    const m = d.marks[it.id], sel = st.sel === it.id;
-    const w = sel ? 3 : (m === "key" || keys.has(it.id)) ? 2 : 1;
-    const c = m === "wrong" ? css("--wrong") : colour(it);
-    const tag = `${it.tf === "session" ? "" : it.tf + " "}${it.kind}${it.also.length ? " +" + it.also.length : ""}${d.moved[it.id] ? " (moved)" : ""}`;
-    if (it.role === "area") {
-      lines.push(series.createPriceLine({ price: at(it, "top"), color: c, lineWidth: w, lineStyle: 2, axisLabelVisible: sel, title: sel ? tag : "" }));
-      lines.push(series.createPriceLine({ price: at(it, "bottom"), color: c, lineWidth: w, lineStyle: 2, axisLabelVisible: false, title: sel ? "" : tag }));
+// ---- segments, not full-width lines: every level runs from the candle that made it to now (after the reveal: to
+// the candle that took it). Areas are shaded boxes. Painted on a canvas over the chart, in the chart's own coordinates.
+let times = [], shapes = [], dirty = 1;
+const wallOf = s => s ? Date.parse(s.slice(0, 19).replace(" ", "T") + "Z") / 1000 : null;
+function idxOf(t) {
+  const n = times.length; if (!n) return 0;
+  const step = n > 1 ? times[n - 1] - times[n - 2] : 1, step0 = n > 1 ? times[1] - times[0] : 1;
+  if (t <= times[0]) return (t - times[0]) / step0;
+  if (t >= times[n - 1]) return n - 1 + (t - times[n - 1]) / step;
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (times[m] <= t) lo = m; else hi = m; }
+  return lo + (t - times[lo]) / (times[hi] - times[lo]);
+}
+function tOfIdx(l) {
+  const n = times.length; if (!n) return 0;
+  const step = n > 1 ? times[n - 1] - times[n - 2] : 1, step0 = n > 1 ? times[1] - times[0] : 1;
+  if (l <= 0) return times[0] + l * step0;
+  if (l >= n - 1) return times[n - 1] + (l - n + 1) * step;
+  const i = Math.floor(l); return times[i] + (l - i) * (times[i + 1] - times[i]);
+}
+// the chart only maps whole bars inside the data, so go via the nearest real bar plus the bar spacing
+const spacing = () => chart.timeScale().options().barSpacing;
+const clampI = l => Math.max(0, Math.min(times.length - 1, Math.round(l)));
+function xOf(t) {
+  if (!times.length) return null;
+  const l = idxOf(t), k = clampI(l), c = chart.timeScale().logicalToCoordinate(k);
+  return c == null ? null : c + (l - k) * spacing();
+}
+function tOfX(x) {
+  if (!times.length) return null;
+  const g = chart.timeScale().coordinateToLogical(x), k = clampI(g == null ? 0 : g), c = chart.timeScale().logicalToCoordinate(k);
+  return c == null ? null : Math.round(tOfIdx(k + (x - c) / spacing()));
+}
+const yOf = p => series.priceToCoordinate(p);
+const pOfY = y => { const p = series.coordinateToPrice(y); return p == null ? null : Math.round(p * 100) / 100; };
+const STUB = 36;                                         // px past "now" so an open level reads as still live
+const xNow = () => (xOf(st.item.at) ?? 0) + STUB;
+function xEnd(s) {
+  if (s.t1 != null) return xOf(s.t1);
+  if (revealed() && times.length && times[times.length - 1] > st.item.at) return xOf(times[times.length - 1]) + 6;
+  return xNow();
+}
+
+const cv = document.createElement("canvas");
+cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:3";
+$("chart").appendChild(cv);
+function paint() {
+  const el = $("chart"), W = chart.timeScale().width(), H = el.clientHeight - chart.timeScale().height(), r = devicePixelRatio || 1;
+  if (cv.width !== Math.round(el.clientWidth * r) || cv.height !== Math.round(el.clientHeight * r)) {
+    cv.width = Math.round(el.clientWidth * r); cv.height = Math.round(el.clientHeight * r);
+    cv.style.width = el.clientWidth + "px"; cv.style.height = el.clientHeight + "px";
+  }
+  const g = cv.getContext("2d");
+  g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, el.clientWidth, el.clientHeight);
+  g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
+  g.font = "10px ui-monospace, Menlo, monospace"; g.textBaseline = "middle";
+  for (const s of shapes) {
+    const x0 = s.t0 == null ? 0 : xOf(s.t0), x1 = xEnd(s);
+    if (x0 == null || x1 == null) continue;
+    const sel = st.sel === s.key;
+    g.strokeStyle = g.fillStyle = s.color; g.lineWidth = sel ? s.w + 1.5 : s.w;
+    g.setLineDash(s.dash ? [5, 4] : []);
+    if (s.trend) {
+      const y0 = yOf(s.p0), y1 = yOf(s.p1); if (y0 == null || y1 == null) continue;
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      if (s.label) { g.fillText(s.label, x1 + 6, y1); }
+      if (sel) { g.fillStyle = css("--panel"); for (const [x, y] of [[x0, y0], [x1, y1]]) { g.fillRect(x - 4, y - 4, 8, 8); g.strokeRect(x - 4, y - 4, 8, 8); } }
+      continue;
+    }
+    if (s.zone) {
+      const a = yOf(s.top), b = yOf(s.bottom); if (a == null || b == null) continue;
+      g.globalAlpha = sel ? .28 : .14; g.fillRect(x0, a, x1 - x0, b - a);
+      g.globalAlpha = 1; g.beginPath(); g.moveTo(x0, a); g.lineTo(x1, a); g.moveTo(x0, b); g.lineTo(x1, b); g.stroke();
+      if (s.label) { g.setLineDash([]); g.textAlign = "right"; g.fillText(s.label, Math.min(x1, W) - 4, Math.min(a, b) - 7); g.textAlign = "left"; }
     } else {
-      lines.push(series.createPriceLine({ price: at(it, "price"), color: c, lineWidth: w, lineStyle: m === "wrong" ? 1 : 0, axisLabelVisible: sel || w > 1, title: tag }));
+      const y = yOf(s.price); if (y == null) continue;
+      g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); g.setLineDash([]);
+      g.beginPath(); g.arc(x0, y, sel ? 4 : 2.5, 0, 7); g.fill();               // where it was made
+      if (s.taken) { g.beginPath(); g.moveTo(x1 - 4, y - 4); g.lineTo(x1 + 4, y + 4); g.moveTo(x1 - 4, y + 4); g.lineTo(x1 + 4, y - 4); g.stroke(); }
+      if (s.label) { g.textAlign = "right"; g.fillText(s.label, Math.min(x1, W) - 4, y + (s.role === "sellside" ? 8 : -8)); g.textAlign = "left"; }
+    }
+    if (sel && s.mine) {                                                        // handles: drag the ends to set start / finish
+      g.setLineDash([]); g.fillStyle = css("--panel");
+      const ys = s.zone ? [yOf(s.top), yOf(s.bottom)] : [yOf(s.price)];
+      for (const x of [x0, x1]) for (const y of ys) { g.fillRect(x - 4, y - 4, 8, 8); g.strokeRect(x - 4, y - 4, 8, 8); }
     }
   }
-  for (const a of d.added) lines.push(series.createPriceLine({ price: a.price, color: css("--mine"), lineWidth: 2, lineStyle: 1, axisLabelVisible: true, title: "yours: " + (a.kind || "") }));
+  if (!revealed()) { const xn = xOf(st.item.at); if (xn != null) { g.strokeStyle = css("--key"); g.lineWidth = 1; g.setLineDash([2, 3]);
+    g.beginPath(); g.moveTo(xn, 0); g.lineTo(xn, H); g.stroke(); } }
+  g.restore();
+}
+let sig = "";
+(function loop() {                                       // repaint whenever the view moves (pan, zoom, price-scale drag, resize)
+  if (st.item) {
+    const lr = chart.timeScale().getVisibleLogicalRange(), p = st.item.map.price;
+    const s = [dirty, lr && lr.from, lr && lr.to, yOf(p), yOf(p * 1.01), $("chart").clientWidth, $("chart").clientHeight].join("|");
+    if (s !== sig) { sig = s; paint(); }
+  }
+  requestAnimationFrame(loop);
+})();
+
+function drawLines() {
+  lines.forEach(l => series.removePriceLine(l)); lines = []; shapes = [];
+  const keys = keyIds(), d = draft(), axis = (price, color, title) =>
+    lines.push(series.createPriceLine({ price, color, lineVisible: false, axisLabelVisible: true, title }));
+  for (const it of items()) {
+    if (!shown(it)) continue;
+    const m = d.marks[it.id], sel = st.sel === it.id, key = m === "key" || keys.has(it.id);
+    const w = key ? 2 : it.tf === "1w" || it.tf === "1d" ? 1.5 : 1;
+    const color = m === "wrong" ? css("--wrong") : colour(it);
+    const tag = `${it.tf === "session" ? "" : it.tf + " "}${it.kind}${it.also.length ? " +" + it.also.length : ""}${d.moved[it.id] ? " (moved)" : ""}`;
+    const taken = revealed() && it.hit != null;
+    const base = { key: it.id, color, w, dash: m === "wrong", t0: wallOf(it.formed), t1: taken ? it.hit : null, taken, role: it.role,
+                   label: st.mode === "all" && !key && !sel ? "" : tag };
+    if (it.role === "area") shapes.push({ ...base, zone: true, top: at(it, "top"), bottom: at(it, "bottom") });
+    else shapes.push({ ...base, price: at(it, "price") });
+    if (sel || key) axis(it.role === "area" ? at(it, "top") : at(it, "price"), color, "");
+  }
+  d.added.forEach((a, i) => {
+    const s = { key: "mine:" + i, mine: true, color: css("--mine"), w: 2, dash: a.shape === "zone", t0: a.t0 ?? null, t1: a.t1 ?? null,
+                label: "yours: " + (a.kind || "") + (a.side === "buyside" ? " ↑" : a.side === "sellside" ? " ↓" : ""), role: a.side || "" };
+    if (a.shape === "trend") { shapes.push({ ...s, trend: true, p0: a.p0, p1: a.p1 }); return; }
+    if (a.shape === "zone") shapes.push({ ...s, zone: true, top: a.top, bottom: a.bottom });
+    else shapes.push({ ...s, price: a.price });
+    axis(a.shape === "zone" ? a.top : a.price, css("--mine"), "");
+  });
+  dirty++;
 }
 
 function setData() {
   const live = st.item.live[st.tf] || [], fwd = revealed() ? (st.item.fwd[st.tf] || []) : [];
   const rows = live.concat(fwd.filter(c => !live.length || c[0] > live[live.length - 1][0]));
+  times = rows.map(c => c[0]);
   series.setData(rows.map(c => ({ time: c[0], open: c[1], high: c[2], low: c[3], close: c[4] })));
   series.setMarkers(revealed() && live.length ? [{ time: live[live.length - 1][0], position: "aboveBar", color: css("--key"), shape: "arrowDown", text: "you are here" }] : []);
   chart.timeScale().fitContent();
@@ -242,10 +358,10 @@ function ladder() {
 
 function mineBox() {
   const d = draft();
-  if (!d.added.length) { $("mine").innerHTML = '<div class="muted">Anything the engine missed: click its price on the chart, then say what it is. Drag a line to move it (engine lines too — that records a correction).</div>'; return; }
-  const kinds = ["swing high", "swing low", "equal highs", "equal lows", "FVG / imbalance", "order block", "breaker", "session high", "session low", "old high", "old low", "opening gap", "other"];
+  if (!d.added.length) { $("mine").innerHTML = '<div class="muted">Anything the engine missed: pick its type in the <b>place:</b> row under the chart, then click the chart (it runs from there to now) or drag from where it starts to where it ends. L / Z = a plain level / zone, Esc stops placing. Drag a line to move it; drag the ends of yours to change start/finish. Delete: click it then press Delete, or right-click it.</div>'; return; }
+  const kinds = [...new Set([...PALETTE.flatMap(p => p[2]), "level", "zone", "other"])];
   $("mine").innerHTML = d.added.map((a, i) => `<div class="mine" data-i="${i}">
-    <b style="font-family:ui-monospace,monospace">${fmt(a.price)}</b>
+    <b style="font-family:ui-monospace,monospace" title="${a.t0 ? "from " + new Date(a.t0 * 1000).toISOString().slice(0, 16).replace("T", " ") : ""}${a.t1 ? " to " + new Date(a.t1 * 1000).toISOString().slice(0, 16).replace("T", " ") : " to now"}">${a.shape === "zone" ? "▭ " + fmt(a.bottom) + "–" + fmt(a.top) : a.shape === "trend" ? "╱ " + fmt(a.p0) + "→" + fmt(a.p1) : "─ " + fmt(a.price)}</b>
     <select data-k="kind">${kinds.map(k => `<option ${a.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
     <select data-k="tf">${["1d", "4h", "1h", "15m", "5m", "1m"].map(k => `<option ${a.tf === k ? "selected" : ""}>${k}</option>`).join("")}</select>
     <button data-del="1" title="remove">✕</button>
@@ -262,7 +378,7 @@ function drawOptions() {
   const opts = ['<option value="">— pick one —</option>', '<option value="unsure">unsure / no clear draw</option>'];
   const ranked = items().filter(it => it.role !== "area" || true).slice()
     .sort((a, b) => ((d.marks[b.id] === "key") - (d.marks[a.id] === "key")) || (keys.has(b.id) - keys.has(a.id)) || a.dist - b.dist);
-  for (const a of d.added) opts.push(`<option value="mine:${a.price}">yours: ${a.kind || "level"} ${fmt(a.price)}</option>`);
+  for (const a of d.added) opts.push(`<option value="mine:${a.shape === "zone" ? a.bottom + "-" + a.top : a.shape === "trend" ? a.p0 + ">" + a.p1 : a.price}">yours: ${a.kind || "level"} ${a.shape === "zone" ? fmt(a.bottom) + "–" + fmt(a.top) : a.shape === "trend" ? fmt(a.p0) + "→" + fmt(a.p1) : fmt(a.price)}</option>`);
   for (const it of ranked) opts.push(`<option value="${it.id}">${it.where === "above" ? "↑" : "↓"} ${it.label} ${fmt(it.price)} (${it.dist_adr} ADR)</option>`);
   $("draw").innerHTML = opts.join("");
   $("draw").value = d.draw || "";
@@ -298,29 +414,146 @@ async function load(i) {
   render();
 }
 
-lineDrag(chart, series, $("chart"), {
-  targets: () => {
-    const d = draft(), out = d.added.map((a, i) => ({ key: "mine:" + i, price: a.price }));
-    for (const it of items()) {
-      if (!shown(it)) continue;
-      if (it.role === "area") out.push({ key: it.id + "|top", price: at(it, "top") }, { key: it.id + "|bottom", price: at(it, "bottom") });
-      else out.push({ key: it.id + "|price", price: at(it, "price") });
+// ---- tools: move (V) · level (L): drag = a line from start to finish, click = from there to now · zone (Z): drag a box.
+// Any line: drag its body to change the price, drag the ends of yours to change start / finish.
+// Delete: select (click it) then Delete/Backspace, or right-click it. On an engine line that toggles ✗ wrong.
+st.tool = "move"; st.place = null;
+// the liquidity types you can place: pick one, then click the chart (runs from there to now) or drag start → finish
+const PALETTE = [
+  ["buyside", "level", ["buyside", "EQH"]],
+  ["sellside", "level", ["sellside", "EQL"]],
+  ["", "trend", ["trendline"]],
+  ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
+  ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
+];
+const placeKey = (side, kind) => side + "|" + kind;
+$("palette").innerHTML = '<span class="muted">place:</span>' + PALETTE.map(([side, shape, kinds]) =>
+  kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : "↓ "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
+  '<span class="muted" style="margin-left:auto">Esc = stop placing · Del / right-click = remove</span>';
+const GRAB = 6;
+function hit(px, py) {
+  let best = null;
+  const consider = (s, part, d) => { if (!best || d < best.d || (s.mine && !best.s.mine && d <= best.d + 1)) best = { s, part, d }; };
+  for (const s of shapes) {
+    const x0 = s.t0 == null ? 0 : xOf(s.t0), x1 = xEnd(s);
+    if (x0 == null || x1 == null || px < Math.min(x0, x1) - GRAB || px > Math.max(x0, x1) + GRAB) continue;
+    const end = Math.abs(px - x0) <= GRAB ? "start" : Math.abs(px - x1) <= GRAB ? "end" : null;
+    if (s.trend) {
+      const y0 = yOf(s.p0), y1 = yOf(s.p1); if (y0 == null || y1 == null) continue;
+      if (Math.hypot(px - x0, py - y0) <= GRAB + 2) { consider(s, "start", 0); continue; }
+      if (Math.hypot(px - x1, py - y1) <= GRAB + 2) { consider(s, "end", 0); continue; }
+      const L = Math.hypot(x1 - x0, y1 - y0) || 1, dd = Math.abs((y1 - y0) * px - (x1 - x0) * py + x1 * y0 - y1 * x0) / L;
+      if (dd <= GRAB) consider(s, "body", dd);
+      continue;
     }
-    return out;
-  },
-  move: (key, price) => {
+    if (s.zone) {
+      const a = yOf(s.top), b = yOf(s.bottom); if (a == null || b == null) continue;
+      if (s.mine && end && py >= a - GRAB && py <= b + GRAB) consider(s, end, 0);
+      else if (Math.abs(py - a) <= GRAB) consider(s, "top", Math.abs(py - a));
+      else if (Math.abs(py - b) <= GRAB) consider(s, "bottom", Math.abs(py - b));
+      else if (py > a && py < b) consider(s, "inside", GRAB);
+    } else {
+      const y = yOf(s.price); if (y == null || Math.abs(py - y) > GRAB) continue;
+      consider(s, s.mine && end ? end : "body", Math.abs(py - y));
+    }
+  }
+  return best;
+}
+function removeShape(key) {
+  const d = draft();
+  if (key.startsWith("mine:")) d.added.splice(+key.slice(5), 1);
+  else { d.marks[key] = d.marks[key] === "wrong" ? undefined : "wrong"; if (!d.marks[key]) delete d.marks[key]; }
+  st.sel = null; saveDrafts(); mineBox(); ladder(); drawLines(); drawOptions();
+}
+function setTool(t, place = null) {
+  st.tool = t; st.place = t === "place" ? place : null;
+  document.querySelectorAll(".tool").forEach(b => b.classList.toggle("on", b.dataset.tool === t &&
+    (t !== "place" || placeKey(b.dataset.side, b.dataset.kind) === placeKey(place.side, place.kind))));
+  chart.applyOptions({ handleScroll: t === "move", handleScale: t === "move" });
+  $("chart").style.cursor = t === "move" ? "" : "crosshair";
+}
+(() => {
+  const el = $("chart");
+  let held = null;
+  const pos = e => { const b = el.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+  const inPane = ([x, y]) => x >= 0 && x <= chart.timeScale().width() && y >= 0 && y <= el.clientHeight - chart.timeScale().height();
+  const freeze = on => { if (st.tool === "move") chart.applyOptions({ handleScroll: !on, handleScale: !on }); };
+  el.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    const [px, py] = pos(e); if (!inPane([px, py])) return;
+    const h = hit(px, py), p = pOfY(py), t = tOfX(px), d = draft();
+    if (h) {
+      st.sel = h.s.key;
+      const it = h.s.mine ? null : byId(h.s.key), a = h.s.mine ? d.added[+h.s.key.slice(5)] : null;
+      held = { key: h.s.key, part: h.part, p0: p, t0: t, x0: px, y0: py, moved: false,
+               orig: a ? { ...a } : { price: at(it, "price"), top: at(it, "top"), bottom: at(it, "bottom") } };
+    } else if (st.tool !== "move" && p != null && t != null) {
+      const pl = st.place || { shape: st.tool === "zone" ? "zone" : "level", kind: "other", side: "" };
+      const a = pl.shape === "zone" ? { shape: "zone", top: p, bottom: p, t0: t, t1: t }
+        : pl.shape === "trend" ? { shape: "trend", p0: p, p1: p, t0: t, t1: t } : { shape: "level", price: p, t0: t, t1: t };
+      Object.assign(a, { kind: pl.kind, tf: st.tf, note: "", side: pl.side });
+      d.added.push(a); st.sel = "mine:" + (d.added.length - 1);
+      held = { key: st.sel, part: a.shape === "zone" ? "corner" : "end", p0: p, t0: t, x0: px, y0: py, moved: false, fresh: true, orig: { ...a } };
+    } else { if (st.sel) { st.sel = null; ladder(); drawLines(); } return; }
+    freeze(true); e.preventDefault(); e.stopPropagation(); drawLines();
+  }, true);
+  el.addEventListener("mousedown", e => { if (held) { e.preventDefault(); e.stopPropagation(); } }, true);
+  window.addEventListener("pointermove", e => {
+    const [px, py] = pos(e);
+    if (!held) { if (st.tool === "move" && inPane([px, py])) el.style.cursor = hit(px, py) ? "move" : ""; return; }
+    if (Math.hypot(px - held.x0, py - held.y0) > 3) held.moved = true;
+    if (!held.moved) return;
+    const p = pOfY(py), t = tOfX(px); if (p == null || t == null) return;
+    const dp = Math.round((p - held.p0) * 100) / 100, dt = t - held.t0, o = held.orig, d = draft();
+    if (held.key.startsWith("mine:")) {
+      const a = d.added[+held.key.slice(5)];
+      if (a.shape === "trend") {
+        if (held.part === "end") { a.t1 = t; a.p1 = p; }
+        else if (held.part === "start") { a.t0 = t; a.p0 = p; }
+        else { a.p0 = Math.round((o.p0 + dp) * 100) / 100; a.p1 = Math.round((o.p1 + dp) * 100) / 100; a.t0 = o.t0 + dt; a.t1 = o.t1 + dt; }
+      }
+      else if (held.part === "end") a.t1 = t;
+      else if (held.part === "start") a.t0 = t;
+      else if (held.part === "corner") { a.top = Math.max(o.top, p); a.bottom = Math.min(o.bottom, p); a.t1 = t; }
+      else if (held.part === "top") a.top = p;
+      else if (held.part === "bottom") a.bottom = p;
+      else if (held.part === "inside") { a.top = o.top + dp; a.bottom = o.bottom + dp; if (o.t0 != null) a.t0 = o.t0 + dt; if (o.t1 != null) a.t1 = o.t1 + dt; }
+      else a.price = p;                                                      // body: change the price only
+    } else {
+      const mv = (d.moved[held.key] ||= {});
+      if (held.part === "body") mv.price = p;
+      else if (held.part === "top" || held.part === "bottom") mv[held.part] = p;
+      else if (held.part === "inside") { mv.top = Math.round((o.top + dp) * 100) / 100; mv.bottom = Math.round((o.bottom + dp) * 100) / 100; }
+    }
+    drawLines(); e.preventDefault();
+  });
+  window.addEventListener("pointerup", () => {
+    if (!held) return;
     const d = draft();
-    if (key.startsWith("mine:")) d.added[+key.slice(5)].price = price;
-    else { const [id, k] = key.split("|"); (d.moved[id] ||= {})[k] = price; }
-    drawLines();
-  },
-  done: () => { saveDrafts(); ladder(); mineBox(); drawOptions(); },
-  click: price => {
-    if (Date.now() - lineDrag.lastDrag < 300) return;
-    draft().added.push({ price, kind: "other", tf: st.tf, note: "" });
-    saveDrafts(); mineBox(); drawLines(); drawOptions();
-  },
-});
+    if (held.key.startsWith("mine:")) {
+      const i = +held.key.slice(5), a = d.added[i];
+      if (held.fresh && !held.moved && a.shape === "trend") { d.added.splice(i, 1); st.sel = null; }   // a trendline needs a drag
+      else if (held.fresh && !held.moved) {
+        a.t1 = null;                                                                // a click: from here to now
+        if (a.shape === "zone") { const h = Math.max(st.item.map.adr * 0.05, 0.01);  // a click on a zone type: a small box
+          a.top = Math.round((a.top + h / 2) * 100) / 100; a.bottom = Math.round((a.bottom - h / 2) * 100) / 100; }
+      }
+      const b = d.added[i] === a ? a : null;
+      if (b && b.t0 != null && b.t1 != null && b.t1 < b.t0) { [b.t0, b.t1] = [b.t1, b.t0]; if (b.shape === "trend") [b.p0, b.p1] = [b.p1, b.p0]; }
+      if (b && b.shape === "zone" && b.top < b.bottom) [b.top, b.bottom] = [b.bottom, b.top];
+      if (b && b.shape === "zone" && b.top === b.bottom) { d.added.splice(i, 1); st.sel = null; }
+    }
+    held = null; freeze(false); saveDrafts(); mineBox(); ladder(); drawLines(); drawOptions();
+  });
+  el.addEventListener("contextmenu", e => {
+    const [px, py] = pos(e), h = hit(px, py);
+    if (h) { e.preventDefault(); removeShape(h.s.key); }
+  });
+})();
+document.querySelectorAll(".tool").forEach(b => b.onclick = () => b.dataset.tool === "place"
+  ? (st.place && placeKey(st.place.side, st.place.kind) === placeKey(b.dataset.side, b.dataset.kind) ? setTool("move")
+     : setTool("place", { side: b.dataset.side, shape: b.dataset.shape, kind: b.dataset.kind }))
+  : setTool(b.dataset.tool));
 $("draw").onchange = () => { draft().draw = $("draw").value; saveDrafts(); };
 $("horizon").onchange = () => { draft().horizon = $("horizon").value; saveDrafts(); };
 $("notes").oninput = () => { draft().notes = $("notes").value; saveDrafts(); };
@@ -334,6 +567,9 @@ $("pick").onchange = () => load(st.ids.indexOf($("pick").value));
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   if (e.key === "ArrowLeft") load(st.i - 1); else if (e.key === "ArrowRight") load(st.i + 1);
+  else if (e.key === "Delete" || e.key === "Backspace") { if (st.sel) { e.preventDefault(); removeShape(st.sel); } }
+  else if (e.key === "Escape") { st.sel = null; setTool("move"); drawLines(); ladder(); }
+  else if ("vlz".includes(e.key.toLowerCase()) && e.key.length === 1) { const k = e.key.toLowerCase(); k === "v" ? setTool("move") : setTool("place", k === "z" ? { side: "area", shape: "zone", kind: "zone" } : { side: "", shape: "level", kind: "level" }); }
   else if ("12345".includes(e.key)) { st.tf = ["1w", "1d", "4h", "1h", "15m"][+e.key - 1]; render(); }
 });
 $("save").onclick = async () => {
