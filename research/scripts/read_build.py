@@ -230,6 +230,8 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
     # the range we're trading: the protected level on the play's timeframe (4H first) → the extreme since; sell in its
     # premium half (or a bit cheaper, at a bearish array on EQ), buy in its discount half
     want_side = D if kind == "counter_weekly" else (W if W != "neutral" else D)
+    pin = {"kind": kind, "price": price, "adr": adr, "want_side": want_side, "rtf": None, "range": None, "arrays": [],
+           "now": None, "mom": None, "obs": [], "chain": None, "bs": bs, "ss": ss}   # inputs for a trade plan (plan_build)
     rtf = next((tf for tf in ("4h", "1d", "1h") if S[tf]["state"] == want_side and S[tf]["guard"] is not None), None)
     r = trade_range(fr[rtf], rtf, want_side, S[rtf]["guard"], past) if rtf else None
     if r:
@@ -251,6 +253,8 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
         ext_t = ext_t.idxmax() if want_side == "bull" else ext_t.idxmin()
         nb = int(((fr[rtf].index >= r["t0"]) & (fr[rtf].index <= ext_t)).sum())
         mom = f"momentum: the move ran {(hi - lo) / adr:.1f} ADR in {nb} {SHORT[rtf]} candle{'s' if nb != 1 else ''}"
+        pin.update(rtf=rtf, range={"lo": lo, "hi": hi, "t0": r["t0"], "swept": r["swept"], "t": r["t"]}, arrays=arr,
+                   now=now_d, mom=(hi - lo) / adr / max(nb, 1), adr_move=(hi - lo) / adr, candles=nb)
         fib = f"fib of the move: 0 = {ext:.2f}, 0.5 EQ = {lv(.5):.2f}, OTE 0.62–0.79 = {lv(.62):.2f}–{lv(.79):.2f}, 1 = {fk:.2f}"
         arr_t = ("; ".join(f"{x['label']} {x['bottom']:.2f}–{x['top']:.2f} ({x['d0']:.2f}–{x['d1']:.2f}, {x['depth']})"
                            for x in arr) if arr else "none left between price and the fake-out")
@@ -315,6 +319,9 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
                        f"{r['body'][0]:.2f}–{r['body'][1]:.2f} (MT {r['mt']:.2f}), {ev_t}; {pl['zone']} {pl['fraction']:.2f} of "
                        f"the {pl['basis']} {pl['range'][0]:.2f}–{pl['range'][1]:.2f} = {fits}.{dr_t}")
             T = {"1M": "M", "1w": "W", "1d": "D"}[tf]
+            if live_ob:
+                pin["obs"].append({"tf": tf, "direction": r["direction"], "bottom": r["body"][0], "top": r["body"][1],
+                                   "mt": r["mt"], "formed": wall(r["candle"]), "event": ev, "htf_level": hl})
             if live_ob:                           # only an OB with an event, in the right half, not failed is drawn
                 marks.append({"type": "zone", "grp": "struct", "tf": tf, "own": True, "t": wall(r["candle"]),
                               "top": r["body"][1], "bottom": r["body"][0],
@@ -346,12 +353,13 @@ def read(asset: str, bars: pd.DataFrame, d: date, at: pd.Timestamp | None = None
         marks.append({"type": "level", "tf": "1M", "price": b["level"], "color": "ss" if bear else "bs",
                       "label": f"M BOS {b['level']:.2f}"})
         st.insert(0, {"id": "s_mbos", "tf": "1M", "text": t})
+    pin["chain"] = chain
     fwd_bars = bars[(bars.index >= at)]
     return {"id": f"{asset}-{d:%Y%m%d}", "asset": asset, "day": str(d), "at": wall(at), "price": price, "adr": adr,
             "kind": kind, "structure": S, "statements": st, "marks": marks,
             "panels": {"1M": month_panel(mon, fr["1d"]),
                        **{tf: panel(past, tf, at - span, at) for tf, span in PANELS.items()}},
-            "fwd": {tf: panel(fwd_bars, tf, at, at + FWD[tf]) for tf in PANELS}}
+            "fwd": {tf: panel(fwd_bars, tf, at, at + FWD[tf]) for tf in PANELS}, "_plan": pin}
 
 
 def live(at: pd.Timestamp, assets=("US100", "US500")):
@@ -363,6 +371,7 @@ def live(at: pd.Timestamp, assets=("US100", "US500")):
         bars = dukascopy.load(x, at.date() - timedelta(days=1000), at.date() + timedelta(days=1))
         it = read(x, bars, at.date(), at=at)
         it["id"] = f"{x}-live-{at:%Y%m%d}"
+        it.pop("_plan", None)
         (out / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":")))
         ids.append(it["id"]); print(it["id"], it["kind"])
     old = json.loads((out / "index.json").read_text())["ids"] if (out / "index.json").exists() else []
@@ -403,6 +412,7 @@ def main():
     rnd.shuffle(items)
     (OUT / "s").mkdir(parents=True, exist_ok=True)
     for it in items:
+        it.pop("_plan", None)
         (OUT / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":")))
     (OUT / "index.json").write_text(json.dumps({"generated": str(date.today()), "seed": a.seed,
                                                 "ids": [it["id"] for it in items]}, indent=1))
