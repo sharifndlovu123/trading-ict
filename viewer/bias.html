@@ -76,7 +76,8 @@ aside { overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 <script>
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const TFS = [["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
+const ALL_TFS = [["1w", "W"], ["1d", "D"], ["4h", "4H"], ["1h", "1H"]];
+let TFS = ALL_TFS;                                     // the timeframes this chart has (timeline charts: W + D)
 const st = { ids: [], i: 0, it: null, tf: "1w", answers: {} };
 let drafts = {};
 try { drafts = JSON.parse(localStorage.getItem("biasDrafts") || "{}"); } catch (e) { drafts = {}; }
@@ -203,7 +204,8 @@ function paintLines() {
 })();
 chart.subscribeClick(p => {
   if (!st.tool || st.tool.startsWith("bos") || p.time == null) return;
-  const d = draft(); (d.changes[st.tf] ||= []).push({ t: p.time, to: st.tool });
+  const d = draft(), L = (d.changes[st.tf] ||= []);
+  if (!L.some(c => c.t === p.time && c.to === st.tool)) L.push({ t: p.time, to: st.tool });   // no duplicates
   d.changes[st.tf].sort((a, b) => a.t - b.t);
   st.tool = null; $("chart").style.cursor = ""; saveDrafts(); side(); draw();
 });
@@ -243,6 +245,8 @@ $("note").oninput = () => { draft().note = $("note").value; saveDrafts(); };
 async function load(i) {
   st.i = (i + st.ids.length) % st.ids.length;
   st.it = await (await fetch(`s/${st.ids[st.i]}.json`)).json();
+  TFS = ALL_TFS.filter(([k]) => (st.it.panels[k] || []).length);
+  if (!TFS.some(([k]) => k === st.tf)) st.tf = TFS[0][0];
   $("pick").value = st.ids[st.i];
   $("where").textContent = `${st.it.asset} · ${st.it.day} 08:30 NY`;
   $("count").textContent = `${st.i + 1}/${st.ids.length} · saved ${Object.keys(st.answers).length}`;

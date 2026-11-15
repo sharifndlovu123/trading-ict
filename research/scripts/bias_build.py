@@ -46,11 +46,32 @@ def moment(asset, bars, d):
                        "swing_highs": sw(w[1]) if w else [], "swing_lows": sw(w[2]) if w else []}}
 
 
+def timeline():
+    """One moment per index at the in-sample end (2023-09-29 08:30, candles before it only): the whole weekly history on
+    W and D, so every weekly change point / BOS is marked once instead of on many overlapping charts."""
+    out = Path("out/bias-timeline")
+    (out / "s").mkdir(parents=True, exist_ok=True)
+    ids = []
+    for x in ASSETS:
+        bars = dukascopy.load(x, DATA_FROM, CUT + timedelta(days=3))
+        PANELS["1d"] = timedelta(days=730)
+        it = moment(x, bars, CUT)
+        it["id"] = f"{x}-timeline"
+        it["panels"] = {k: it["panels"][k] for k in ("1w", "1d")}
+        (out / "s" / f"{it['id']}.json").write_text(json.dumps(it, separators=(",", ":")))
+        ids.append(it["id"]); print(it["id"], len(it["panels"]["1w"]), "weeks", len(it["panels"]["1d"]), "days")
+    (out / "index.json").write_text(json.dumps({"generated": str(date.today()), "ids": ids}, indent=1))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--timeline", action="store_true",
+                    help="one long chart per index (W + D, Oct 2021 → the in-sample end) to mark every weekly change once")
     a = ap.parse_args()
+    if a.timeline:
+        return timeline()
     rnd = random.Random(a.seed)
     bars = {x: dukascopy.load(x, DATA_FROM, CUT + timedelta(days=3)) for x in ASSETS}
     days = [START + timedelta(days=i) for i in range((CUT - START).days)]
