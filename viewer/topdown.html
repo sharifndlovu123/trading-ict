@@ -246,7 +246,9 @@ function paint() {
     g.setLineDash(s.dash ? [5, 4] : []);
     if (s.trend) {
       const y0 = yOf(s.p0), y1 = yOf(s.p1); if (y0 == null || y1 == null) continue;
+      if (s.kind === "fake push") g.setLineDash([6, 4]);
       g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      if (MOVES.includes(s.kind)) arrowHead(g, x0, y0, x1, y1);
       if (s.label) { g.fillText(s.label, x1 + 6, y1); }
       if (sel) { g.fillStyle = css("--panel"); for (const [x, y] of [[x0, y0], [x1, y1]]) { g.fillRect(x - 4, y - 4, 8, 8); g.strokeRect(x - 4, y - 4, 8, 8); } }
       continue;
@@ -303,7 +305,7 @@ function drawLines() {
   d.added.forEach((a, i) => {
     const s = { key: "mine:" + i, mine: true, color: css("--mine"), w: 2, dash: a.shape === "zone", t0: a.t0 ?? null, t1: a.t1 ?? null,
                 label: "yours: " + (a.kind || "") + (a.side === "buyside" ? " ↑" : a.side === "sellside" ? " ↓" : ""), role: a.side || "" };
-    if (a.shape === "trend") { shapes.push({ ...s, trend: true, p0: a.p0, p1: a.p1 }); return; }
+    if (a.shape === "trend") { shapes.push({ ...s, trend: true, kind: a.kind, p0: a.p0, p1: a.p1 }); return; }
     if (a.shape === "zone") shapes.push({ ...s, zone: true, top: a.top, bottom: a.bottom });
     else shapes.push({ ...s, price: a.price });
     axis(a.shape === "zone" ? a.top : a.price, css("--mine"), "");
@@ -503,13 +505,16 @@ const PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
   ["", "level", ["BOS"]],
-  ["", "trend", ["trendline"]],
+  ["", "trend", ["trendline", "displacement", "fake push"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
 ];
+const MOVES = ["displacement", "fake push"];   // a move: arrow at its end; a fake push is dashed
+const arrowHead = (g, x0, y0, x1, y1) => { const a = Math.atan2(y1 - y0, x1 - x0), L = 10; g.setLineDash([]); g.beginPath();
+  for (const s of [-0.45, 0.45]) { g.moveTo(x1, y1); g.lineTo(x1 - L * Math.cos(a + s), y1 - L * Math.sin(a + s)); } g.stroke(); };
 const placeKey = (side, kind) => side + "|" + kind;
 $("palette").innerHTML = '<span class="muted">place:</span>' + PALETTE.map(([side, shape, kinds]) =>
-  kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
+  kinds.map(k => `<span class="tool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side]}" data-tool="place" data-side="${side}" data-shape="${shape}" data-kind="${k}" title="${shape === "zone" ? "drag a box from start to finish (a click makes a small box to now)" : shape === "trend" ? "drag from one touch to the other" : "click: from there to now · drag: start → finish"}">${shape === "zone" ? "▭ " : shape === "trend" ? (k === "trendline" ? "╱ " : "⇢ ") : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:8px"></span>') +
   '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click = remove</span>';
 const GRABW = () => st.tool === "grab" ? 16 : 6;   // grab mode reaches further
 function hit(px, py) {

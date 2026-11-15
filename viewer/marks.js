@@ -10,11 +10,14 @@
 // Pick a type, then click (a level runs from there to now) or drag start → finish (zones and trendlines need a drag).
 // The type switches off after one placement. Click a mark to select it; drag its body or its ends; Delete / Backspace or
 // right-click removes it; Esc deselects. A press that hits nothing passes through to the page's own handlers.
+const MOVES = ["displacement", "fake push"];   // a move: arrow at its end; a fake push is dashed
+const arrowHead = (g, x0, y0, x1, y1) => { const a = Math.atan2(y1 - y0, x1 - x0), L = 10; g.setLineDash([]); g.beginPath();
+  for (const s of [-0.45, 0.45]) { g.moveTo(x1, y1); g.lineTo(x1 - L * Math.cos(a + s), y1 - L * Math.sin(a + s)); } g.stroke(); };
 const MARK_PALETTE = [
   ["buyside", "level", ["buyside", "EQH"]],
   ["sellside", "level", ["sellside", "EQL"]],
   ["", "level", ["BOS"]],
-  ["", "trend", ["trendline"]],
+  ["", "trend", ["trendline", "displacement", "fake push"]],
   ["area", "zone", ["FVG", "IFVG", "BPR", "VI", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "opening range gap", "NWOG", "NDOG"]],
 ];
@@ -60,7 +63,7 @@ function marksLayer(chart, series, el, o) {
     o.paletteEl.innerHTML = `<span class="mtool grab ${grab ? "on" : ""}" data-grab="1" title="grab (G): the chart holds still; press near any mark to move it">✋ grab</span><span style="width:6px"></span>` +
       '<span class="muted">place:</span>' + MARK_PALETTE.map(([side, shape, kinds]) => kinds.map(k =>
       `<span class="mtool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side] || ""} ${place && place.kind === k && place.side === side ? "on" : ""}"
-        data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? "╱ " : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
+        data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? (k === "trendline" ? "╱ " : "⇢ ") : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
       '<span class="muted" style="margin-left:auto">one placement per pick · Del / right-click removes</span>';
     o.paletteEl.querySelectorAll(".mtool").forEach(b => b.onclick = () => {
       if (b.dataset.grab) return setGrab(!grab);
@@ -103,7 +106,9 @@ function marksLayer(chart, series, el, o) {
       const handles = [];
       if (m.shape === "trend") {
         const y0 = yOf(m.p0), y1 = yOf(m.p1); if (y0 == null || y1 == null) return;
+        if (m.kind === "fake push") g.setLineDash([6, 4]);
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        if (MOVES.includes(m.kind)) arrowHead(g, x0, y0, x1, y1);
         g.fillText(name(m), Math.min(x1, W) + 4, y1); handles.push([x0, y0], [x1, y1]);
       } else if (m.shape === "zone") {
         const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) return;
