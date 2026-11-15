@@ -74,11 +74,14 @@ def moment(asset: str, at: pd.Timestamp, bars: pd.DataFrame) -> dict:
 
 
 def main():
+    global OUT
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--seed", type=int, default=11)
+    ap.add_argument("--out", type=Path, default=OUT, help="out/topdown for the top-down review set")
     ap.add_argument("--at", nargs=3, action="append", metavar=("ASSET", "DATE", "HH:MM"), default=[])
     a = ap.parse_args()
+    OUT = a.out
     rnd = random.Random(a.seed)
     days = [d.date() for d in pd.bdate_range(START, CUT - timedelta(days=1))]
     want = [(ASSETS[i % len(ASSETS)], pd.Timestamp(datetime.combine(rnd.choice(days), time(8, 30)), tz=NY))

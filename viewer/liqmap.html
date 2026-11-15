@@ -98,9 +98,7 @@ textarea { width: 100%; min-height: 60px; }
     <div id="ladder"></div>
     <h3>Your levels <span class="muted" style="text-transform:none">— pick a type under the chart, click or drag start→finish · Delete or right-click removes</span></h3>
     <div id="mine"><div class="muted">Anything the engine missed: pick its type in the <b>place:</b> row under the chart, then click the chart (it runs from there to now) or drag from where it starts to where it ends. L / Z = a plain level / zone, Esc stops placing. Drag a line to move it; drag the ends of yours to change start/finish. Delete: click it then press Delete, or right-click it.</div></div>
-    <h3>Where does price draw to next?</h3>
-    <select id="draw" style="width:100%"></select>
-    <div style="margin-top:4px"><label class="muted">by <select id="horizon"><option value="">—</option><option>today</option><option>this week</option><option>next week+</option></select></label></div>
+    <select id="draw" style="display:none"></select><select id="horizon" style="display:none"></select>
     <h3>Notes</h3>
     <textarea id="notes" placeholder="What you see: the daily story, which liquidity is engineered, where you'd hunt…"></textarea>
     <div style="display:flex;gap:6px;margin:8px 0 14px;align-items:center">
@@ -148,10 +146,13 @@ function colour(it) { return it.role === "buyside" ? css("--bs") : it.role === "
 // clean mode: only the higher-timeframe frame — previous week/day/month high-low, the nearest weekly and daily
 // liquidity on each side, and the daily draw — plus anything you starred
 const CORE_KINDS = new Set(["pwh", "pwl", "pdh", "pdl", "pmh", "pml"]);
+// clean = the top-down read (Sharif 2026-11-16): weekly then daily — areas price is in / nearest above and below,
+// and the nearest buyside above / sellside below. Both sides; no draw is forced.
 function coreIds() {
-  const k = st.item.map.key, s = new Set(items().filter(it => CORE_KINDS.has(it.kind)).map(it => it.id));
+  const k = st.item.map.key, s = new Set();
+  if (k.topdown) { for (const d of Object.values(k.topdown)) for (const v of Object.values(d)) v.forEach(i => s.add(i)); return s; }
+  items().filter(it => CORE_KINDS.has(it.kind)).forEach(it => s.add(it.id));
   for (const tf of ["1w", "1d"]) Object.values((k.nearest || {})[tf] || {}).forEach(v => v && s.add(v));
-  if (k.daily_draw) s.add(k.daily_draw);
   return s;
 }
 function shown(it) {
@@ -310,7 +311,9 @@ function keysBox() {
   h += `<div>Daily bias: <span class="pill">prev_day_dol ${b.prev_day_dol || "?"}</span> <span class="pill">weekly ${b.dol_weekly || "?"}</span></div>`;
   if (k.daily_range) { const r = k.daily_range;
     h += `<div>Daily dealing range ${fmt(r.low)}–${fmt(r.high)} (50% ${fmt(r.eq)}): price at <b>${Math.round(r.fraction * 100)}%</b> → <b>${r.zone}</b></div>`; }
-  h += `<div>Daily draw (bias side): ${name(k.daily_draw)}</div>`;
+  if (k.topdown) for (const tf of ["1w", "1d"]) { const t = k.topdown[tf] || {};
+    const list = ids => (ids || []).map(i => { const it = byId(i); return it ? `${it.kind} <b>${it.role === "area" ? fmt(it.bottom) + "–" + fmt(it.top) : fmt(it.price)}</b>` : ""; }).join(", ") || '<span class="muted">–</span>';
+    h += `<div><b>${tf === "1w" ? "Weekly" : "Daily"}</b> · areas ${list(t.areas)} · ↑ ${list(t.buyside)} · ↓ ${list(t.sellside)}</div>`; }
   h += `<table class="near"><tr><th>tf</th><th>nearest buyside ↑</th><th>nearest sellside ↓</th></tr>`;
   for (const tf of ["1w", "1d", "4h", "1h", "session"]) { const n = (k.nearest || {})[tf] || {};
     const cell = id => { const it = id && byId(id); return it ? `${fmt(it.price)} <span class="muted">${it.dist_adr}</span>` : "–"; };
@@ -363,7 +366,7 @@ function mineBox() {
   $("mine").innerHTML = d.added.map((a, i) => `<div class="mine" data-i="${i}">
     <b style="font-family:ui-monospace,monospace" title="${a.t0 ? "from " + new Date(a.t0 * 1000).toISOString().slice(0, 16).replace("T", " ") : ""}${a.t1 ? " to " + new Date(a.t1 * 1000).toISOString().slice(0, 16).replace("T", " ") : " to now"}">${a.shape === "zone" ? "▭ " + fmt(a.bottom) + "–" + fmt(a.top) : a.shape === "trend" ? "╱ " + fmt(a.p0) + "→" + fmt(a.p1) : "─ " + fmt(a.price)}</b>
     <select data-k="kind">${kinds.map(k => `<option ${a.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
-    <select data-k="tf">${["1d", "4h", "1h", "15m", "5m", "1m"].map(k => `<option ${a.tf === k ? "selected" : ""}>${k}</option>`).join("")}</select>
+    <select data-k="tf">${["1w", "1d", "4h", "1h", "15m", "5m", "1m"].map(k => `<option ${a.tf === k ? "selected" : ""}>${k}</option>`).join("")}</select>
     <button data-del="1" title="remove">✕</button>
     <input type="text" data-k="note" placeholder="why it matters" value="${(a.note || "").replace(/"/g, "&quot;")}"></div>`).join("");
   $("mine").querySelectorAll(".mine").forEach(el => {

@@ -79,3 +79,34 @@ def test_every_item_knows_when_it_formed_and_the_level_was_there():
         if it["kind"] in ("pdh", "pdl", "pwh", "pwl", "pmh", "pml", "asia_high", "asia_low", "london_high", "london_low"):
             bar = b.loc[t]                                          # context levels: the 1m bar that made them
             assert (bar.high >= it["price"] - 0.01) if it["role"] == "buyside" else (bar.low <= it["price"] + 0.01), it["id"]
+
+
+def _tf_bars(closes, start="2024-01-01"):
+    idx = pd.date_range(start, periods=len(closes), freq="D", tz=NY)
+    return pd.DataFrame({"close": closes, "close_ts": idx + pd.Timedelta(hours=17)}, index=idx)
+
+
+def test_htf_gap_judged_on_its_own_closes_wick_keeps_it_close_through_inverts_close_back_retires():
+    from ict_engine.concepts.events import Event
+    from ict_engine.concepts.liquidity_map import _htf_gap
+    t = pd.Timestamp("2024-01-01 17:00", tz=NY)
+    g = Event("fvg", "1d", "bull", t, t, top=110.0, bottom=100.0)
+    end = pd.Timestamp("2024-02-01", tz=NY)
+    assert _htf_gap(g, _tf_bars([120, 115, 105, 112]), end) == "fvg"           # closes inside: partly filled, still there
+    assert _htf_gap(g, _tf_bars([120, 105, 95, 98]), end) == "ifvg"            # a daily close below the bottom: IFVG
+    assert _htf_gap(g, _tf_bars([120, 95, 105, 111]), end) is None             # ... then a close back above the top
+    assert _htf_gap(g, _tf_bars([120, 95]), pd.Timestamp("2024-01-02 12:00", tz=NY)) == "fvg"   # no look-ahead
+    vi = Event("vi", "1d", "bull", t, t, top=110.0, bottom=100.0)
+    assert _htf_gap(vi, _tf_bars([120, 95]), end) is None
+
+
+def test_topdown_names_existing_items_on_both_sides():
+    m = build(bars(), AS_OF, max_adr=50)
+    ids = {it["id"]: it for it in m["items"]}
+    td = m["key"]["topdown"]
+    assert set(td) == {"1w", "1d"}
+    for tf, d in td.items():
+        assert all(i in ids for v in d.values() for i in v)
+        assert all(ids[i]["role"] == "buyside" and ids[i]["where"] == "above" for i in d["buyside"])
+        assert all(ids[i]["role"] == "sellside" and ids[i]["where"] == "below" for i in d["sellside"])
+        assert all(ids[i]["role"] == "area" for i in d["areas"])

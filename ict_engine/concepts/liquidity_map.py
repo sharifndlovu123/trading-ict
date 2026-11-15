@@ -10,12 +10,21 @@ price currently is when we open the chart to hunt".
                  kind   pdh pdl pwh pwl pmh pml asia_high asia_low london_high london_low   (context)
                         swing_high swing_low                                                (untaken swings)
                         eqh eql                                                             (equal highs / lows)
-                        fvg vi                                                              (unfilled imbalances)
+                        fvg vi                                                              (imbalances still open)
+                        ifvg                                                                (1w/1d FVG closed through)
                         nwog                                                                (new week opening gap)
                  where  above | below (price)
                  role   buyside | sellside (resting stops) | area (imbalance: a draw or a place to react)
     key        nearest buyside above / sellside below per timeframe, the daily dealing range and where price sits
-               in it (premium / discount), the daily bias reads, and the daily draw in the bias direction
+               in it (premium / discount), the daily bias reads, the daily draw in the bias direction, and
+               ``topdown``: Sharif's read (2026-11-16) — weekly first, then daily: per timeframe the areas price is
+               inside / the nearest above and below, and the nearest two buyside above and sellside below. Both
+               sides, no direction forced ("we look at interesting places, places it's respected, and possible
+               liquidity"); respect at an area is what picks the side later.
+
+Weekly and daily imbalances are judged on their own timeframe's closes: a wick into (or through) a weekly FVG leaves
+it on the map — partly filled is still an area — and only a weekly close beyond its far edge ends it, turning a FVG
+into an IFVG (ruling §10) until a close back through the other side.
 """
 
 from __future__ import annotations
@@ -34,6 +43,8 @@ LOOKBACK = {"1w": timedelta(days=730), "1d": timedelta(days=180), "4h": timedelt
 EQ_BP = {"1w": 20.0, "1d": 10.0, "4h": 4.0, "1h": 2.0}
 REACH = {"1w": 2.0}                     # weekly levels may sit up to 2× max_adr away
 PER_SIDE = {"swing": 4, "eq": 2, "gap": 3}
+# top-down liquidity per side and timeframe; context kinds skipped unless they coincide with a swing / equal level
+TOPDOWN = {"n": 2, "skip": ()}
 TF_ORDER = {"1w": -1, "1d": 0, "4h": 1, "1h": 2, "session": 3}
 
 
@@ -68,6 +79,21 @@ def _when(bars: pd.DataFrame, before: pd.Timestamp, price: float, high: bool) ->
     seg = bars[bars.index <= before]
     hit = seg.index[(seg.high >= price - 1e-9) if high else (seg.low <= price + 1e-9)]
     return str(hit[-1]) if len(hit) else ""
+
+
+def _htf_gap(g, b: pd.DataFrame, as_of: pd.Timestamp) -> str | None:
+    """State of a 1w/1d imbalance at ``as_of`` from closes of its own timeframe (``b`` has ``close_ts``):
+    "fvg"/"vi" while no close beyond the far edge, "ifvg" after a FVG's close beyond it, None once retired."""
+    c = b[(b.close_ts > g.ts) & (b.close_ts < as_of)].close
+    bull = g.direction == "bull"
+    beyond = (c < g.bottom) if bull else (c > g.top)
+    if not beyond.any():
+        return g.kind
+    if g.kind != "fvg":
+        return None
+    after = c[c.index > beyond.idxmax()] if beyond.any() else c.iloc[:0]
+    back = (after > g.top) if bull else (after < g.bottom)
+    return None if back.any() else "ifvg"
 
 
 def _daily(hist: pd.DataFrame) -> pd.DataFrame:
@@ -195,9 +221,16 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
         for g in list(fvgs(b, tf)) + list(volume_imbalances(b, tf)):
             if g.ts >= as_of:
                 continue
-            st = gap_lifecycle(g, hist, until=as_of)
-            if not st.valid_at(as_of) or st.filled is not None:
-                continue
+            if tf in ("1w", "1d"):
+                state = _htf_gap(g, b, as_of)
+                if state is None:
+                    continue
+                g = g if state == g.kind else type(g)("ifvg", g.tf, "bear" if g.direction == "bull" else "bull", g.ts,
+                                                      g.origin_ts, g.top, g.bottom, g.meta)
+            else:
+                st = gap_lifecycle(g, hist, until=as_of)
+                if not st.valid_at(as_of) or st.filled is not None:
+                    continue
             if g.bottom > last:
                 gaps["above"].append((g.bottom - last, g))
             elif g.top < last:
@@ -207,9 +240,9 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
         for side, lst in gaps.items():
             for _, g in sorted(lst, key=lambda x: x[0])[:PER_SIDE["gap"]]:
                 near = g.bottom if side == "above" else g.top
-                kind = "fvg" if g.kind == "fvg" else "vi"
+                kind = g.kind if g.kind in ("fvg", "ifvg") else "vi"
                 add(tf, kind, "area", near, _ny(g.origin_ts),
-                    f"{tf} {'bullish' if g.direction == 'bull' else 'bearish'} {'FVG' if kind == 'fvg' else 'volume imbalance'}",
+                    f"{tf} {'bullish' if g.direction == 'bull' else 'bearish'} {({'fvg': 'FVG', 'ifvg': 'IFVG'}).get(kind, 'volume imbalance')}",
                     top=g.top, bottom=g.bottom)
 
     # new week opening gaps (last 4 weeks): Friday's last price → Sunday's first
@@ -236,6 +269,18 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
         up = [it for it in items if on(it) and it.role == "buyside" and it.where == "above"]
         dn = [it for it in items if on(it) and it.role == "sellside" and it.where == "below"]
         key["nearest"][tf] = {"buyside": up[0].id if up else None, "sellside": dn[0].id if dn else None}
+    key["topdown"] = {}
+    for tf in ("1w", "1d"):
+        on = lambda it: it.tf == tf or any(a.startswith(f"{tf} ") for a in it.also)
+        areas = [it for it in items if on(it) and it.role == "area"]
+        liq = lambda it: on(it) and not (it.kind in TOPDOWN["skip"] and not it.also)
+        inside = [it.id for it in areas if it.bottom <= last <= it.top]
+        up = [it.id for it in areas if it.bottom > last][:1]
+        dn = [it.id for it in areas if it.top < last][:1]
+        key["topdown"][tf] = {
+            "areas": inside + up + dn,
+            "buyside": [it.id for it in items if liq(it) and it.role == "buyside" and it.where == "above"][:TOPDOWN["n"]],
+            "sellside": [it.id for it in items if liq(it) and it.role == "sellside" and it.where == "below"][:TOPDOWN["n"]]}
     sw = sorted((e for e in swings(done, "1d") if e.ts < as_of), key=lambda e: e.ts) if len(done) >= 3 else []
     hs = [e.top for e in sw if e.kind == "swing_high"]
     ls = [e.bottom for e in sw if e.kind == "swing_low"]
