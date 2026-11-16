@@ -11,12 +11,12 @@
   --pos:#4cc28c; --neg:#e66767; --up:#3987e5; --down:#d95926; --warn:#e0b040; --accent:#3987e5; --area:#a98be6; --bs:#7ea6e8; --ss:#f0915f; --mine:#4fd1b5; } }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
-main { max-width:1250px; margin:0 auto; padding:14px 16px 60px; }
+main { max-width:none; margin:0; padding:10px 14px 60px; }
 h1 { font-size:20px; margin:0; } h2 { font-size:15px; margin:0 0 6px; }
 .top { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; margin-bottom:10px; }
 .dim { color:var(--ink2); } .num { font-family:ui-monospace,Menlo,monospace; }
 .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:8px 0; }
-.grid { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:12px; align-items:start; }
+.grid { display:grid; grid-template-columns:minmax(0,1fr) clamp(340px,24vw,460px); gap:12px; align-items:start; }
 @media (max-width:980px) { .grid { grid-template-columns:1fr; } }
 button, select, input, textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:4px 9px; }
 button { cursor:pointer; } button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
@@ -27,7 +27,7 @@ textarea { width:100%; min-height:44px; resize:vertical; } input.px { width:96px
 .chip { border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:13px; }
 .chip.warn { border-color:var(--warn); color:var(--warn); } .chip.good { border-color:var(--pos); color:var(--pos); }
 .verdict { font-weight:600; } .verdict.yes { color:var(--pos); } .verdict.no { color:var(--neg); }
-#chart { height:480px; position:relative; }
+#chart { height:max(480px, calc(100vh - 235px)); position:relative; }
 #palette { display:flex; flex-wrap:wrap; gap:3px; align-items:center; margin:6px 0; }
 .mtool { padding:0 6px; font-size:12px; border-radius:5px; border:1px solid var(--line); cursor:pointer; user-select:none; }
 .mtool.bs { border-color:var(--bs); } .mtool.ss { border-color:var(--ss); } .mtool.ar { border-color:var(--area); border-style:dashed; }
@@ -71,7 +71,6 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
   </div>
   <div class="tabs" id="tabs"></div>
   <div class="card" id="cond"></div>
-  <div class="card" id="compare"></div>
   <div class="grid">
     <div>
       <div class="card" id="chartcard">
@@ -102,6 +101,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
       <div class="card" id="breaks"></div>
     </div>
   </div>
+  <div class="card" id="compare"></div>
 </main>
 <script>
 const $ = id => document.getElementById(id);
