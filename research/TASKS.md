@@ -76,3 +76,8 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☐ J2 Resting limits cancelled after a run of ≥ 1 R without a fill
 - ☐ J3 Minimum width for areas and trigger gaps (in ticks / ADR)
 - ☑ J4 Fact sheet: the turn line uses the trade's own day (to 16:55 NY); the note prints the area, the decision time and the trigger gap
+
+## Paused 2026-11-16 ~16:15 (session limit) — resume here
+- J2 `cancel_run_r` option is built and committed (off by default, suite 593 passed).
+- Its sweep on 2022-01-03 → 2024-06-28 (three indices; 2022 model, MMxM, silver bullet, morning recipe) writes `reports/cancelrun-2022-01-03-2024-06-28.parquet` when it ends. **Not yet read.**
+- Next: compare against the baselines (`reports/backtest[-mmxm|-silver_bullet]-<ASSET>-2022-01-03-2024-06-28-futures.parquet`; recipe: `reports/variants-pd_return-2022-01-03-2024-06-28-recipe4.parquet`) by model, year and condition → 30-trade review if results move → change gate. Then J1 (TP1 picker) and J3 (minimum area / gap widths).
