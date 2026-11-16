@@ -16,9 +16,10 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 ## B. 30-trade review (15 winners / 15 losers), price focus
 - ☑ B1 Fact sheets with the turn point (where price really turned + known levels there)
 - ☑ B2 Written reviews, two reviewers × 15 trades (`research/trade-reviews/2026-11-16-30-trades/`)
-- ☐ B3 Synthesis: pricing mistakes that repeat, levels we should have priced
-- ◐ B4 Level-based tweaks from the reviews (`tweak_levels.py`): stop beyond array / pool, TP1 front-run, entry at the HTF array, skip gates — running on all 4,656 trades
-- ☐ B5 Tweaks that fix many more trades than they break and lift R on most datasets → change gate (option → backtest)
+- ☑ B3 Synthesis: `research/trade-reviews/2026-11-16-30-trades/SUMMARY.md`
+- ☑ B4 Level-based tweaks on all 4,656 trades: none lifts mean R (stops beyond array/pool raise win rate to 44–50% at the same R; entry at the HTF array is worse, z −2.0)
+- ☑ B5 Nothing qualifies for the change gate (rule R11). Weak lead only: skip when a pool sits within 0.15 ADR beyond the stop (+0.053 vs −0.027 R, z ≈ 1)
+- ☐ B6 PD-array flags from the reviewers → array audit notes (opposite labels at the same prices, overlapping opposite arrays, stale direction labels)
 
 ## C. Microstructure (the layer we had not used)
 - ☑ C1 Break the references (`references/orderflow.md`, `references/microstructure/`) into components: measure, formula, data it needs, computable with our data or not
