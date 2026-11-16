@@ -57,3 +57,18 @@ def test_cost_basis_defaults_to_futures_and_rejects_unknown(monkeypatch):
     monkeypatch.setenv("ICT_COST_BASIS", "spot")
     with pytest.raises(ValueError):
         ins.cost_basis()
+
+
+def test_new_indices_have_futures_costs_and_scaled_units():
+    """Added 2026-11-16 (recipe on unseen instruments): Russell 2000, DAX, FTSE trade on a futures basis."""
+    import os
+    import pandas as pd
+    from ict_engine.data.instruments import ASSETS, cost_at, unit
+    os.environ["ICT_COST_BASIS"] = "futures"
+    ts = pd.Timestamp("2023-03-15 10:00", tz="America/New_York")
+    assert cost_at("US2000", 1800.0, ts) == 0.10 + 4.5 / 50      # 1 tick + fee / $ per point
+    assert cost_at("DE40", 15000.0, ts) == 1.0 + 4.5 / 5
+    assert cost_at("UK100", 7500.0, ts) == 0.5 + 4.5 / 10
+    assert (unit("US2000"), unit("DE40"), unit("UK100")) == (0.4, 4.0, 2.0)
+    assert unit("US100") == unit("US500") == unit("US30") == 1.0  # the old indices do not move
+    assert ASSETS["US2000"].clock == ASSETS["US100"].clock

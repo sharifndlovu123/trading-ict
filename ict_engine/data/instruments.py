@@ -32,6 +32,10 @@ ASSETS: dict[str, Asset] = {
         Asset("XAGUSD", "xagusd", "SI", "fx", 0.005),
         Asset("DXY", "dollaridxusd", "DX", "fx", 0.005),
         Asset("EURUSD", "eurusd", "6E", "fx", 0.00005),   # Euro index proxy
+        # Indices added 2026-11-16 as unseen instruments for the recipe (research/preregistered-recipe-new-indices.md)
+        Asset("US2000", "ussc2000idxusd", "RTY", "futures", 0.1),    # Russell 2000: US hours, US news
+        Asset("DE40", "deuidxeur", "FDXM", "futures", 1.0),          # DAX (mini future: 1 point tick, EUR 5 a point)
+        Asset("UK100", "gbridxgbp", "Z", "futures", 0.5),            # FTSE 100 (GBP 10 a point)
         # real CME futures (Databento NQ.v.0, continuous front month): order-flow tests. Not the root lookup
         # for "NQ" (that stays US100, which the reference cases use).
         Asset("NQCME", "", "NQ", "futures", 0.25, source="cme"),
@@ -61,9 +65,11 @@ COST_BPS: dict[str, float] = {"NQCME": 0.71, "US100": 0.71, "US500": 1.16, "US30
 # 1 tick of spread + commission/fees of ~$4.50 per contract round trip ÷ the contract's $ per point.
 # Assumption (2026-11-13): a retail/prop futures account; 1 tick even pre-market; no extra slippage.
 FUTURES_TICK = {"NQCME": 0.25, "US100": 0.25, "US500": 0.25, "US30": 1.0, "XAUUSD": 0.10, "XAGUSD": 0.005,
-                "DXY": 0.005, "EURUSD": 0.00005}                      # DX: $5 a tick; 6E: $6.25 a tick
+                "DXY": 0.005, "EURUSD": 0.00005,                      # DX: $5 a tick; 6E: $6.25 a tick
+                "US2000": 0.10, "DE40": 1.0, "UK100": 0.5}            # RTY $5 a tick; FDXM EUR 5; Z GBP 5
 FUTURES_POINT_VALUE = {"NQCME": 20.0, "US100": 20.0, "US500": 50.0, "US30": 5.0, "XAUUSD": 100.0, "XAGUSD": 5000.0,
-                       "DXY": 1000.0, "EURUSD": 125000.0}
+                       "DXY": 1000.0, "EURUSD": 125000.0,
+                       "US2000": 50.0, "DE40": 5.0, "UK100": 10.0}      # fee taken as 4.5 in the contract's currency
 # Thresholds written in index points (stop_buffer 0.25, the 2022 model's min_potential 10 = ICT's "10 points or
 # 40 ticks") keep their value on these assets (results validated on them must not move) and scale by the futures
 # tick on every other asset: unit = tick / 0.25, so 0.25 → 1 tick and 10 → 40 ticks.
