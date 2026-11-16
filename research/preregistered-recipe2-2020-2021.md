@@ -76,3 +76,12 @@ Reported beside it:
 **Reading:** the sign repeated on data the rule never saw, on every index and in both years, where the unfiltered model loses on every one of those cuts. The size roughly halved (+0.23 → +0.12 R), the details that looked strongest in-sample (early entries, longs, the wide-stop 1 R version) did not carry over, and under a stricter fill the hold-out is about zero. It is the lead candidate, with a win rate of about a third; it is not an edge one could size a trade on yet.
 
 **What follows (as written above):** the second check on gold, silver, the dollar index and EUR/USD; a written review of every hold-out trade; the recipe goes to the forward log. No re-tuning on 2020–2021.
+
+
+## Second check — gold, silver, dollar index, EUR/USD, 2022-01-03 → 2024-06-28 (run once, 2026-11-16)
+| | n | Win % | Mean R | z | XAUUSD / XAGUSD / DXY / EURUSD |
+|---|---|---|---|---|---|
+| Model baseline | 1,093 | 29.6 | −0.084 | −1.86 | +0.007 (570) / −0.262 (256) / −0.073 (103) / −0.129 (164) |
+| recipe3 | 111 | 18.9 | **−0.170** | −1.97 | −0.131 (34) / +0.089 (26) / −0.358 (25) / −0.299 (26) |
+
+**The recipe does not carry over to metals and currencies.** No pass bar was set for this check; it is recorded as a negative. What stands is narrower: positive on the three US indices in the New York session, in-sample (2022–24) and on the hold-out (2020–21). Those three markets move together, so this is closer to one market seen three times than to three independent confirmations.
