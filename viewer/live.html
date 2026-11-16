@@ -6,9 +6,9 @@
 <title>Recipe Live Sheet</title>
 <style>
 :root { --bg:#f2f3f0; --panel:#fcfcfb; --ink:#141614; --ink2:#52514e; --line:#d9ddd7; --pos:#1f7a55; --neg:#b23b3b;
-  --up:#2a78d6; --down:#eb6834; --warn:#9a6a00; --accent:#2a78d6; --area:#8a63d2; }
+  --up:#2a78d6; --down:#eb6834; --warn:#9a6a00; --accent:#2a78d6; --area:#8a63d2; --bs:#2b62b8; --ss:#c0562a; --mine:#138a72; }
 @media (prefers-color-scheme: dark) { :root { --bg:#111110; --panel:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --line:#34342f;
-  --pos:#4cc28c; --neg:#e66767; --up:#3987e5; --down:#d95926; --warn:#e0b040; --accent:#3987e5; --area:#a98be6; } }
+  --pos:#4cc28c; --neg:#e66767; --up:#3987e5; --down:#d95926; --warn:#e0b040; --accent:#3987e5; --area:#a98be6; --bs:#7ea6e8; --ss:#f0915f; --mine:#4fd1b5; } }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
 main { max-width:1250px; margin:0 auto; padding:14px 16px 60px; }
@@ -27,7 +27,17 @@ textarea { width:100%; min-height:44px; resize:vertical; } input.px { width:96px
 .chip { border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:13px; }
 .chip.warn { border-color:var(--warn); color:var(--warn); } .chip.good { border-color:var(--pos); color:var(--pos); }
 .verdict { font-weight:600; } .verdict.yes { color:var(--pos); } .verdict.no { color:var(--neg); }
-#chart { height:480px; }
+#chart { height:480px; position:relative; }
+#palette { display:flex; flex-wrap:wrap; gap:3px; align-items:center; margin:6px 0; }
+.mtool { padding:0 6px; font-size:12px; border-radius:5px; border:1px solid var(--line); cursor:pointer; user-select:none; }
+.mtool.bs { border-color:var(--bs); } .mtool.ss { border-color:var(--ss); } .mtool.ar { border-color:var(--area); border-style:dashed; }
+.mtool.on { background:var(--mine); color:#fff; border-color:var(--mine); font-weight:600; }
+.muted { color:var(--ink2); font-size:12px; }
+#chartcard.full { position:fixed; inset:0; z-index:50; margin:0; border-radius:0; display:flex; flex-direction:column; }
+#chartcard:fullscreen { background:var(--panel); display:flex; flex-direction:column; padding:10px 12px; }
+#chartcard.full #chart, #chartcard:fullscreen #chart { flex:1; height:auto; min-height:0; }
+#chartcard.full #legend, #chartcard:fullscreen #legend { display:none; }
+#fsinfo { display:none; margin-left:auto; } #chartcard.full #fsinfo, #chartcard:fullscreen #fsinfo { display:inline; }
 .plan { border-left:4px solid var(--line); } .plan.long { border-left-color:var(--up); } .plan.short { border-left-color:var(--down); }
 .plan.sel { outline:2px solid var(--accent); }
 .row { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin-top:6px; }
@@ -37,6 +47,8 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
 .gate { font-size:12.5px; } .gate.f { color:var(--neg); }
 .saved { color:var(--pos); font-size:13px; }
 </style>
+<script src="linedrag.js"></script>
+<script src="marks.js"></script>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -50,11 +62,16 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
   <div class="card" id="cond"></div>
   <div class="grid">
     <div>
-      <div class="card">
+      <div class="card" id="chartcard">
         <div class="row" style="margin-top:0">
           <span class="tabs" id="tfs"></span>
-          <span class="dim" id="legend">Prices are the CFD's (not the futures'). Dotted = session levels · purple = the higher-timeframe area · blue / red / green = entry / stop / TP1 of the selected plan.</span>
+          <button id="full" title="full screen (F)">⛶ full screen</button>
+          <span class="tabs" id="fstabs"></span>
+          <span id="marksn" class="dim"></span>
+          <span id="fsinfo" class="dim num"></span>
+          <span class="dim" id="legend">Prices are the CFD's (not the futures'). Dotted = session levels · purple = the higher-timeframe area · blue / red / green = entry / stop / TP1 of the selected plan. Pick a type below, then click or drag on the chart.</span>
         </div>
+        <div id="palette"></div>
         <div id="chart"></div>
       </div>
     </div>
@@ -69,7 +86,14 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
 const $ = id => document.getElementById(id);
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const st = { doc: null, asset: null, tf: "15m", answers: {}, sel: null, sig: "", dirty: false, lines: [] };
+const st = { doc: null, asset: null, tf: "15m", answers: {}, sel: null, sig: "", dirty: false, lines: [], marks: {} };
+// my marks: per index, kept as a draft in this browser for the day and sent with every save
+const mkKey = () => "live-marks-" + (st.doc ? st.doc.day : "");
+const myMarks = () => (st.marks[st.asset] ||= []);
+function loadMarks() { try { st.marks = JSON.parse(localStorage.getItem(mkKey()) || "{}"); } catch (e) { st.marks = {}; }
+  for (const a of Object.values(st.answers)) if (a.marks && a.asset && a.day === st.doc.day && !(st.marks[a.asset] || []).length) st.marks[a.asset] = a.marks; }
+function keepMarks() { try { localStorage.setItem(mkKey(), JSON.stringify(st.marks)); } catch (e) {}
+  $("marksn").textContent = myMarks().length ? `${myMarks().length} mark${myMarks().length > 1 ? "s" : ""} of mine (saved with my read / a plan mark)` : ""; }
 
 const chart = LightweightCharts.createChart($("chart"), { autoSize: true,
   layout: { background: { color: "transparent" }, textColor: css("--ink2") },
@@ -77,6 +101,22 @@ const chart = LightweightCharts.createChart($("chart"), { autoSize: true,
   timeScale: { timeVisible: true, secondsVisible: false, borderColor: css("--line") }, rightPriceScale: { borderColor: css("--line") } });
 const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false,
   wickUpColor: css("--up"), wickDownColor: css("--down") });
+
+const layer = marksLayer(chart, series, $("chart"), {
+  list: () => st.doc ? myMarks() : [], times: () => st.doc ? (st.doc.assets[st.asset].candles[st.tf] || []).map(c => c.time) : [],
+  nowT: () => null, paletteEl: $("palette"), color: css, tfName: () => st.tf, changed: keepMarks });
+const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
+function toggleFull() {
+  const c = $("chartcard");
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (c.classList.contains("full")) c.classList.remove("full");
+  else if (c.requestFullscreen) c.requestFullscreen().catch(() => c.classList.add("full"));
+  else c.classList.add("full");
+  setTimeout(() => { $("full").textContent = fsOn() ? "✕ exit full screen" : "⛶ full screen"; renderTabs(); }, 150);
+}
+$("full").onclick = toggleFull;
+document.addEventListener("fullscreenchange", () => { $("full").textContent = fsOn() ? "✕ exit full screen" : "⛶ full screen"; renderTabs(); });
+document.addEventListener("keydown", e => { if (!["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) && e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey) toggleFull(); });
 
 function line(price, color, title, style) {
   st.lines.push(series.createPriceLine({ price, color, lineWidth: 1, lineStyle: style ?? 0, axisLabelVisible: true, title }));
@@ -96,6 +136,8 @@ function drawChart(fit) {
     const n = (a.candles[st.tf] || []).length, show = { "5m": 150, "15m": 110, "1h": 120 }[st.tf];
     chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - show), to: n + 6 });
   }
+  layer.redraw(); keepMarks();
+  $("fsinfo").textContent = `${st.asset} · ${a.last} at ${a.last_bar} NY`;
 }
 
 function renderTabs() {
@@ -103,6 +145,8 @@ function renderTabs() {
     const live = (v.setups || []).filter(s => s.ok).length;
     return `<button data-a="${k}" class="${k === st.asset ? "on" : ""}">${k}${live ? ` · ${live} plan${live > 1 ? "s" : ""}` : ""}</button>`; }).join("");
   $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
+  $("fstabs").innerHTML = fsOn() ? Object.keys(st.doc.assets).map(k => `<button data-a="${k}" class="${k === st.asset ? "on" : ""}">${k}</button>`).join("") : "";
+  $("fstabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
   $("tfs").innerHTML = ["5m", "15m", "1h"].map(t => `<button data-t="${t}" class="${t === st.tf ? "on" : ""}">${t}</button>`).join("");
   $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.tf = b.dataset.t; renderTabs(); drawChart(true); });
 }
@@ -167,7 +211,7 @@ function renderPlans() {
 }
 
 async function save(id, body) {
-  body.id = id;
+  body.id = id; body.marks = myMarks();
   const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { alert("save failed"); return; }
   st.answers[id] = body; st.dirty = false; st.sig = ""; render(false);
@@ -189,6 +233,7 @@ async function poll(first) {
     const fresh = !st.doc || d.now !== st.doc.now;
     st.doc = d;
     if (!st.asset || !d.assets[st.asset]) st.asset = Object.keys(d.assets)[0];
+    if (first) loadMarks();
     $("fresh").textContent = `page checked ${new Date().toLocaleTimeString()}`;
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
