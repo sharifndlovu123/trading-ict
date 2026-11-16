@@ -26,6 +26,11 @@ did afterwards (pools taken next, MFE, stopped-then-target, how far it ran) goes
 are lessons to test on many trades, not blame for this one. Example: "the stop sat 0.04 ADR beyond the 4h high" is
 known. "Price came back to tag it" is hindsight.
 
+## Layers to read on every sheet
+- **Time and activity:** the entry hour and whether the last hour was quiet, normal or busy for that time.
+- **Price:** the `turn` line (hindsight): where price really turned, how far from our entry and stop, and which known level sat there. That level is "the pricing we should have looked at"; whether it was knowable goes under step 4 or 7.
+- **Microstructure:** the order-flow line where it exists (NQ 2024): flow with or against the trade over the approach (60 min) and at the trigger (5 min). A reading aid, not a rule.
+
 ## Common gaps to look for
 - No sweep before the entry (step 5 fail) on a trade that needed one: entering in the middle of the range.
 - Stop short of an obvious pool (EQH/EQL, session extreme) on its side: the pool is the magnet that takes it.

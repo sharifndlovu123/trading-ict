@@ -51,11 +51,19 @@ def traits(f: dict) -> dict:
            "k_momentum": k["momentum_adr_per_candle"], "k_range_tf": k["range_tf"],
            "k_activity": (k.get("activity") or {}).get("state"), "k_activity_rel": (k.get("activity") or {}).get("relative"),
            "k_activity_range_adr": (k.get("activity") or {}).get("range_adr"),
-           "k_activity_net_adr": (k.get("activity") or {}).get("net_adr")}
+           "k_activity_net_adr": (k.get("activity") or {}).get("net_adr"),
+           "k_flow_imb_5m": (k.get("order_flow") or {}).get("imb_5m"), "k_flow_imb_60m": (k.get("order_flow") or {}).get("imb_60m"),
+           "k_flow_with_trade_60m": (k.get("order_flow") or {}).get("with_trade_60m"),
+           "k_flow_rel_volume": (k.get("order_flow") or {}).get("rel_volume")}
     o = a["own"]
     out |= {"cf_mfe_r": o.get("mfe_r"), "cf_mae_r": o.get("mae_r"), "cf_overnight": o.get("overnight"),
             "cf_day_only_r": (a.get("day_only") or {}).get("r"), "cf_best_r": (a.get("reach") or {}).get("best_r"),
             "cf_stopped_then_target": a.get("stopped_then_target") is not None if o.get("why") == "stop" else None}
+    tn = a.get("turn") or {}
+    out |= {"cf_turn_depth_r": tn.get("depth_r"), "cf_turn_depth_adr": tn.get("depth_adr"),
+            "cf_turn_beyond_stop_adr": tn.get("beyond_stop_adr"), "cf_turn_at_known_level": tn.get("at_known_level"),
+            "cf_turn_run_after_adr": tn.get("run_after_adr"),
+            "cf_turn_level": (tn.get("levels") or [None])[0]}
     return out
 
 
@@ -100,8 +108,21 @@ def pick(d: pd.DataFrame, n: int) -> pd.DataFrame:
     return pd.concat(parts).sort_values("filled_at")
 
 
-def sheets(path: str, n: int, out: Path):
-    d = pick(traded(path), n)
+def pick_balanced(frames: list[pd.DataFrame], n_each: int, seed: int = 7) -> pd.DataFrame:
+    """``n_each`` winners and ``n_each`` losers, spread evenly over the given runs (model × asset), seeded."""
+    out = []
+    for won in (True, False):
+        per, left = divmod(n_each, len(frames))
+        for i, d in enumerate(frames):
+            g = d[(d.r > 0) == won]
+            k = min(len(g), per + (1 if i < left else 0))
+            out.append(g.sample(k, random_state=seed + i))
+    return pd.concat(out).sort_values("filled_at")
+
+
+def sheets(path: str, n: int, out: Path, balanced: int = 0):
+    paths = path.split(",")
+    d = pick_balanced([traded(p) for p in paths], balanced) if balanced else pick(traded(paths[0]), n)
     bars = _bars(d.asset.unique())
     out.mkdir(parents=True, exist_ok=True)
     for r in d.itertuples():
@@ -120,11 +141,12 @@ def main():
     ap.add_argument("--max", type=int, default=0, help="facts: sample at most this many trades")
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--balanced", type=int, default=0, help="sheets: this many winners and this many losers, spread over the comma-separated runs")
     a = ap.parse_args()
     if a.cmd == "facts":
         facts(a.path, a.workers, a.max)
     else:
-        sheets(a.path, a.n, a.out or Path("research/trade-reviews/sheets") / Path(a.path).stem)
+        sheets(a.path, a.n, a.out or Path("research/trade-reviews/sheets") / Path(a.path.split(",")[0]).stem, a.balanced)
 
 
 if __name__ == "__main__":

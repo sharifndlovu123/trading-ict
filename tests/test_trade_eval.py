@@ -135,3 +135,43 @@ def test_activity_quiet_vs_busy_against_the_same_clock_window():
     quiet = activity(b.assign(high=lambda x: x.high.where(x.index.normalize() != days[-1], 100.5)),
                      days[-1] + pd.Timedelta(hours=10), adr=20)
     assert quiet["state"] == "quiet"
+
+
+def test_turn_point_names_the_known_level_where_price_turned():
+    from trade_eval import turn_point
+    # a short from 100, stop 105: price runs to 107 (beyond the stop) first, then falls to 90
+    b = bars([(100, 101, 99, 100), (100, 107, 100, 106), (106, 106, 95, 96), (96, 96, 90, 91)])
+    items = [{"role": "area", "top": 108.0, "bottom": 106.5, "label": "4h bearish FVG", "kind": "fvg"},
+             {"role": "buyside", "price": 107.2, "label": "PDH", "kind": "pdh"},
+             {"role": "sellside", "price": 80.0, "label": "PWL", "kind": "pwl"}]
+    t = turn_point(b, False, 100, 105, b.index[0], items, adr=10)
+    assert t["price"] == 107 and t["beyond_stop"] and t["beyond_stop_adr"] == 0.2 and t["depth_r"] == 1.4
+    assert t["at_known_level"] and t["levels"] == ["4h bearish FVG 106.50–108.00", "PDH 107.20"]
+    assert t["run_after_r"] == pytest.approx(17 / 5)
+    inside = turn_point(bars(SHORT), False, 100, 105, bars(SHORT).index[0], [], adr=10)
+    assert not inside["beyond_stop"] and not inside["at_known_level"]
+
+
+def test_pick_balanced_is_half_winners_half_losers():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "research" / "scripts"))
+    from review_sample import pick_balanced
+    mk = lambda k: pd.DataFrame({"r": [1.5] * 20 + [-1.0] * 30,
+                                 "filled_at": pd.date_range(f"2023-0{k}-01", periods=50, freq="D", tz=NY)})
+    p = pick_balanced([mk(1), mk(2), mk(3)], 15)
+    assert len(p) == 30 and (p.r > 0).sum() == 15
+
+
+def test_order_flow_imbalance_is_aligned_with_the_trade_and_uses_only_the_past():
+    from trade_eval import order_flow
+    at = pd.Timestamp("2024-03-05 10:00", tz=NY)
+    idx = pd.date_range(at - pd.Timedelta(minutes=60), periods=90, freq="1min")     # 60 min before + 30 after
+    f = pd.DataFrame({"buy": 30.0, "sell": 10.0}, index=idx)
+    f.loc[f.index >= at - pd.Timedelta(minutes=5), ["buy", "sell"]] = [10.0, 30.0]    # the last 5 min: sellers
+    f.loc[f.index >= at, ["buy", "sell"]] = [1000.0, 0.0]                             # the future: must be ignored
+    f["volume"], f["delta"] = f.buy + f.sell, f.buy - f.sell
+    long = order_flow("US100", at, True, flow=f)
+    assert long["imb_5m"] == -0.5 and long["imb_60m"] == pytest.approx((55 * 20 - 5 * 20) / (60 * 40), abs=0.001)
+    assert long["with_trade_60m"] and not long["with_trade_5m"]
+    short = order_flow("US100", at, False, flow=f)
+    assert short["imb_5m"] == 0.5 and not short["with_trade_60m"]
+    assert order_flow("XAUUSD", at, True) is None                                      # no futures flow on disk

@@ -113,6 +113,37 @@ def reach(path: pd.DataFrame, long: bool, entry: float, risk: float, start: pd.T
     return {"best_r": round(float(best), 2), "best_at": bt, "worst_r": round(float(worst), 2)}
 
 
+def turn_point(path: pd.DataFrame, long: bool, entry: float, stop: float, fill: pd.Timestamp, items: list[dict],
+               adr: float) -> dict | None:
+    """Hindsight: where price actually turned. From the fill to the best favourable price in the window, the worst
+    price against the trade is the turn — the price a perfect entry/stop would have used. Reports how far it was
+    from our entry and stop (in R and ADR) and which levels known at the entry sat there (an area containing it
+    within 0.02 ADR, or a pool within 0.05 ADR): "the pricing we should have looked at"."""
+    p = path[path.index >= fill]
+    if p.empty:
+        return None
+    best_at = p.high.idxmax() if long else p.low.idxmin()
+    seg = p[p.index <= best_at]
+    ext = float(seg.low.min() if long else seg.high.max())
+    at = seg.low.idxmin() if long else seg.high.idxmax()
+    risk = abs(entry - stop)
+    sg = 1 if long else -1
+    depth = (entry - ext) * sg                                  # > 0: price went this far past our entry first
+    beyond_stop = (stop - ext) * sg                             # > 0: the turn was beyond our stop
+    near = []
+    for it in items:
+        if it["role"] == "area" and it.get("top") is not None:
+            if it["bottom"] - 0.02 * adr <= ext <= it["top"] + 0.02 * adr:
+                near.append(f"{it['label']} {it['bottom']:.2f}–{it['top']:.2f}")
+        elif it["role"] in ("buyside", "sellside") and abs(it["price"] - ext) <= 0.05 * adr:
+            near.append(f"{it['label'] or it['kind']} {it['price']:.2f}")
+    best = float(p.high.max() if long else p.low.min())
+    return {"price": round(ext, 2), "at": at, "depth_r": round(depth / risk, 2), "depth_adr": round(depth / adr, 3),
+            "beyond_stop": beyond_stop > 0, "beyond_stop_adr": round(max(beyond_stop, 0) / adr, 3),
+            "levels": near[:5], "at_known_level": bool(near),
+            "run_after_r": round((best - ext) * sg / risk, 2), "run_after_adr": round((best - ext) * sg / adr, 2)}
+
+
 def taken(items: list[dict], path: pd.DataFrame, start: pd.Timestamp, entry: float, risk: float, long: bool) -> list[dict]:
     """Pools (buyside / sellside levels from the map at the entry) that price traded through after ``start``, in
     time order, with their distance from the entry in R (+ = in the trade's favour)."""
@@ -195,6 +226,46 @@ def activity(bars: pd.DataFrame, at: pd.Timestamp, adr: float, mins: int = 60, d
     state = None if rel is None else "quiet" if rel < 0.6 else "busy" if rel > 1.5 else "normal"
     return {"range_adr": round(rng / adr, 3), "relative": round(rel, 2) if rel is not None else None,
             "net_adr": round(abs(float(w.close.iloc[-1] - w.open.iloc[0])) / adr, 3), "state": state}
+
+
+FLOW_FILES = {"US100": "data/orderflow/NQ-flow1m-{year}.parquet"}      # real CME trades per minute (buy, sell, delta)
+_FLOW: dict = {}
+
+
+def order_flow(asset: str, at: pd.Timestamp, long: bool, flow: pd.DataFrame | None = None) -> dict | None:
+    """Microstructure facts known at ``at``, from CME futures trades (aggressor side) where we have them (NQ 2024):
+    the aligned imbalance I = (buy − sell) / (buy + sell), sign flipped for shorts so I > 0 = flow with the trade, over
+    the last 5 minutes (the trigger) and the last 60 (the approach), and the last hour's volume ÷ the median of the
+    same clock hour on the previous 20 weekdays. Descriptive: the three pre-registered order-flow rules failed on
+    NQ 2024 (research/orderflow-results-NQ-2024.md), so this is a review fact, not a gate."""
+    if flow is None:
+        pat = FLOW_FILES.get(asset)
+        f = Path(__file__).resolve().parents[2] / pat.format(year=at.year) if pat else None
+        if f is None or not f.exists():
+            return None
+        if f not in _FLOW:
+            _FLOW[f] = pd.read_parquet(f)
+        flow = _FLOW[f]
+    def imb(mins):
+        w = flow.loc[at - timedelta(minutes=mins): at - timedelta(microseconds=1)]
+        tot = float(w.buy.sum() + w.sell.sum())
+        return None if len(w) < mins // 2 or tot == 0 else round(float(w.buy.sum() - w.sell.sum()) / tot * (1 if long else -1), 3)
+    w = flow.loc[at - timedelta(minutes=60): at - timedelta(microseconds=1)]
+    if len(w) < 30:
+        return None
+    past = []
+    for k in range(1, 40):
+        t = at - timedelta(days=k)
+        if t.weekday() < 5:
+            p = flow.loc[t - timedelta(minutes=60): t - timedelta(microseconds=1)]
+            if len(p) >= 30:
+                past.append(float(p.volume.sum()))
+        if len(past) >= 20:
+            break
+    med = float(pd.Series(past).median()) if len(past) >= 5 else None
+    i5, i60 = imb(5), imb(60)
+    return {"imb_5m": i5, "imb_60m": i60, "rel_volume": round(float(w.volume.sum()) / med, 2) if med else None,
+            "with_trade_5m": None if i5 is None else i5 > 0, "with_trade_60m": None if i60 is None else i60 > 0}
 
 
 def range_place(pin: dict, long: bool, price: float) -> dict | None:
@@ -283,7 +354,7 @@ def evaluate(asset: str, side: str, entry_time: pd.Timestamp, entry: float, stop
         "read_side": want, "side_matches_read": (want == ("bull" if long else "bear")) if want in ("bull", "bear") else None,
         "statements": [s["text"] for s in rd.get("statements", [])],
         "range": range_place(pin, long, entry), "momentum_adr_per_candle": pin.get("mom"), "range_tf": pin.get("rtf"),
-        "activity": activity(bars, entry_time, adr),
+        "activity": activity(bars, entry_time, adr), "order_flow": order_flow(asset, entry_time, long),
         "clock_windows": active(entry_time, clock, include_optional=True), "news": news, "news_ahead": news_ahead,
         "swept_before": swept_before(pre, bars, entry_time - PRE_SWEEP, entry_time),
         "levels": level_checks(items + intraday_pools(bars, entry_time), long, entry, stop, [p for p, _ in tps], adr),
@@ -307,6 +378,7 @@ def evaluate(asset: str, side: str, entry_time: pd.Timestamp, entry: float, stop
                                             filled_at=sim["filled"])
         out["after"]["reach"] = reach(path, long, entry, risk, sim["filled"])
         out["after"]["pools_taken"] = taken(items, path, sim["filled"], entry, risk, long)[:10]
+        out["after"]["turn"] = turn_point(path, long, entry, stop, sim["filled"], items + intraday_pools(bars, entry_time), adr)
         if sim["why"] == "stop":
             later = path[path.index > sim["exit"]]
             t1 = tps[0][0]
@@ -335,6 +407,10 @@ def markdown(f: dict, note: str = "") -> str:
     if ac.get("range_adr") is not None:
         L.append(f"- market activity, last 60 min: range {ac['range_adr']} ADR = **{ac['state']}** ({ac['relative']}× the normal "
                  f"for this time of day), net move {ac['net_adr']} ADR")
+    of = k.get("order_flow")
+    if of:
+        L.append(f"- order flow (CME futures trades): aligned imbalance last 5 min {of['imb_5m']}, last 60 min {of['imb_60m']} "
+                 f"(> 0 = flow with the trade); volume {of['rel_volume']}× normal for this hour")
     if k["range"]:
         r = k["range"]
         L.append(f"- current {k['range_tf']} range {r['lo']}–{r['hi']}: entry at {r['fraction_from_low']} from the low = "
@@ -361,6 +437,12 @@ def markdown(f: dict, note: str = "") -> str:
         L.append(f"- same trade, flat 16:55 NY that day: **{d['r']:+.2f} R** — " + " → ".join(d["events"][1:]))
         rc = a["reach"]
         L.append(f"- price went on to {rc['best_r']} R in favour (at {rc['best_at']:%a %H:%M}) and {rc['worst_r']} R against within the window")
+        tn = a.get("turn")
+        if tn:
+            L.append(f"- **where price actually turned:** {tn['price']} at {tn['at']:%a %H:%M} — {tn['depth_r']} R ({tn['depth_adr']} ADR) past our entry"
+                     + (f", {tn['beyond_stop_adr']} ADR beyond our stop" if tn["beyond_stop"] else ", inside our stop")
+                     + f"; from there it ran {tn['run_after_r']} R ({tn['run_after_adr']} ADR) our way. Known levels at that price: "
+                     + ("; ".join(tn["levels"]) if tn["levels"] else "**none on the map**"))
         if a.get("stopped_then_target"):
             L.append(f"- **stopped, then TP1 traded at {a['stopped_then_target']:%a %H:%M}** — the idea was right, the stop or timing wasn't")
         if a.get("actual_exit"):

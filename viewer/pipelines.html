@@ -55,8 +55,11 @@ th { color:var(--ink2); font-weight:500; }
       <div class="step review"><b>3 Review facts, all trades</b>Side vs read, range half, sweep before, stop vs pools, pools before TP1.</div><span class="arrow">→</span>
       <div class="step pattern"><b>4 Pattern finder</b>Which facts separate wins from losses. On R and on win rate.</div><span class="arrow">→</span>
       <div class="step review"><b>5 Written reviews, subset</b>12 trades: worst, typical losers, winners. The reason behind the numbers.</div><span class="arrow">→</span>
-      <div class="step audit cond"><b>6 Array audit</b>If problems cluster on one array, or a trade can't be explained.</div><span class="arrow">→</span>
-      <div class="step gate"><b>7 Findings → B</b>Each recommendation goes through the change gate.</div>
+      <div class="step pattern"><b>6 Tweak lab</b>Replay every trade with tweaked stops, targets, entries. How many trades does each tweak fix or break?</div><span class="arrow">→</span>
+      <div class="step audit cond"><b>7 Array audit</b>If problems cluster on one array, or a trade can't be explained.</div><span class="arrow">→</span>
+      <div class="step gate"><b>8 Findings → B</b>Each recommendation and tweak goes through the change gate.</div>
+    </div>
+    <div class="when" style="margin:10px 0 0">Every analysis is also reported by layer: <b>time and activity</b> (entry hour; quiet / normal / busy) · <b>price</b> (where price really turned, and which known level sat there) · <b>microstructure</b> (order flow, where futures trade data exists).
     </div></div>
 
   <div class="lane"><h3>B · Code change</h3><div class="when">Any recommendation that might touch the code.</div>
@@ -105,6 +108,8 @@ th { color:var(--ink2); font-weight:500; }
     <tr><td>R6</td><td>Any recommendation to change code</td><td>Pipeline B. Never straight from a finding.</td></tr>
     <tr><td>R7</td><td>A code change landed</td><td>Re-run the affected backtest and compare.</td></tr>
     <tr><td>R8</td><td>Win rate and R disagree</td><td>Check target and stop distance first; test smaller targets / structure stops as options.</td></tr>
+    <tr><td>R10</td><td>A tweak fixes many more trades than it breaks and lifts R on most datasets</td><td>Option behind a flag → real backtest → confirmation. Never a default straight from the screen.</td></tr>
+    <tr><td>R11</td><td>A tweak changes win rate but not R</td><td>Not an improvement. Look at which setups and when, not stop/target arithmetic.</td></tr>
     <tr><td>R9</td><td>Day-only R very different from held R</td><td>Report both. A rule that only works overnight is not a candidate.</td></tr>
   </table></div>
 

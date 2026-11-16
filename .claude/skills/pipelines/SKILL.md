@@ -16,8 +16,14 @@ The goal every pipeline serves: **≥ 50% win rate (TP1 before the stop) with po
 3. **Trade-review facts for every trade:** `research/scripts/review_sample.py facts <parquet>` adds the checklist facts (side vs read, range half, sweep before, stop vs pools, pools before TP1, news) to each trade.
 4. **Pattern-finder** on those facts, on both R and win rate (`--target win`): which checklist steps and traits separate wins from losses.
 5. **Written trade-review on a subset** (`review_sample.py sheets … --n 12`: worst, typical losers, winners), using the trade-review skill. This is where the numbers get a reason.
-6. **Array trigger** (rule R4): run pd-array-audit when the problems cluster on one array kind or TF, or when a reviewed trade can't be explained.
-7. **Findings** → `research/sweeps/<date>-<name>.md` and a row in `research/review-log.md`. Each recommendation goes to pipeline B.
+6. **Tweak lab:** `research/scripts/tweak_lab.py` replays every trade under alternative pricing (stops, targets, entry depth) and counts how many trades each tweak fixes or breaks, and on how many datasets. Add the tweaks the written reviews suggest (a level-based stop, a different target level) to its `TWEAKS` table first. A tweak worth pursuing fixes many more trades than it breaks **and** improves mean R on most datasets; a tweak that only trades win rate for payoff (mean R unchanged) is not an improvement.
+7. **Array trigger** (rule R4): run pd-array-audit when the problems cluster on one array kind or TF, or when a reviewed trade can't be explained.
+8. **Findings** → `research/sweeps/<date>-<name>.md` and a row in `research/review-log.md`. Each recommendation goes to pipeline B.
+
+**Layers every pipeline-A analysis reports on** (not only the overall number):
+- **Time and activity:** results by entry hour and by market activity (quiet / normal / busy for the time of day). Sharif: hunt when price is moving, not in a dry consolidation.
+- **Price:** where price actually turned vs our entry and stop, and which known level sat there (`turn` on the fact sheet).
+- **Microstructure:** order-flow facts (aligned imbalance over the last 5 and 60 minutes, relative volume) wherever futures trade data is on disk (NQ 2024). This is a review layer for now: the three pre-registered order-flow rules failed (`research/orderflow-results-NQ-2024.md`). A new order-flow rule needs its own pre-registration; the open idea is flow over the whole approach into an HTF zone. For the theory, use the `microstructure-library` skill.
 
 ## B. Code-change pipeline — any recommendation that might touch the code
 
@@ -60,6 +66,8 @@ The goal every pipeline serves: **≥ 50% win rate (TP1 before the stop) with po
 | R6 | Any recommendation to change code | Pipeline B. Never edit the engine straight from a finding |
 | R7 | A code change landed | Re-run the affected backtest and compare. No behaviour change intended → results must match; a difference is a bug |
 | R8 | Win rate and R disagree (high win %, R ≤ 0 — or low win %, R carried by outliers) | Look at target and stop distance first: TP1 too far/near, stop on liquidity. Test smaller targets / structure stops as options |
+| R10 | A tweak from the reviews or the tweak lab fixes many more trades than it breaks and improves mean R on most datasets | Pipeline B as an option behind a flag → a real backtest (the screen ignores trade slots) → pipeline E. Never a default straight from the screen |
+| R11 | A tweak changes win rate but not mean R (stops and targets alone usually do this) | Not an improvement. Look for the edge in which setups are taken and when (time, activity, level), not in the stop/target arithmetic |
 | R9 | Day-only R much lower than held R (or the reverse) | Report both. Day-only is the goal; a rule that only works overnight is not a candidate |
 
 ## What stops for Sharif
