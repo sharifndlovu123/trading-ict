@@ -1,6 +1,6 @@
-# Pre-registration (DRAFT — waits for Sharif's go-ahead) — the morning recipe with a stop buffer on 2024-07 → 2026-11
+# Pre-registration — the morning recipe with a stop buffer on 2024-07 → 2026-11
 
-Drafted 2026-11-16. Nothing below has been run on any date after 2024-06-28 for this model with these settings.
+Written 2026-11-16. Nothing below had been run on any date after 2024-06-28 for this model with these settings when this was written. **Approved by Sharif on 2026-11-16: "yes proceed, that will help confirm if it works well".** He also accepts that it is an index rule: "what we have works best for the indices … that's okay, it's always better to have different approaches for specific groupings of assets as they move differently."
 
 ## The rule (fixed)
 PD-array-return model, variant `recipe4b: mornings only, stop + 0.10 ADR, target kept` in `ict_engine/eval/variants.py`:
