@@ -21,5 +21,13 @@ Either way the rule stays a lead for the forward log; "supports" only means the 
 
 Reported beside it: win rates; the split with the volatility state (2020 was mostly high-volatility); ISM-only days separately, since ISM was not in the calendar when the idea was found.
 
-## Result
-_(not run)_
+## Result — computed once, 2026-11-16
+| | n | Win % | Mean R |
+|---|---|---|---|
+| High-impact news day | 13 | 46 | +0.394 |
+| Other days | 23 | 35 | +0.250 |
+Difference +0.144 R: news days are positive and better, by less than the 0.2 R written above. **Outcome: UNCLEAR** (same direction, too small and too few to count as support).
+
+Beside it: 2020 was mostly high-volatility, and the other days made money too. By volatility: high +0.65 R (17), low +0.17 (6), normal −0.51 (10). News × volatility: news + high +0.95 (4), news + low +0.77 (4), news + normal −0.35 (5); no news + high +0.55 (13), no news + normal −0.68 (5). The three ISM-only days: −0.25 R. In 2020 volatility separates the trades more than news does; the normal-volatility trades lose with or without news.
+
+The rule stays a lead for the forward log, stated as "high volatility or a high-impact release".

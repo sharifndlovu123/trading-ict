@@ -53,14 +53,14 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 Order agreed: calendars → the unseen 2020 news split → forward log → conditions rules for the older models on 2021.
 
 ### F. Calendars
-- ☐ F1 Holiday calendar (US market holidays and early closes), with tests; tag every trade; skip rule as an option
-- ☐ F2 News calendar back to 2019-10 (ALFRED vintage dates via the browser; FOMC 2019–2020)
-- ☐ F3 Missing scheduled events: 10:00 releases (ISM manufacturing / services, consumer confidence), Jackson Hole chair speeches
-- ☐ F4 Rebuild `us_calendar.csv`; tests; the conditions study re-run with the fuller calendar
+- ☑ F1 Holiday calendar (`ict_engine/news/holidays.py`: holiday / early close / after holiday), tests; on every fact sheet (a skip gate is left for J)
+- ☑ F2 News calendar back to 2019-10 (ALFRED vintages kept in `ict_engine/news/vintages/`; FOMC 2019–2020 checked on the Fed's pages)
+- ☑ F3 10:00 releases by publication rule (approximate) and the Jackson Hole speeches 2020–2025 (2026 to add)
+- ☑ F4 `us_calendar.csv` rebuilt: 958 → 1,458 events, every old row unchanged; suite 588 passed
 
 ### G. The one unseen split
-- ☐ G1 Pre-register: recipe (mornings) on 2020, news days against the rest (36 trades, never split by news)
-- ☐ G2 Run once, record
+- ☑ G1 Pre-registered (`research/preregistered-recipe-news-2020.md`)
+- ☑ G2 Run once: UNCLEAR (news days +0.39 R, others +0.25; volatility separates more)
 
 ### H. Forward log
 - ☐ H1 Recipe with its conditions (news or high-volatility day, right half of the range, not Monday) defined as a fixed forward rule
