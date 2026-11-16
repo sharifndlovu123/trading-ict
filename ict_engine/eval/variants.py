@@ -309,6 +309,13 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
                                            ob_measure="body", trigger_tf="15m", trigger_wait_min=240,
                                            return_level="ce", use_bias=False, windows=("ny_am_kz", "ny_pm_kz")),
 }
+# Trade reviews 2026-11-16: resting limits that fill hours after price already ran our way (off by default).
+CANCEL_RUN = "cancel the limit after a 1 R run"
+VARIANTS[CANCEL_RUN] = replace(BASE, cancel_run_r=1.0)
+MMXM_VARIANTS[CANCEL_RUN] = replace(MB, cancel_run_r=1.0)
+SB_VARIANTS[CANCEL_RUN] = replace(SB, cancel_run_r=1.0)
+PD_RETURN_VARIANTS[CANCEL_RUN + " (recipe, mornings)"] = replace(PD_RETURN_VARIANTS["recipe4: recipe3, mornings only"], cancel_run_r=1.0)
+
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}
 

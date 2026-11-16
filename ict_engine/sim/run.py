@@ -37,7 +37,8 @@ def manage(plan, params):
     if runner_stop.startswith("trail_"):                     # the trailed runner rides to the session close
         from ict_engine.models.targets import session_close
         until = session_close(plan.placed_at.date())
-    return replace(plan, partial_frac=getattr(params, "partial_frac", 0.5), runner_stop=runner_stop, runner_until=until)
+    return replace(plan, partial_frac=getattr(params, "partial_frac", 0.5), runner_stop=runner_stop, runner_until=until,
+                   cancel_run_r=getattr(params, "cancel_run_r", None))
 
 
 def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Params(),

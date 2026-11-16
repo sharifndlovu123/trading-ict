@@ -86,6 +86,7 @@ class Params:
     fomc_day: str = "trade"
     partial_frac: float = 0.5
     runner_stop: str = "entry"
+    cancel_run_r: float | None = None    # cancel the resting limit after this many R our way unfilled (off)
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -94,7 +95,7 @@ class Params:
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
         for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer", "stop_buffer_adr", "buffer_keeps_target",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
-                     "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
+                     "news_blackout", "fomc_day", "partial_frac", "runner_stop", "cancel_run_r", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

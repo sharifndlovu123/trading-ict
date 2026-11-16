@@ -56,6 +56,10 @@ class TradePlan:
     # Runner only: ride past the trade's time exit until this time (trailed runner, preregistered-timeframes-trail);
     # None = the trade's time exit. The part before TP1 keeps its own time exit.
     runner_until: pd.Timestamp | None = None
+    # A resting limit is cancelled ("missed") once price has run this many R our way without filling: the move
+    # left, a later fill is a stale idea (trade reviews 2026-11-16). None = rest until TP1 trades or the window
+    # ends. Not applied to ``arm`` orders, which expect the run before the retrace.
+    cancel_run_r: float | None = None
 
     @property
     def risk(self) -> float:

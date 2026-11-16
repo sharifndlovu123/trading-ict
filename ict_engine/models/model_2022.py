@@ -97,6 +97,7 @@ class Params:
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
     runner_stop: str = "entry"           # runner stop after TP1: entry | lock_half | original
+    cancel_run_r: float | None = None    # cancel the resting limit after this many R our way unfilled (off)
     tags: dict = field(default_factory=dict, compare=False)
 
     @property
@@ -140,6 +141,8 @@ class Params:
             extra.append(f"activity>={self.min_activity:g}" + ("" if self.min_activity_at == "decision" else f"@{self.min_activity_at}"))
         if (self.partial_frac, self.runner_stop) != (0.5, "entry"):
             extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
+        if self.cancel_run_r is not None:
+            extra.append(f"cancelrun{self.cancel_run_r:g}R")
         if self.entry_mode != "limit":
             extra.append(self.entry_mode)
         if self.stop_type != "swing":

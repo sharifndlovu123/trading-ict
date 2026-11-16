@@ -226,3 +226,40 @@ def test_market_short_mirror():
     p = TradePlan("short", placed_at=t(0), expires_at=t(30), entry=99, stop=102, tp1=96, final_target=92, order="market")
     r = simulate(p, bars([(99, 99, 99, 99), (98, 98.2, 95.9, 96)]), CLOSE)
     assert r.fill_price == 98 and r.vote and r.r == pytest.approx(0.5)
+
+
+# --- cancel a resting limit once price has run our way without us (trade reviews 2026-11-16) -----------------
+
+def test_limit_is_cancelled_after_a_run_of_cancel_run_r_without_a_fill():
+    from dataclasses import replace
+    plan = replace(PLAN, cancel_run_r=1.0)                       # entry 100, risk 2 → cancel at 102
+    b = bars([(101, 101, 101, 101), (101, 102.5, 101, 102), (102, 102, 99.5, 100), (100, 104.5, 100, 104)])
+    r = simulate(plan, b, CLOSE)
+    assert r.filled_at is None and r.exit_reason == "missed" and r.exit_at == t(1)
+    assert simulate(PLAN, b, CLOSE).filled_at == t(2)            # default: the stale order still fills
+
+
+def test_cancel_run_does_not_touch_an_order_that_fills_first_or_on_the_same_bar():
+    from dataclasses import replace
+    plan = replace(PLAN, cancel_run_r=1.0)
+    b = bars([(101, 101, 101, 101), (101, 101, 99.5, 100.5), (100.5, 104.5, 100.2, 104)])
+    assert simulate(plan, b, CLOSE).exit_reason == "tp1"
+    same = bars([(101, 101, 101, 101), (101, 102.5, 99.8, 101), (101, 104.5, 100.5, 104)])   # fill and run in one bar
+    assert simulate(plan, same, CLOSE).filled_at == t(1)         # the fill counts (same convention as TP1-before-fill)
+
+
+def test_cancel_run_short_side_and_arm_orders_are_left_alone():
+    from dataclasses import replace
+    short = TradePlan("short", placed_at=t(0), expires_at=t(30), entry=100, stop=102, tp1=96, final_target=92, cancel_run_r=1.0)
+    b = bars([(99, 99, 99, 99), (99, 99, 97.5, 98), (98, 100.5, 98, 100)])
+    assert simulate(short, b, CLOSE).exit_reason == "missed"
+    armed = replace(PLAN, arm=103, cancel_run_r=1.0)             # an arm order expects the run first
+    b2 = bars([(101, 101, 101, 101), (101, 103.2, 101, 103), (103, 103, 99.5, 100), (100, 104.5, 100, 104)])
+    assert simulate(armed, b2, CLOSE).filled_at == t(2)
+
+
+def test_manage_copies_cancel_run_r_from_the_params():
+    from types import SimpleNamespace
+    from ict_engine.sim.run import manage
+    assert manage(PLAN, SimpleNamespace(cancel_run_r=1.0)).cancel_run_r == 1.0
+    assert manage(PLAN, SimpleNamespace()).cancel_run_r is None

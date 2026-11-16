@@ -49,6 +49,9 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
         return row.high >= level if long else row.low <= level
 
     # --- waiting for the fill ---------------------------------------------------
+    run_level = None
+    if plan.cancel_run_r is not None and plan.arm is None:
+        run_level = plan.entry + (1 if long else -1) * plan.cancel_run_r * plan.risk
     fill_i = None
     armed = plan.arm is None
     for i, (ts, row) in enumerate(after.iterrows()):
@@ -65,7 +68,7 @@ def simulate(plan: TradePlan, bars: pd.DataFrame, time_exit: pd.Timestamp, cost:
         if hit_entry(row):
             fill_i = i
             break
-        if hit(row, plan.tp1):
+        if hit(row, plan.tp1) or (run_level is not None and hit(row, run_level)):
             res.exit_at, res.exit_reason = ts, "missed"
             return res
     if fill_i is None:
