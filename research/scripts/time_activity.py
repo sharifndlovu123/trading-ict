@@ -34,7 +34,7 @@ def activity_fast(idx, hi, lo, t: pd.Timestamp, days: int = 20):
     now = window_range(idx, hi, lo, np.datetime64(t.tz_convert("UTC").tz_localize(None)))
     past = []
     for k in range(1, days * 2):
-        p = t - pd.Timedelta(days=k)                       # same NY wall-clock time (DST-aware)
+        p = t - pd.DateOffset(days=k)                      # calendar days: the same NY wall-clock time across DST
         if p.weekday() >= 5:
             continue
         r = window_range(idx, hi, lo, np.datetime64(p.tz_convert("UTC").tz_localize(None)))

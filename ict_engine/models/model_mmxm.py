@@ -40,7 +40,7 @@ import pandas as pd
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.context import DayContext, build_context
 from ict_engine.concepts.events import Event, fvgs, gap_lifecycle, structure, swings
-from ict_engine.data.instruments import cost_at
+from ict_engine.data.instruments import cost_at, scaled
 from ict_engine.models.base import Gate, Setup, TradePlan
 from ict_engine.models.model_2022 import _tf_minutes, _ts, _window_at, _window_end, bias_gate
 
@@ -262,6 +262,7 @@ def reacc_zone(frame: pd.DataFrame, curve: Curve, long: bool, which: int) -> tup
 
 def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params(),
                 ctx: DayContext | None = None) -> list[Setup]:
+    p = scaled(p, asset)                 # index-point thresholds in this asset's price units (no-op on indices, gold)
     ctx = ctx or build_context(bars_1m, day)
     d0, d1 = _ts(day, time(0)), _ts(day, time(16))
     curve_from = _ts(day - timedelta(days=1), time(18)) - pd.Timedelta(hours=p.curve_max_h)

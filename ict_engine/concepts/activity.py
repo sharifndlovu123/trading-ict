@@ -30,7 +30,7 @@ def relative_activity(bars_1m: pd.DataFrame, at: pd.Timestamp, mins: int = 60, d
     now = _range(bars_1m, at, mins)
     past = []
     for k in range(1, days * 2):
-        t = at - pd.Timedelta(days=k)                     # the same NY wall-clock time (DST-aware index)
+        t = at - pd.DateOffset(days=k)                    # calendar days: the same NY wall-clock time across DST
         if t.weekday() >= 5:
             continue
         r = _range(bars_1m, t, mins)

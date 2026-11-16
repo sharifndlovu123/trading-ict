@@ -213,7 +213,7 @@ def activity(bars: pd.DataFrame, at: pd.Timestamp, adr: float, mins: int = 60, d
     rng = float(w.high.max() - w.low.min())
     past = []
     for k in range(1, days * 2):
-        t = at - timedelta(days=k)
+        t = at - pd.DateOffset(days=k)                   # calendar days: the same NY clock time across DST
         if t.weekday() >= 5:
             continue
         p = bars[(bars.index >= t - timedelta(minutes=mins)) & (bars.index < t)]
@@ -255,7 +255,7 @@ def order_flow(asset: str, at: pd.Timestamp, long: bool, flow: pd.DataFrame | No
         return None
     past = []
     for k in range(1, 40):
-        t = at - timedelta(days=k)
+        t = at - pd.DateOffset(days=k)
         if t.weekday() < 5:
             p = flow.loc[t - timedelta(minutes=60): t - timedelta(microseconds=1)]
             if len(p) >= 30:

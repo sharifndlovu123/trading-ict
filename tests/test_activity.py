@@ -64,3 +64,17 @@ def test_fill_time_mode_is_labelled_and_a_bad_mode_raises():
         p = replace(m.Params(), min_activity=0.6, min_activity_at="fill")
         assert "fill" in p.variant and m.Params().min_activity_at == "decision"
     assert "@" not in replace(model_2022.Params(), min_activity=0.6).variant
+
+
+def test_same_clock_window_across_a_dst_change():
+    """The baseline is the same NY clock window on earlier weekdays, also across a DST change (found by the
+    microstructure study 2026-11-16: stepping back in 24-hour days lands an hour off for weeks after the change)."""
+    days = pd.bdate_range("2024-02-26", "2024-03-12", tz=NY)          # DST starts Sunday 2024-03-10
+    parts = []
+    for d in days:
+        idx = pd.date_range(d + pd.Timedelta(hours=9), periods=60, freq="1min")     # bars only 09:00–10:00 NY
+        parts.append(pd.DataFrame({"open": 100.0, "high": 102.0, "low": 100.0, "close": 101.0}, index=idx))
+    b = pd.concat(parts)
+    at = pd.Timestamp("2024-03-12 10:00", tz=NY)
+    a = relative_activity(b, at)
+    assert a["median"] == 2 and a["relative"] == 1.0                   # every earlier weekday counted, before and after DST

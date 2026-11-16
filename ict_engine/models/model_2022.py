@@ -24,7 +24,7 @@ import pandas as pd
 from ict_engine.concepts.bars import resample
 from ict_engine.concepts.clock import WINDOWS, Window
 from ict_engine.concepts.context import DayContext, build_context, pricing
-from ict_engine.data.instruments import cost_at
+from ict_engine.data.instruments import cost_at, scaled
 from ict_engine.concepts.events import (
     Event, fvgs, gap_lifecycle, structure, sweeps, swing_levels, swings,
 )
@@ -184,6 +184,7 @@ def _window_end(ts: pd.Timestamp, w: Window) -> pd.Timestamp:
 def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params(),
                 ctx: DayContext | None = None) -> list[Setup]:
     """All 2022-model setups on ``day`` (00:00–16:00 NY), each with its gate trace and plan."""
+    p = scaled(p, asset)                 # index-point thresholds in this asset's price units (no-op on indices, gold)
     ctx = ctx or build_context(bars_1m, day)
     d0, d1 = _ts(day, time(0)), _ts(day, time(16))
     day_1m = bars_1m[(bars_1m.index >= d0) & (bars_1m.index < d1)].assign(close_ts=lambda x: x.index)
