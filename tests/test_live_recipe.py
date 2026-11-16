@@ -101,3 +101,5 @@ def test_higher_timeframe_candles_follow_the_futures_clock():
     assert d[0]["open"] == 0 and d[0]["close"] == 22 and d[1]["open"] == 23 and d[0]["high"] == 22.5
     w = lr.htf_candles(h1, "1W")
     assert len(w) == 1 and pd.Timestamp(w[0]["time"], unit="s").strftime("%a %d") == "Mon 08" and w[0]["close"] == len(idx) - 1
+    m = lr.htf_candles(h1, "1M")
+    assert len(m) == 1 and pd.Timestamp(m[0]["time"], unit="s").strftime("%Y-%m-%d") == "2024-01-01" and m[0]["open"] == 0

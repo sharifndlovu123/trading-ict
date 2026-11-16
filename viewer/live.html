@@ -147,7 +147,7 @@ const layer = marksLayer(chart, series, $("chart"), {
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
     ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).filter(m => tfShows(m.tf || "1h")).map(m => ({ ...m, bold: true,
       color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
-const TFS = ["5m", "15m", "1h", "4h", "1D", "1W"];
+const TFS = ["5m", "15m", "1h", "4h", "1D", "1W", "1M"];
 const tfShows = tf => TFS.indexOf(st.tf) <= TFS.indexOf(tf);      // a mark shows on its own timeframe and every lower one
 const weak = a => (a.kind === "breaker" || a.kind === "order block") && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
 const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
@@ -236,7 +236,7 @@ function drawChart(fit) {
   const ov = st.overlay && $("ovon").checked ? st.overlay[st.asset] : null;      // Claude's read-only marks (out/live/overlay.json)
   if (ov) for (const l of ov.levels || []) line(l.price, css(l.color || "--warn"), l.title, l.style ?? 2);
   if (fit) {
-    const n = (a.candles[st.tf] || []).length, show = { "5m": 150, "15m": 110, "1h": 120, "4h": 120, "1D": 130, "1W": 110 }[st.tf];
+    const n = (a.candles[st.tf] || []).length, show = { "5m": 150, "15m": 110, "1h": 120, "4h": 120, "1D": 130, "1W": 110, "1M": 90 }[st.tf];
     chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - show), to: n + 6 });
   }
   layer.redraw(); keepMarks();
@@ -250,7 +250,7 @@ function renderTabs() {
   $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
   $("fstabs").innerHTML = fsOn() ? Object.keys(st.doc.assets).map(k => `<button data-a="${k}" class="${k === st.asset ? "on" : ""}">${k}</button>`).join("") : "";
   $("fstabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
-  $("tfs").innerHTML = ["5m", "15m", "1h", "4h", "1D", "1W"].filter(t => (st.doc.assets[st.asset].candles[t] || []).length).map(t => `<button data-t="${t}" class="${t === st.tf ? "on" : ""}">${t}</button>`).join("");
+  $("tfs").innerHTML = [...TFS].reverse().filter(t => (st.doc.assets[st.asset].candles[t] || []).length).map(t => `<button data-t="${t}" class="${t === st.tf ? "on" : ""}">${t}</button>`).join("");
   $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.tf = b.dataset.t; renderTabs(); drawChart(true); });
 }
 
