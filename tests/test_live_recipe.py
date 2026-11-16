@@ -54,3 +54,22 @@ def test_strength_reads_the_session_move_and_the_place_in_yesterdays_range():
 def test_adr_of_uses_finished_days_only():
     days = pd.concat([bars([(100, 100 + k, 100, 100)] * 3, f"2024-01-{d:02d} 10:00") for d, k in zip(range(2, 9), (10, 10, 10, 10, 10, 10, 50))])
     assert lr.adr_of(days, pd.Timestamp("2024-01-08 12:00", tz=NY)) == 10.0      # 8 Jan itself (range 50) is not counted
+
+
+def test_entry_areas_show_the_breaker_body_only_once_it_is_known():
+    # one 1m bar per hour = the 1h candle. Low (01:00) → high 103 (04:00, body 100.5–102) → a minor lower high
+    # (06:00) → lower low (08:00) → the 10:00 candle closes above 103: a bullish breaker, known at 11:00
+    rows = [(98, 98, 96, 97), (97, 97, 95, 96), (96, 98, 96, 97.5), (97.5, 101, 97, 100.5), (100.5, 103, 100, 102),
+            (102, 102.2, 99.5, 99.8), (99.8, 102.5, 99.2, 99.4), (99.4, 99.5, 95, 95.5), (95.5, 98.5, 94, 98.2),
+            (98.2, 101, 98, 100.5), (100.5, 104, 100, 103.6), (103.6, 104.5, 103, 104)]
+    idx = pd.date_range(pd.Timestamp("2024-01-09 00:00", tz=NY), periods=len(rows), freq="1h")
+    b = pd.DataFrame(rows, columns=["open", "high", "low", "close"], index=idx, dtype=float)
+    br = [a for a in lr.entry_areas(b, pd.Timestamp("2024-01-09 12:00", tz=NY), adr=10.0) if a["kind"] == "breaker"]
+    assert len(br) == 1
+    a = br[0]
+    assert (a["side"], a["bottom"], a["top"], a["body_pct"], a["where"]) == ("buy", 100.5, 102.0, 50, "below")
+    assert a["from"].endswith("04:00") and pd.Timestamp(a["t0"], unit="s").strftime("%H:%M") == "04:00"
+    early = lr.entry_areas(b, pd.Timestamp("2024-01-09 10:30", tz=NY), adr=10.0)        # the 10:00 candle is still open
+    assert not [x for x in early if x["kind"] == "breaker"]
+    assert all(x["inside"] or x["where"] == ("below" if x["side"] == "buy" else "above")
+               for x in lr.entry_areas(b, pd.Timestamp("2024-01-09 12:00", tz=NY), adr=10.0))

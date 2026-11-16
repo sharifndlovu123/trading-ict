@@ -83,6 +83,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <button id="refresh" title="reload the chart with the newest candles (Alt+R)">↻ refresh</button>
           <button id="resetmarks" title="remove everything I drew or wrote on this index's chart (Claude's marks stay)">Reset my marks</button>
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
+          <label title="the 1h entry areas near price: breaker, order block, FVG, OTE"><input type="checkbox" id="areason" checked> entry areas</label>
           <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked> Claude's marks</label>
           <span id="marksn" class="dim"></span>
           <span id="fsinfo" class="dim num"></span>
@@ -96,6 +97,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
       <div class="card" id="read"></div>
       <div id="plans"></div>
       <div class="card" id="blocked"></div>
+      <div class="card" id="areas"></div>
       <div class="card" id="breaks"></div>
     </div>
   </div>
@@ -137,7 +139,10 @@ const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css
 
 const layer = marksLayer(chart, series, $("chart"), {
   list: () => st.doc ? myMarks() : [], times: () => st.doc ? (st.doc.assets[st.asset].candles[st.tf] || []).map(c => c.time) : [],
-  nowT: () => null, paletteEl: $("palette"), color: css, tfName: () => st.tf, changed: keepMarks });
+  nowT: () => null, paletteEl: $("palette"), color: css, tfName: () => st.tf, changed: keepMarks,
+  under: () => !st.doc || !$("areason").checked ? [] : (st.doc.assets[st.asset].areas || []).map(a => ({ t0: a.t0, top: a.top, bottom: a.bottom,
+    color: css(a.side === "buy" ? "--pos" : "--neg"), alpha: weak(a) ? .04 : a.inside ? .16 : .09, label: `1h ${a.kind} · ${a.side}${weak(a) ? " · wick" : ""}` })) });
+const weak = a => a.kind === "breaker" && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
 const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
 function toggleFull() {
   const c = $("chartcard");
@@ -285,6 +290,18 @@ function renderCompare() {
   $("compare").innerHTML = h;
 }
 
+// the 1h entry areas near price. They are places to get in, not trades: the idea and the target come first.
+function renderAreas() {
+  const a = st.doc.assets[st.asset], L = a.areas || [];
+  const row = x => `<tr style="${weak(x) ? "opacity:.55" : ""}"><td><b style="color:${css(x.side === "buy" ? "--pos" : "--neg")}">${x.side}</b> · ${esc(x.kind)}</td>
+    <td class="num">${x.bottom}–${x.top}</td><td>${esc(x.from)}</td>
+    <td>${x.inside ? "<b>price is in it</b>" : `${x.where}, ${x.dist_adr} ADR`}${x.touched && !x.inside ? " · touched" : x.inside ? "" : " · fresh"}</td>
+    <td>${x.kind === "breaker" && x.body_pct != null ? (weak(x) ? `more wick than body (${x.body_pct}%)` : `clean body (${x.body_pct}%)`) : ""}</td></tr>`;
+  $("areas").innerHTML = `<h2>Entry areas near price · 1h · ${esc(st.asset)}</h2>
+    <div class="dim">Places to get in once the idea and the target are there; an area alone is not a trade. Buy areas sit under price, sell areas over it. Breaker = the body of the last candle before the leg.</div>` +
+    (L.length ? `<table style="width:100%;margin-top:6px"><tr class="dim"><td>area</td><td>prices</td><td>from</td><td>where</td><td>quality</td></tr>${L.map(row).join("")}</table>`
+              : `<div class="dim" style="margin-top:6px">none within one average day's range</div>`);
+}
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
 
@@ -356,7 +373,7 @@ async function save(id, body) {
 function render(fit) {
   const d = st.doc;
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
-  renderTabs(); renderCond(); renderCompare();
+  renderTabs(); renderCond(); renderCompare(); renderAreas();
   const a = d.assets[st.asset];
   const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
@@ -377,7 +394,7 @@ async function poll(first) {
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
 async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false); if (st.doc) render(true); $("refresh").textContent = "↻ refresh"; }
-$("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
+$("areason").onchange = () => drawChart(false); $("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
 (async () => {
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
   await poll(true);

@@ -237,6 +237,61 @@ def gap_state(bars: pd.DataFrame, now: pd.Timestamp, adr: float) -> dict | None:
     return out
 
 
+def _epoch(ts: pd.Timestamp) -> int:
+    """New York wall clock written as a UTC epoch, as the chart's candles are."""
+    return int((ts.tz_convert(NY).tz_localize(None) - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1))
+
+
+def entry_areas(bars: pd.DataFrame, now: pd.Timestamp, adr: float, breaks: list[dict] | None = None,
+                days: int = 6, reach: float = 1.0, per_side: int = 4) -> list[dict]:
+    """The 1h entry areas near price, all looked for the same way (Sharif 2026-11-16: a breaker is an entry area like
+    an OTE or an order block; the idea and the target come first, the area is only where to get in).
+      breaker      body of the last candle before the leg, after a close back through it (``merge`` + ``block="body"``);
+                   ``body_pct`` = the body's share of that candle (he rejects "more wick than body")
+      order block  the engine's block; FVG  unfilled and not closed through; OTE  62–79% of a break still waiting
+    Only areas known by ``now`` (closed 1h candles), still valid, within ``reach`` ADR of price; nearest ``per_side``
+    above and below plus any that price is in. A buy area is support (bull), a sell area resistance (bear)."""
+    from ict_engine.concepts.bars import resample
+    from ict_engine.concepts.events import breaker_blocks, fvgs, gap_lifecycle, order_blocks
+    recent = bars[(bars.index > now - pd.Timedelta(days=days + 4)) & (bars.index <= now)]
+    h1 = resample(recent[list(AGG)], "1h")
+    h1 = h1[h1.index + pd.Timedelta(hours=1) <= now + pd.Timedelta(minutes=1)]       # closed candles only
+    last = float(recent.close.iloc[-1])
+    evs = [(e, "breaker") for e in breaker_blocks(h1, "1h", merge=True, block="body") if e.kind == "breaker"]
+    evs += [(e, "order block") for e in order_blocks(h1, "1h")] + [(e, "FVG") for e in fvgs(h1, "1h")]
+    out = []
+    for e, name in evs:
+        if e.ts > now or e.ts < now - pd.Timedelta(days=days) or e.top <= e.bottom:
+            continue
+        st = gap_lifecycle(e, recent, until=now)                 # touched / filled: on the 1m path
+        own = gap_lifecycle(e, h1)                               # still valid: judged on closed 1h candles, its own timeframe
+        if own.retired is not None or own.inverted is not None or (name == "FVG" and st.filled is not None):
+            continue
+        item = {"kind": name, "tf": "1h", "side": "buy" if e.direction == "bull" else "sell", "top": round(e.top, 2),
+                "bottom": round(e.bottom, 2), "t0": _epoch(e.origin_ts), "from": e.origin_ts.strftime("%a %d %H:%M"),
+                "known": e.ts.strftime("%a %d %H:%M"), "touched": st.touched is not None}
+        if name == "breaker" and e.origin_ts in h1.index:
+            rng = float(h1.high[e.origin_ts] - h1.low[e.origin_ts])
+            item["body_pct"] = round(100 * (e.top - e.bottom) / rng) if rng > 0 else None
+        out.append(item)
+    for b in breaks or []:
+        if str(b.get("state", "")).startswith("waiting"):
+            top, bottom = max(b["entry"], b["ote_hi"]), min(b["entry"], b["ote_hi"])
+            ts = pd.Timestamp(datetime.strptime(b["id"][4:17], "%Y%m%d-%H%M"), tz=NY)
+            out.append({"kind": "OTE", "tf": "1h", "side": "sell" if b["side"] == "short" else "buy", "top": top, "bottom": bottom,
+                        "t0": _epoch(ts), "from": b["at"], "known": b["at"], "touched": False})
+    for a in out:
+        a["inside"] = a["bottom"] <= last <= a["top"]
+        a["dist_adr"] = 0.0 if a["inside"] else round(min(abs(last - a["top"]), abs(last - a["bottom"])) / adr, 2)
+        a["where"] = "price is in it" if a["inside"] else "above" if a["bottom"] > last else "below"
+    # an entry area is on the retrace side: a buy area under (or at) price, a sell area over (or at) it
+    out = [a for a in out if a["dist_adr"] <= reach and (a["inside"] or a["where"] == ("below" if a["side"] == "buy" else "above"))]
+    keep = [a for a in out if a["inside"]]
+    for w in ("above", "below"):
+        keep += sorted((a for a in out if a["where"] == w), key=lambda a: a["dist_adr"])[:per_side]
+    return sorted(keep, key=lambda a: -a["top"])
+
+
 def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, mode: str) -> dict:
     from ict_engine.concepts.context import build_context
     doc = {"day": str(day), "now": now.strftime("%a %Y-%m-%d %H:%M"), "mode": mode, "variant": VARIANT, "assets": {}}
@@ -254,6 +309,7 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
                 item["adr"] = round(adr, 1)
                 item["strength"] = strength(bars, now, adr)
                 item["gap"] = gap_state(bars, now, adr)
+                item["areas"] = entry_areas(bars, now, adr, item["breaks"])
                 for b in item["breaks"]:
                     rng = abs(b["far"] - b["near"])
                     b["range_adr"] = round(rng / adr, 2)

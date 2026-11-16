@@ -99,6 +99,14 @@ function marksLayer(chart, series, el, o) {
     g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, el.clientWidth, el.clientHeight);
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
     g.font = "10px ui-monospace, Menlo, monospace"; g.textBaseline = "middle";
+    for (const u of (o.under ? o.under() : [])) {       // read-only zones under my marks (the page's own areas): no handles, never picked up
+      const x0 = u.t0 == null ? 0 : xOf(u.t0), a = yOf(u.top), b = yOf(u.bottom);
+      if (x0 == null || a == null || b == null) continue;
+      g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 1; g.setLineDash([2, 3]);
+      g.globalAlpha = u.alpha ?? .10; g.fillRect(x0, a, W - x0, b - a); g.globalAlpha = .8;
+      g.beginPath(); g.moveTo(x0, a); g.lineTo(W, a); g.moveTo(x0, b); g.lineTo(W, b); g.stroke(); g.setLineDash([]);
+      g.fillText(u.label, Math.max(x0, 0) + 4, Math.min(a, b) + 7); g.globalAlpha = 1;
+    }
     o.list().forEach((m, i) => {
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m), on = sel === i;
       if (x0 == null || x1 == null) return;
