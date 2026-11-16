@@ -15,3 +15,4 @@ Source: pd-array-audit, `research/pd-audit/2026-11-16.md` (105 zones Sharif drew
 ## 3. Breakers read as order blocks (2 of 4) — **needs Sharif / ictindex**
 - Evidence: on re-mmxm-US500-20230215 (4h) and re-2022_model-US100-20230828 (15m), the engine finds an OB at his breaker. Its breaker needs swing low → swing high → a lower low that takes the first low → a close above the high (Bible pp.19–26); there, the sequence isn't complete on that TF.
 - Decision: no code change on n = 4. Ask Sharif which sequence he saw, and check ictindex if the definitions differ.
+- **Answer (Sharif, 2026-11-16): "both breaker and order blocks play well."** Either reading is acceptable at those zones; closed with no change. In the audit, a breaker he drew that the engine reads as an order block (or the reverse) counts as found.

@@ -20,4 +20,14 @@ Microstructure study 2026-11-16 (`research/microstructure/2026-11-16-study.md`, 
 Price outcomes on 2024-07+ have been looked at many times (the forward runs). The flow split on that period has only been used once before, with a different window (5 minutes, H2 of the first order-flow pre-registration).
 
 ## Result
-_(appended after the single run)_
+Run once, 2026-11-16 (`research/scripts/flow30_holdout.py`), 229 US100 trades, 2024-07-01 → 2024-12-31:
+
+| Group | n | Win % | Mean R |
+|---|---|---|---|
+| Flow against the trade (imb30 ≤ −0.014) | 90 | 31.1 | −0.109 |
+| Middle | 76 | 25.0 | −0.288 |
+| Flow with the trade (imb30 ≥ +0.025) | 63 | 30.2 | −0.088 |
+
+Against − with: **−0.021 R, one-sided z −0.08 (day-clustered). FAIL** (needs 2.4). Q3: against −0.257 vs with +0.007; Q4: +0.038 vs −0.181 (the sign flips). Per model: 2022 model −0.248 vs +0.121; MMxM −0.023 vs −0.230; silver bullet +0.007 vs −0.148.
+
+**Outcome:** the first-half difference (+0.27 vs −0.16 R) was noise. Order flow stays a review aid; no tag or gate is added. Not reused for this idea.
