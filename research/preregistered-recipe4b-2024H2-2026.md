@@ -36,5 +36,19 @@ Reported beside it: the 0.05-buffer and no-buffer variants; results when the ent
 ## After the run
 A written review of every trade (Sharif: more than 60 is welcome), as for every run.
 
-## Result
-_(not run)_
+## Result — run once, 2026-11-16, code at 50e5694 (`reports/variants-pd_return-2024-07-01-2026-11-13-recipe4b-confirm.*`)
+
+| | n | Win % [95%] | Mean R | z | US100 / US30 / US500 | 2024 / 2025 / 2026 |
+|---|---|---|---|---|---|---|
+| Model baseline | 2,882 | 27.1 [26–29] | −0.044 | −1.32 | −0.011 / −0.132 / +0.005 | −0.001 / −0.073 / −0.033 |
+| mornings only, no buffer | 79 | 29.1 [20–40] | −0.053 | −0.36 | +0.049 / +0.029 / −0.169 | −0.225 / +0.057 / −0.078 |
+| stop + 0.05 ADR, target kept | 81 | 32.1 [23–43] | −0.121 | −1.00 | −0.034 / −0.005 / −0.241 | −0.160 / −0.066 / −0.153 |
+| **recipe4b (the rule): stop + 0.10 ADR, target kept** | **81** | **33.3 [24–44]** | **−0.174** | **−1.63** | −0.121 (23) / +0.010 (21) / −0.311 (37) | −0.099 (17) / −0.169 (31) / −0.217 (33) |
+
+**Outcome: FAIL** (mean R ≤ 0; negative on two of three indices; every year negative; win rate 33%, not 45%).
+
+Beside it: without the 5 best trades −0.292 R; counted as ideas (same day and side once) 70 ideas, −0.167 R; the entry trading more than 2 or 4 ticks through changes nothing (−0.174 / −0.173); longs −0.16 (45), shorts −0.20 (36); by decision hour: 08h −0.16 (25), 09h −0.28 (41), 10h +0.10 (15); exits 40 stops, 27 TP1, 14 time exits.
+
+**Reading:** the 50.4% / +0.21 R on 2020-01 → 2024-06 was fitted. The two additions chosen after the hold-out review (mornings only, the stop buffer) did not carry forward: the buffered version is the worst of the three on the clean period, and the plain morning recipe is about −0.05 R, the same as the unfiltered model. Putting every period together, the plain morning recipe has 212 trades at about +0.12 R: indistinguishable from zero. The recipe as coded is not an edge.
+
+No re-tuning on 2024-07 → 2026-11. Every trade of this run gets a written review (what was different from 2020–24), as for every run.
