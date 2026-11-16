@@ -1,0 +1,41 @@
+# Trade facts — DE40 short Thu 26 Oct 2023 10:45 NY
+entry 14745.279 · stop 14796.759 · TPs 14690.399 (100%) · stop to entry after TP1
+
+**Trader's note:** [engine pd_return trade · window ny_am_kz · POI 1h FVG · bias bull · engine result +1.03 R (tp1) · area / liquidity: 1h FVG 14777.10-14813.25 · decided 10:14 · trigger gap 1.50 points]
+
+## Known at the entry (only bars before it)
+- price 14743.27 · ADR 213.93 · risk 0.241 ADR · R:R to TP1 1.07
+- engine read: **aligned**, side bear → trade side matches the read: **True**
+- clock windows: ny_am_kz, sb_am · news: GDP Thu 08:30 (-135 min)
+- scheduled news during the hold window (known in advance): PCE Fri 27 Oct 08:30 (high)
+- market activity, last 60 min: range 0.416 ADR = **normal** (1.12× the normal for this time of day), net move 0.157 ADR
+- current 4h range 14625.769–15304.67: entry at 0.176 from the low = **discount** (WRONG half for a short) · momentum 0.14 ADR/candle
+- liquidity taken in the 6 h before: sellside 1h swing low 14662.75 at 07:03; buyside 1h equal highs 14790.18 at 08:58
+- stop vs liquidity: nearest pool on the stop side session so far high 14796.76 — stop is SHORT of it by 0.0 ADR (sits at the liquidity)
+- TP1 vs liquidity: pools before TP1: none
+- pools above: 1h swing high 14837.97 (0.44 ADR); previous day high 14936.40 (0.90 ADR); 1d swing high 14959.79 (1.01 ADR); 4h swing high 14979.70 (1.11 ADR)
+- pools below: 1h swing low 14652.90 (0.42 ADR); 1d swing low 14625.77 (0.55 ADR); 1w swing low 14458.24 (1.33 ADR); 1w swing low 13693.05 (4.91 ADR)
+- arrays near: 1h bullish FVG 14689.79–14737.75; 1h bearish FVG 14777.10–14813.25; 4h bearish FVG 14784.20–14811.65; 1h bearish FVG 14787.06–14811.65; 1w bullish volume imbalance 14661.90–14689.07
+
+<details><summary>engine read statements</summary>
+
+- Monthly: structure broke down — Sep 2023 closed 15352.30 below the Jul 2023 swing low 15449.90 (BOS). Beyond them, the interest: the 1M FVG 13353.30–13693.05 (CE 13523.17), near edge 13693.05 — not reached yet.
+- Order blocks: 1M bullish OB May 2023 [not one to use: weak body, no aggressive push, no event, failed: closed through its MT, then traded through the body; body 0.34 of its range, 0.33× the mean body; push 0.65×; closed beyond its high]: body 15696.65–15939.17 (MT 15817.91), no event before it — just a candle; discount 0.29 of the dealing range 15623.75–16297.70 = the right place. | 1M bearish OB Jul 2023 [not one to use: weak body, no aggressive push, no event; holding; body 0.25 of its range, 0.36× the mean body; push 0.68×; closed beyond its low]: body 16192.48–16466.87 (MT 16329.67), no event before it — just a candle; premium 0.96 of the dealing range 11808.06–16531.78 = the right place. Draw: the remaining 1M FVG 13353.30–13693.05 (CE 13523.17), liquidity at its edge 14458.24 — not reached yet. | 1w bullish OB wk 04 Sep 2023 [not one to use: weak body, no aggressive push, no event, no HTF level, failed: closed through its MT, then traded through the body; body 0.32 of its range, 0.44× the mean body; push 0.47×; traded through its high]: body 15732.27–15856.30 (MT 15794.28), no event before it — just a candle; discount 0.23 of the dealing range 15573.75–16531.78 = the right place. | 1w bearish OB wk 11 Sep 2023 [not one to use: weak body, no aggressive push, no event, no HTF level; holding; body 0.31 of its range, 0.46× the mean body; push 1.34×; closed beyond its low]: body 15738.69–15870.80 (MT 15804.74), no event before it — just a candle; premium 0.65 of the dealing range 15449.90–15992.90 = the right place. Draw: the remaining 1M FVG 13353.30–13693.05 (CE 13523.17), liquidity at its edge 14458.24 — not reached yet. | 1d bearish OB 16 Oct 2023 [not one to use: no aggressive push, no event; holding; body 0.66 of its range, 1.01× the mean body; push 0.23×; closed beyond its low; into 1w old high 15271.29]: body 15148.27–15263.48 (MT 15205.87), no event before it — just a candle; premium 0.79 of the dealing range 14944.76–15273.80 = the right place. Draw: the remaining 1M FVG 13353.30–13693.05 (CE 13523.17), liquidity at its edge 14458.24 — not reached yet. | 1d bullish OB 23 Oct 2023 [not one to use: weak body, no aggressive push, no event; body traded through (no close past MT); body 0.09 of its range, 0.18× the mean body; push 1.09×; closed beyond its high; into 1M bullish FVG 14677.40–15102.75]: body 14770.30–14791.56 (MT 14780.93), no event before it — just a candle; discount 0.16 of the dealing range 14625.77–15575.90 = the right place. Draw: the remaining 1d FVG 14979.70–15034.17 (CE 15006.93) — not reached yet.
+- Weekly: bear since 25 Sep 2023. Protected lower high 16531.78 (8.4 ADR away) — until a W close breaks it, moves the other way are shifts inside a bear trend.
+- Daily: bear since 20 Sep 2023. Protected lower high 15992.90 (5.8 ADR away) — until a D close breaks it, moves the other way are shifts inside a bear trend.
+- 4H: bear since 18 Oct 18:00. Protected lower high 15304.67 (2.6 ADR away) — until a 4H close breaks it, moves the other way are shifts inside a bear trend.
+- 1H: bear since 25 Oct 18:00. Protected lower high 14936.40 (0.9 ADR away) — until a 1H close breaks it, moves the other way are shifts inside a bear trend.
+- Areas I'm watching: 1w FVG 14682.16–14900.75 (price is inside); 1w IFVG 14516.90–14840.26 (price is inside); 1w VI 14661.90–14689.07 (below, 0.2 ADR); 1d FVG 14852.66–14925.75 (above, 0.5 ADR).
+- Liquidity — buyside above: 1h swing high 14837.97 (0.4 ADR), 1d previous day high 14936.40 (0.9 ADR), 1d swing high 14959.79 (1.0 ADR); sellside below: 1h swing low 14652.90 (0.4 ADR), 1d swing low 14625.77 (0.6 ADR), 1w swing low 14458.24 (1.3 ADR).
+- Where the play is: Everything lines up bear: the play respects the higher TF — a continuation toward the sellside: next 1h swing low 14652.90, then the higher-TF draw 1d swing low 14625.77; the weekly allows the distant targets. The higher-TF draw (monthly): the 1M FVG 13353.30–13693.05, its near edge 13693.05 = the target. Price is inside the 1w FVG — respect there (reaction, closes holding) comes first.
+- Current range (4H): the fake-out high 15304.67 (it took buyside 15291.30 first, against us) → the low of the move down since, 14625.77 — the distribution our PD arrays come from (momentum: the move ran 3.2 ADR in 23 4H candles). fib of the move: 0 = 14625.77, 0.5 EQ = 14965.22, OTE 0.62–0.79 = 15046.69–15162.10, 1 = 15304.67; price has pulled back to 0.17. Hoping for a premium: sell at an array on the pullback, in the order price meets them: 1h bearish FVG 14777.10–14813.25 (0.22–0.28, shallow — risk: knocked out if price goes deeper); 4h bearish FVG 14784.20–14811.65 (0.23–0.27, shallow — risk: knocked out if price goes deeper); 1h bearish FVG 14787.06–14811.65 (0.24–0.27, shallow — risk: knocked out if price goes deeper); 4h bearish IFVG 14798.60–14803.76 (0.25–0.26, shallow — risk: knocked out if price goes deeper); 1h bearish IFVG 14813.30–14818.28 (0.28–0.28, shallow — risk: knocked out if price goes deeper); 4h bearish IFVG 14854.25–14869.19 (0.34–0.36, shallow — risk: knocked out if price goes deeper). Shallow or deep is not right or wrong: shallow risks a knock-out, deep risks missing it — momentum decides. Target beyond the move: the liquidity in the play above.
+
+</details>
+
+## After the entry (hindsight — not knowable at the entry)
+- your management: **+1.07 R** — filled Thu 26 Oct 10:45 → TP1 Thu 12:15 at 14690.40 (100%)
+- MFE 1.25 R · MAE -0.63 R before the exit · held overnight: False
+- same trade, flat 16:55 NY that day: **+1.07 R** — TP1 Thu 12:15 at 14690.40 (100%)
+- price went on to 3.06 R in favour (at Fri 15:45) and -1.56 R against within the window
+- **where price turned that day (the trade's own swing, to 16:55 NY):** 14777.8 at Thu 10:54 — 0.63 R (0.152 ADR) past our entry, inside our stop; from there it ran 2.54 R (0.61 ADR) our way. Known levels at that price: 1h bearish FVG 14777.10–14813.25; 1w bullish FVG 14682.16–14900.75; 1w bullish IFVG 14516.90–14840.26
+- pools price took next: 1h swing low 14652.90 (+1.79 R) Thu 16:01; 1d swing low 14625.77 (+2.32 R) Fri 13:18
