@@ -10,9 +10,9 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☑ A3 Decision: the decision-time gate is NOT taken to 2021 (too weak; the clean year is kept)
 - ☑ A3b Fill-time mode built (`min_activity_at="fill"`: the order is pulled when the market is quiet at the fill; suite 565 passed)
 - ☑ A3c Fill-time gate in-sample (2022 model): −0.066 → −0.033 R pooled, 2 of 3 indices, removed 114 trades at −0.36 R (z −2.7); mostly US100
-- ◐ A3d Re-check after the DST fix (same run, corrected baseline window)
-- ☐ A4 If A3c holds (pooled and ≥ 2 of 3 indices, removed trades clearly worse): one run on 2021 (approved by Sharif); else stop here
-- ☐ A5 Pass → new default through the change gate; fail / not confirmed → logged, option stays off
+- ☑ A3d Re-check after the DST fix: pooled −0.066 → −0.044 but only 1 of 3 indices (a US100 effect) — the condition fails
+- ✗ A4 2021 run: not run (condition failed); 2021 stays untouched
+- ☑ A5 Logged (review log #43); the option stays in the code, off
 
 ## B. 30-trade review (15 winners / 15 losers), price focus
 - ☑ B1 Fact sheets with the turn point (where price really turned + known levels there)
@@ -20,7 +20,7 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☑ B3 Synthesis: `research/trade-reviews/2026-11-16-30-trades/SUMMARY.md`
 - ☑ B4 Level-based tweaks on all 4,656 trades: none lifts mean R (stops beyond array/pool raise win rate to 44–50% at the same R; entry at the HTF array is worse, z −2.0)
 - ☑ B5 Nothing qualifies for the change gate (rule R11). Weak lead only: skip when a pool sits within 0.15 ADR beyond the stop (+0.053 vs −0.027 R, z ≈ 1)
-- ☐ B6 PD-array flags from the reviewers → array audit notes (opposite labels at the same prices, overlapping opposite arrays, stale direction labels)
+- ☑ B6 PD-array flags from the reviewers listed in the review summary and in the session summary (open item for the next array audit)
 
 ## C. Microstructure (the layer we had not used)
 - ☑ C1 Break the references (`references/orderflow.md`, `references/microstructure/`) into components: measure, formula, data it needs, computable with our data or not
@@ -32,11 +32,11 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 
 ## D. Engine fixes queued
 - ☑ D1 Index-point thresholds scale by the futures tick outside the indices and gold (`instruments.unit` / `scaled`); futures cost for DXY and EUR/USD; indices untouched by construction
-- ◐ D2 Backtests: silver, dollar index, EUR/USD × 2022 model, MMxM, silver bullet (2022–24)
+- ☑ D2 Backtests on silver, dollar index, EUR/USD: they trade now; no edge (review log #44)
 
 ## E. Wrap-up
-- ☐ E1 One summary document for Sharif: what was done, what holds, what failed, what needs his decision
-- ☐ E2 Full test suite passes; everything committed; review-log and memory updated
+- ☑ E1 Summary: `research/SESSION-2026-11-16.md`
+- ☑ E2 Suite 570 passed after the last engine change; committed; review log #35–44; memory updated
 - ☐ E3 Power the machine off
 
 ## Done earlier this session

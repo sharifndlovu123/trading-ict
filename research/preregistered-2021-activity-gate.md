@@ -1,6 +1,6 @@
 # Pre-registration — activity gate (`min_activity` 0.6) on 2021 (never tested)
 
-Written 2026-11-16 before any run on 2021. Sharif approved the run on 2026-11-16 ("Proceed"), on the condition stated to him: only if the gate holds on the data already used.
+Written 2026-11-16 before any run on 2021. **Status: not run — the in-sample condition failed after the DST fix (below); 2021 stays untouched.** Sharif approved the run on 2026-11-16 ("Proceed"), on the condition stated to him: only if the gate holds on the data already used.
 
 ## The rule
 No new setup when the range of the 60 minutes before the decision is under 0.6 × the median range of the same clock window over the previous 20 weekdays (`ict_engine.concepts.activity`, variant `activity >= 0.6`). Threshold 0.6 was fixed from the fill-time analysis in review log #40 and is not tuned further.
@@ -48,8 +48,18 @@ Caution written before the hold-out: almost all of the effect is US100 (68 remov
 
 The in-sample run is repeated after the DST fix (calendar-day baseline) and its table appended below; the condition (pooled better and ≥ 2 of 3 indices) must still hold for the 2021 run to go ahead. Pass bar, hold-out period and outcomes are unchanged from above, with "the qualifying models" = the 2022 model.
 
-### In-sample, fill-time gate, after the DST fix
-_(appended when the run finishes)_
+### In-sample, fill-time gate, after the DST fix (run 2026-11-16)
+| | Baseline | Fill-time gate |
+|---|---|---|
+| Pooled | −0.066 R, 33.8% win (n 1,105) | −0.044 R, 34.4% (n 998) |
+| US100 | −0.076 | −0.015 |
+| US500 | +0.009 | +0.003 |
+| US30 | −0.104 | −0.133 |
+| Removed trades | | 112 at −0.273 R vs kept −0.043 R, z −1.83. By index: US100 64 at −0.584 R; US500 21 at **+0.125**; US30 27 at **+0.155** |
+
+Better pooled, but on **1 of 3 indices**: the condition fails. The baseline is identical to the earlier run (the fixes moved no index result).
+
+**Decision: no run on 2021.** The quiet-market effect is a US100 effect (as the stop-size rule was), not a property of the model. 2021 was not touched.
 
 ## Hold-out result (2021)
-_(appended after the single run)_
+Not run.
