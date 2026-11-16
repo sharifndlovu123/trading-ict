@@ -71,6 +71,7 @@ class Params:
     stop_mode: str = "reaction"          # reaction | array
     stop_buffer: float = 0.0
     stop_buffer_adr: float | None = None  # extra buffer beyond the stop anchor, as a share of the 20-day ADR (None = off)
+    buffer_keeps_target: bool = False     # TP1 chosen from the risk without the ADR buffer (the buffer moves only the stop)
     min_tp1_r: float = 1.0
     tp1_cap_r: float | None = None
     max_cost_r: float | None = 0.1
@@ -91,7 +92,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer", "stop_buffer_adr",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer", "stop_buffer_adr", "buffer_keeps_target",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
@@ -289,6 +290,9 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
         return setup
     risk = abs(entry - stop)
+    tp_risk = abs(entry - buffered_stop(anchor, long, p, None)) if p.buffer_keeps_target else risk
+    if tp_risk <= 0:
+        tp_risk = risk
     setup.gates.append(Gate("trigger", True, f"returned to {g.tf} {name} {g.bottom:.2f}-{g.top:.2f} at {touch:%H:%M}; "
                                              f"{p.trigger_tf} FVG {f.bottom:.2f}-{f.top:.2f}"))
     if p.structure_gate is not None or p.max_entry_dist_adr is not None or p.last_entry is not None:
@@ -299,7 +303,7 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
         setup.gates += recipe_gates(p, long=long, decided=decided, entry=entry, area=(float(g.bottom), float(g.top)),
                                     states=states, adr=adr)
     tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts,
-                                                min_dist=p.min_tp1_r * risk)
+                                                min_dist=p.min_tp1_r * tp_risk)
     if tp1 is None:
         setup.gates.append(Gate("target", False, f"no untaken liquidity ≥ {p.min_tp1_r:g}R"))
         return setup
@@ -308,7 +312,7 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
     from ict_engine.models import targets
     tp1, tp1_name, final, final_name, t_exit = targets.apply(
         p.target_mode, entry=entry, stop=stop, long=long, tp1=tp1, tp1_name=tp1_name, final=final, final_name=final_name,
-        bars_1m=day_1m if bars_1m is None else bars_1m, decided=decided, ctx=ctx, day=day, min_tp1=p.min_tp1_r * risk)
+        bars_1m=day_1m if bars_1m is None else bars_1m, decided=decided, ctx=ctx, day=day, min_tp1=p.min_tp1_r * tp_risk)
     setup.tags["dol"] = final_name
     setup.gates.append(Gate("target", True, f"TP1 {tp1_name} {tp1:.2f}, final {final_name} {final:.2f}"))
     if p.max_cost_r is not None:

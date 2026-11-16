@@ -277,6 +277,14 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
         area_history="formation", stop_buffer_adr=0.10),
+    "recipe4b: mornings only, stop + 0.10 ADR, target kept": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation", stop_buffer_adr=0.10, buffer_keeps_target=True),
+    "recipe4b: mornings only, stop + 0.05 ADR, target kept": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation", stop_buffer_adr=0.05, buffer_keeps_target=True),
     "recipe4: recipe3, mornings only": replace(
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",

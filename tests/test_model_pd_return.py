@@ -278,3 +278,14 @@ def test_stop_buffer_in_adr_moves_the_stop_beyond_the_extreme():
     plain = planned(pr.find_setups(bars(), DAY, "US100", P))[0].plan
     wide = planned(pr.find_setups(bars(), DAY, "US100", replace(P, stop_buffer_adr=0.1)))
     assert wide and wide[0].plan.stop < plain.stop and wide[0].plan.entry == plain.entry                      # a long: lower stop
+
+
+def test_buffer_keeps_target_widens_the_stop_without_moving_tp1():
+    """The stop buffer raised the win rate in the replay because the target stayed where it was; in the model a
+    wider stop pushed "the nearest liquidity ≥ 1 R" further out. ``buffer_keeps_target`` picks TP1 from the
+    unbuffered risk. Off by default."""
+    assert pr.Params().buffer_keeps_target is False
+    plain = planned(pr.find_setups(bars(), DAY, "US100", P))[0].plan
+    kept = planned(pr.find_setups(bars(), DAY, "US100", replace(P, stop_buffer_adr=0.1, buffer_keeps_target=True)))[0].plan
+    assert kept.tp1 == plain.tp1 and kept.entry == plain.entry and kept.stop < plain.stop
+    assert "buffer_keeps_target=True" in replace(P, stop_buffer_adr=0.1, buffer_keeps_target=True).variant
