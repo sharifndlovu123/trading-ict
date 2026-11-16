@@ -72,12 +72,8 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ I3 30 trades reviewed in writing (`research/trade-reviews/2026-11-16-conditions-2021/SUMMARY.md`)
 
 ### J. Fixes the reviews asked for (after F–I, each through the change gate)
-- ☐ J1 TP1 picker: nearer qualifying pools first; not behind an opposing array; not at a pool already taken
-- ☐ J2 Resting limits cancelled after a run of ≥ 1 R without a fill
-- ☐ J3 Minimum width for areas and trigger gaps (in ticks / ADR)
+- ☑ J1 TP1 picker: checked on existing facts, no consistent effect → not built (`research/decisions/2026-11-16-tp1-picker-min-widths.md`)
+- ☑ J2 `cancel_run_r` option built (off); 2022–24 sweep: no gain → stays off (`research/decisions/2026-11-16-cancel-run.md`); 30 dropped trades under review
+- ☑ J3 Minimum widths: checked, the size effect is US100 / 2022-model only, MMxM opposite → not built (same decision file)
 - ☑ J4 Fact sheet: the turn line uses the trade's own day (to 16:55 NY); the note prints the area, the decision time and the trigger gap
 
-## Paused 2026-11-16 ~16:15 (session limit) — resume here
-- J2 `cancel_run_r` option is built and committed (off by default, suite 593 passed).
-- Its sweep on 2022-01-03 → 2024-06-28 (three indices; 2022 model, MMxM, silver bullet, morning recipe) writes `reports/cancelrun-2022-01-03-2024-06-28.parquet` when it ends. **Not yet read.**
-- Next: compare against the baselines (`reports/backtest[-mmxm|-silver_bullet]-<ASSET>-2022-01-03-2024-06-28-futures.parquet`; recipe: `reports/variants-pd_return-2022-01-03-2024-06-28-recipe4.parquet`) by model, year and condition → 30-trade review if results move → change gate. Then J1 (TP1 picker) and J3 (minimum area / gap widths).

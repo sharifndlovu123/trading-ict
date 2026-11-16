@@ -1,0 +1,42 @@
+# Trade facts — US500 short Thu 16 Mar 2023 03:41 NY
+entry 3900.047 · stop 3906.129 · TPs 3888.361 (100%) · stop to entry after TP1
+
+**Trader's note:** [engine silver_bullet trade · window sb_london · POI 1h FVG 3886.32-3917.88 · bias bear · engine result -1.06 R (stop) · area / liquidity: leg start · decided 03:00 · trigger gap 0.56 points]
+
+## Known at the entry (only bars before it)
+- price 3899.86 · ADR 66.38 · risk 0.092 ADR · R:R to TP1 1.92
+- engine read: **counter_weekly**, side bull → trade side matches the read: **False**
+- clock windows: london_kz, london_sweet_spot, sb_london · news: none near
+- scheduled news during the hold window (known in advance): Jobless claims Thu 16 Mar 08:30 (medium)
+- market activity, last 60 min: range 0.212 ADR = **normal** (1.47× the normal for this time of day), net move 0.049 ADR
+- current 1d range 3763.64–4195.332: entry at 0.316 from the low = **discount** (WRONG half for a short) · momentum 0.22 ADR/candle
+- liquidity taken in the 6 h before: **none** (no sweep before the entry)
+- stop vs liquidity: nearest pool on the stop side last 4 h high 3910.43 — stop is SHORT of it by 0.065 ADR (sits at the liquidity)
+- TP1 vs liquidity: pools before TP1: last 4 h low 3889.37; TP1 just past last 4 h low 3889.37
+- pools above: Asia high 3913.88 (0.21 ADR); 1h swing high 3927.96 (0.42 ADR); previous day high 3929.70 (0.45 ADR); 4h swing high 3937.52 (0.57 ADR)
+- pools below: Asia low 3888.36 (0.17 ADR); 1h swing low 3886.62 (0.20 ADR); previous week low 3845.70 (0.82 ADR); 1h swing low 3836.12 (0.96 ADR)
+- arrays near: 4h bearish FVG 3891.74–3916.05; 4h bullish volume imbalance 3888.31–3891.05; 4h bullish FVG 3873.18–3886.62; 1h bearish FVG 3913.93–3916.44; 4h bearish FVG 3917.00–3950.04
+
+<details><summary>engine read statements</summary>
+
+- Monthly: structure broke down — Jun 2022 closed 3776.64 below the Feb 2022 swing low 4106.54 (BOS). Equal lows 3635.55 (Jan 2021 3661.13, Feb 2021 3664.15, Jun 2022 3635.55) = the sellside that leg is drawn to; taken in Sep 2022 (3583.24). Beyond them, the interest: the 1M FVG 3068.84–3072.94 (CE 3070.89), near edge 3072.94 — not reached yet.
+- Order blocks: 1M bullish OB Sep 2022 [not one to use: no aggressive push; holding; body 0.63 of its range, 1.77× the mean body; push 1.43×; traded through its high]: body 3599.46–3957.54 (MT 3778.50), after swing low 3635.55 (to 3489.69); discount 0.16 of the dealing range 3583.24–4817.00 = the right place. | 1M bearish OB Nov 2022 [not one to use: no aggressive push, failed: closed through its MT, then traded through the body; body 0.54 of its range, 0.89× the mean body; push 1.04×; open crossed only]: body 3874.11–4082.21 (MT 3978.16), after 1M bearish FVG revisited 3905.45 (to 4136.19); premium 0.77 of the dealing range 3635.55–4082.51 = the right place. Draw: the remaining 1M FVG 3068.84–3072.94 (CE 3070.89), liquidity at its edge 3209.14 — not reached yet. | 1w bearish OB wk 30 Jan 2023 [not one to use: weak body, no aggressive push, no HTF level; holding; body 0.35 of its range, 0.87× the mean body; push 0.42×; closed beyond its low]: body 4062.55–4133.22 (MT 4097.88), after swing high 4154.94 (to 4195.33); premium 0.86 of the dealing range 3489.69–4195.33 = the right place. Draw: the remaining 1M FVG 3068.84–3072.94 (CE 3070.89), liquidity at its edge 3209.14 — not reached yet. | 1w bearish OB wk 27 Feb 2023 [not one to use: no event, no HTF level; holding; body 0.59 of its range, 1.30× the mean body; push 3.16×; closed beyond its low]: body 3970.60–4046.61 (MT 4008.60), no event before it — just a candle; premium 0.93 of the dealing range 3489.69–4048.36 = the right place. Draw: the remaining 1M FVG 3068.84–3072.94 (CE 3070.89), liquidity at its edge 3209.14 — not reached yet. | 1d bearish OB 08 Mar 2023 [not one to use: weak body, no event; holding; body 0.18 of its range, 0.19× the mean body; push 2.77×; closed beyond its low; into 1w old high 3988.10]: body 3987.03–3992.73 (MT 3989.88), no event before it — just a candle; premium 0.87 of the dealing range 3919.91–4000.61 = the right place. Draw: the remaining 1M FVG 3068.84–3072.94 (CE 3070.89), liquidity at its edge 3209.14 — not reached yet. | 1d bullish OB 13 Mar 2023 [not one to use: weak body, no aggressive push, no event; body traded through (no close past MT); body 0.19 of its range, 0.72× the mean body; push 1.44×; open crossed only; into 1w bullish IFVG 3737.10–3835.85]: body 3862.70–3887.40 (MT 3875.05), no event before it — just a candle; discount 0.24 of the dealing range 3809.33–4078.32 = the right place. Draw: the remaining 1w FVG 4071.50–4218.15 (CE 4144.83), liquidity at its edge 4195.33 — not reached yet.
+- Weekly: bear since 07 Mar 2022. Protected lower high 4325.70 (6.4 ADR away) — until a W close breaks it, moves the other way are shifts inside a bear trend.
+- Daily: bull since 01 Feb 2023. Protected higher low 3763.64 (2.1 ADR away) — until a D close breaks it, moves the other way are shifts inside a bull trend.
+- 4H: bear since 09 Mar 14:00. Protected lower high 4017.15 (1.8 ADR away) — until a 4H close breaks it, moves the other way are shifts inside a bear trend.
+- 1H: bear since 15 Mar 06:00. Protected lower high 3929.70 (0.4 ADR away) — until a 1H close breaks it, moves the other way are shifts inside a bear trend.
+- Areas I'm watching: 1w FVG 4071.50–4218.15 (above, 2.6 ADR); 1w VI 3851.68–3873.00 (below, 0.4 ADR); 1d IFVG 3930.53–3963.12 (above, 0.5 ADR); 1d IFVG 3773.13–3842.58 (below, 0.9 ADR).
+- Liquidity — buyside above: Asia high 3913.88 (0.2 ADR), 1d previous day high 3929.70 (0.5 ADR), 1d swing high 4017.15 (1.8 ADR); sellside below: 1h swing low 3886.62 (0.2 ADR), 1d previous week low 3845.70 (0.8 ADR), 1d previous day low 3830.87 (1.0 ADR).
+- Where the play is: Daily bull against the weekly bear: the play sits on the daily — a counter-weekly leg. Expect small grabs (Asia high 3913.88), not the distant weekly areas; the weekly protected level 4325.70 decides if it becomes more.
+- Current range (D): the fake-out low 3763.64 (it took sellside 3775.93 first, against us) → the high of the move up since, 4195.33 — the distribution our PD arrays come from (momentum: the move ran 6.5 ADR in 29 D candles). fib of the move: 0 = 4195.33, 0.5 EQ = 3979.49, OTE 0.62–0.79 = 3927.68–3854.30, 1 = 3763.64; price has pulled back to 0.68 — in the OTE now. Hoping for a discount: buy at an array on the pullback, in the order price meets them: 4h bullish FVG 3897.58–3900.38 (0.68–0.69, deep — risk: price may not come this far, the trade is missed); 4h bullish IFVG 3873.18–3888.27 (0.71–0.75, deep — risk: price may not come this far, the trade is missed); 1h bullish IFVG 3860.37–3888.27 (0.71–0.78, deep — risk: price may not come this far, the trade is missed); 4h bullish FVG 3873.18–3886.62 (0.72–0.75, deep — risk: price may not come this far, the trade is missed); 4h bullish IFVG 3831.69–3833.93 (0.84–0.84, deep — risk: price may not come this far, the trade is missed); 4h bullish FVG 3797.90–3827.58 (0.85–0.92, deep — risk: price may not come this far, the trade is missed). Shallow or deep is not right or wrong: shallow risks a knock-out, deep risks missing it — momentum decides. Target beyond the move: the liquidity in the play above.
+
+</details>
+
+## After the entry (hindsight — not knowable at the entry)
+- your management: **-1.00 R** — filled Thu 16 Mar 03:41 → stopped Thu 03:54 at 3906.13
+- MFE 0.13 R · MAE -1.0 R before the exit · held overnight: False
+- same trade, flat 16:55 NY that day: **-1.00 R** — stopped Thu 03:54 at 3906.13
+- price went on to 6.24 R in favour (at Thu 09:32) and -12.43 R against within the window
+- **where price turned that day (the trade's own swing, to 16:55 NY):** 3909.87 at Thu 04:02 — 1.62 R (0.148 ADR) past our entry, 0.056 ADR beyond our stop; from there it ran 7.86 R (0.72 ADR) our way. Known levels at that price: 4h bearish FVG 3891.74–3916.05; last 4 h high 3910.43
+- **stopped, then TP1 traded at Thu 05:07** — the idea was right, the stop or timing wasn't
+- pools price took next: Asia low 3888.36 (+1.92 R) Thu 05:07; 1h swing low 3886.62 (+2.21 R) Thu 05:18; Asia high 3913.88 (-2.27 R) Thu 10:54; 1h swing high 3927.96 (-4.59 R) Thu 11:25; previous day high 3929.70 (-4.88 R) Thu 11:26; 4h swing high 3937.52 (-6.16 R) Thu 11:53; 4h swing high 3938.36 (-6.3 R) Thu 11:53; 4h equal highs 3939.80 (-6.54 R) Thu 11:56
