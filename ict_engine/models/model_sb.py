@@ -68,6 +68,7 @@ class Params:
     news_blackout: tuple[int, int] | None = None
     # no new setup when the last hour's range is under this × normal for the time of day (concepts.activity); None = off
     min_activity: float | None = None
+    min_activity_at: str = "decision"    # decision = no new setup when quiet | fill = the resting order is pulled if the market is quiet when it would fill
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     fomc_day: str = "trade"
     partial_frac: float = 0.5            # share closed at TP1 (runner_r); ICT live: 75–80%
@@ -83,7 +84,7 @@ class Params:
         d = Params()
         parts = ["sb", self.entry_level]
         for name in ("late_window", "strict_fvg_in_hour", "min_framework_ticks", "framework_adr_frac", "min_tp1_r",
-                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "min_activity"):
+                     "tp1_cap_r", "max_cost_r", "use_bias", "use_pricing", "use_poi", "bias_rule", "cap_scope", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "min_activity", "min_activity_at"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

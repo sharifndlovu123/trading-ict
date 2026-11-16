@@ -44,3 +44,23 @@ def test_same_bar_stop_and_target_is_the_stop_and_open_trades_close_flat():
     assert replay(np.array([105.0]), np.array([97.0]), np.array([100.0]), True, 100, 98, 104)[2]
     r, win, stopped = replay(np.array([101.0, 102.0]), np.array([99.0, 100.0]), np.array([100.5, 101.0]), True, 100, 98, 104)
     assert not win and not stopped and r == pytest.approx(0.5)
+
+
+def test_level_tweaks_use_the_known_levels():
+    from tweak_levels import tweak
+    # a long from 100, stop 98, TP 104, ADR 20; a 4h bullish FVG 96.5–99 holds the stop; a pool at 97.5 under it
+    L = {"arrays": [("4h", "fvg", 96.5, 99.0)], "pools_stop": [97.5, 80.0], "pools_tp": [102.5, 110.0]}
+    assert tweak("stop beyond array", True, 100, 98, 104, 20, L) == (100, 96.5 - 0.4, 104, False)
+    assert tweak("stop beyond pool", True, 100, 98, 104, 20, L) == (100, 97.5 - 0.4, 104, False)
+    assert tweak("skip: pool near the stop", True, 100, 98, 104, 20, L) is None
+    assert tweak("TP1 front-run the first pool", True, 100, 98, 104, 20, L) == (100, 98, 102.5 - 0.2, False)
+    assert tweak("entry at the HTF array", True, 100, 98, 104, 20, L) == (99.0, 96.5 - 0.4, 104, True)
+    assert tweak("skip: no HTF array at the entry", True, 100, 98, 104, 20, L) == (100, 98, 104, False)   # within 0.1 ADR
+    none = {"arrays": [], "pools_stop": [], "pools_tp": []}
+    for n in ("stop beyond array", "stop beyond pool", "skip: pool near the stop", "TP1 front-run the first pool", "entry at the HTF array"):
+        assert tweak(n, True, 100, 98, 104, 20, none) == (100, 98, 104, False)        # nothing known → unchanged
+    assert tweak("skip: no HTF array at the entry", True, 100, 98, 104, 20, none) is None
+    # the short mirror
+    Ls = {"arrays": [("1h", "fvg", 101.0, 103.5)], "pools_stop": [102.5], "pools_tp": [97.5]}
+    assert tweak("stop beyond array", False, 100, 102, 96, 20, Ls) == (100, 103.5 + 0.4, 96, False)
+    assert tweak("TP1 front-run the first pool", False, 100, 102, 96, 20, Ls) == (100, 102, 97.5 + 0.2, False)

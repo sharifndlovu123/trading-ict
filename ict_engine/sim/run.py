@@ -76,7 +76,10 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.plan = None
             continue
         min_act = getattr(params, "min_activity", None)
-        if min_act is not None:
+        act_at = getattr(params, "min_activity_at", "decision")
+        if act_at not in ("decision", "fill"):
+            raise ValueError(f"min_activity_at must be 'decision' or 'fill', not {act_at!r}")
+        if min_act is not None and act_at == "decision":
             from ict_engine.concepts import activity
             ok, why = activity.gate(bars_1m, s.decided_at, min_act)
             s.gates.append(Gate("activity", ok, why))
@@ -149,6 +152,12 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.tags["tp1_only"] = True
             s.gates.append(Gate("counter_tp1", True, f"{s.side} against weekly {weekly}: all off at TP1"))
         s.result = simulate(s.plan, bars_1m, close, cost=cost_at(asset, s.plan.entry, s.plan.placed_at))
+        if min_act is not None and act_at == "fill" and s.result.filled_at is not None:
+            from ict_engine.concepts import activity
+            ok, why = activity.gate(bars_1m, s.result.filled_at, min_act)      # known at the fill: only bars before it
+            if not ok:                                                         # the order was pulled: no trade, slot free
+                s.gates.append(Gate("activity", False, "at the fill: " + why))
+                s.result = Result(exit_at=s.result.filled_at, exit_reason="cancelled")
         busy_until = s.result.exit_at or s.plan.expires_at
         prev, prev_scope = s, scope
         if s.result.filled_at is None and s.tags.get("reentry"):

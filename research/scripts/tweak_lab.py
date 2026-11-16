@@ -98,7 +98,7 @@ def apply(tw, long: bool, e: float, s: float, t: float, adr: float) -> tuple[flo
     return s2, t2, shift
 
 
-def load_trades() -> pd.DataFrame:
+def load_trades(with_fill: bool = False) -> pd.DataFrame:
     out = []
     for a in sorted({s[1] for s in SETS}):
         b = dukascopy.load(a, date(2019, 10, 1) if a.startswith("US") else date(2021, 10, 1), date(2024, 7, 1))
@@ -127,7 +127,7 @@ def load_trades() -> pd.DataFrame:
                     A = adr.get(fill.tz_localize(None).normalize())
                     if A is None or not A == A:
                         A = adr[adr.index <= fill.tz_localize(None)].iloc[-1]
-                    out.append({"cell": f"{per} {a} {m}", "family": m, "long": r.side == "long", "e": float(r.entry),
+                    out.append({"cell": f"{per} {a} {m}", "family": m, "asset": a, "fill": fill, "long": r.side == "long", "e": float(r.entry),
                                 "s": float(r.stop), "t": float(r.tp1), "adr": float(A), "cost": cost,
                                 "hi": hi[i0:i1], "lo": lo[i0:i1], "cl": cl[i0:i1]})
     return pd.DataFrame(out)

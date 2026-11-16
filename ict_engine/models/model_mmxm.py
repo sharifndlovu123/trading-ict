@@ -87,6 +87,7 @@ class Params:
     news_blackout: tuple[int, int] | None = None
     # no new setup when the last hour's range is under this × normal for the time of day (concepts.activity); None = off
     min_activity: float | None = None
+    min_activity_at: str = "decision"    # decision = no new setup when quiet | fill = the resting order is pulled if the market is quiet when it would fill
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
     counter_after: str | None = None     # sim.run.COUNTER_MODES (counter-bias pre-registration)
@@ -110,7 +111,7 @@ class Params:
         parts = [f"{self.frame_tf}>{self.entry_tf}", self.entry,
                  "+".join(w.replace("_kz", "").replace("macro_", "m") for w in self.windows)]
         for name in ("oc_bars", "oc_range_mult", "min_steps", "tp1_cap_r", "max_cost_r", "use_bias",
-                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after", "liquidity_hold_bp", "stop_tf", "reentry", "reentry_nochase", "counter_tp1", "weekly_rule", "min_activity"):
+                     "use_pricing", "use_poi", "bias_rule", "fvg_pick", "smr_purge", "invalidate_tf", "news_blackout", "fomc_day", "partial_frac", "runner_stop", "entry_gate", "target_mode", "range_entry", "counter_after", "liquidity_hold_bp", "stop_tf", "reentry", "reentry_nochase", "counter_tp1", "weekly_rule", "min_activity", "min_activity_at"):
             if getattr(self, name) != getattr(d, name):
                 parts.append(f"{name}={getattr(self, name)}")
         return "-".join(parts)

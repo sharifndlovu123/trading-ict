@@ -53,3 +53,14 @@ def test_gate_is_off_by_default_and_labelled_when_on():
         p = m.Params()
         assert p.min_activity is None and "activity" not in p.variant
         assert "activity" in replace(p, min_activity=0.6).variant
+
+
+def test_fill_time_mode_is_labelled_and_a_bad_mode_raises():
+    from dataclasses import replace
+    from datetime import date
+    from ict_engine.models import model_2022, model_mmxm, model_sb
+    from ict_engine.sim.run import run_day
+    for m in (model_2022, model_mmxm, model_sb):
+        p = replace(m.Params(), min_activity=0.6, min_activity_at="fill")
+        assert "fill" in p.variant and m.Params().min_activity_at == "decision"
+    assert "@" not in replace(model_2022.Params(), min_activity=0.6).variant

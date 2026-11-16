@@ -81,6 +81,7 @@ class Params:
     news_blackout: tuple[int, int] | None = None
     # no new setup when the last hour's range is under this × normal for the time of day (concepts.activity); None = off
     min_activity: float | None = None
+    min_activity_at: str = "decision"    # decision = no new setup when quiet | fill = the resting order is pulled if the market is quiet when it would fill
     target_mode: str = "default"         # targets.MODES (liquidity-targets pre-registration)
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
@@ -136,7 +137,7 @@ class Params:
         if self.fomc_day != "trade":
             extra.append(f"fomc_{self.fomc_day}")
         if self.min_activity is not None:
-            extra.append(f"activity>={self.min_activity:g}")
+            extra.append(f"activity>={self.min_activity:g}" + ("" if self.min_activity_at == "decision" else f"@{self.min_activity_at}"))
         if (self.partial_frac, self.runner_stop) != (0.5, "entry"):
             extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
         if self.entry_mode != "limit":
