@@ -242,43 +242,64 @@ def _epoch(ts: pd.Timestamp) -> int:
     return int((ts.tz_convert(NY).tz_localize(None) - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1))
 
 
+def engulfed_blocks(df: pd.DataFrame, tf: str) -> list:
+    """Order blocks as Sharif taught them (2026-11-16, Sunday 15 Nov open): the last opposite candle is an order block
+    only when the VERY NEXT candle engulfs it — one move strong enough to close beyond the candle's open. Two candles
+    doing it together do not count on that timeframe (the 1h 18:00 candle was invalid; the 15m 19:45 one valid).
+    The block = that candle's body; known when the engulfing candle closes. ``meta['beyond_wick']``: the close is
+    also beyond the candle's wick."""
+    from ict_engine.concepts.events import Event
+    o, h, lo, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    cts = (df["close_ts"] if "close_ts" in df else df.index.to_series()).to_numpy()
+    out = []
+    for i in range(len(df) - 1):
+        if c[i] > o[i] and c[i + 1] < o[i]:                       # an up candle, then one candle closing under its open
+            out.append(Event("ob", tf, "bear", pd.Timestamp(cts[i + 1]), df.index[i], float(c[i]), float(o[i]),
+                             {"beyond_wick": bool(c[i + 1] < lo[i])}))
+        elif c[i] < o[i] and c[i + 1] > o[i]:
+            out.append(Event("ob", tf, "bull", pd.Timestamp(cts[i + 1]), df.index[i], float(o[i]), float(c[i]),
+                             {"beyond_wick": bool(c[i + 1] > h[i])}))
+    return out
+
+
 def entry_areas(bars: pd.DataFrame, now: pd.Timestamp, adr: float, breaks: list[dict] | None = None,
                 days: int = 6, reach: float = 1.0, per_side: int = 4) -> list[dict]:
     """The 1h entry areas near price, all looked for the same way (Sharif 2026-11-16: a breaker is an entry area like
     an OTE or an order block; the idea and the target come first, the area is only where to get in).
       breaker      body of the last candle before the leg, after a close back through it (``merge`` + ``block="body"``);
                    ``body_pct`` = the body's share of that candle (he rejects "more wick than body")
-      order block  the LAST opposite candle before the move only (``single``; Sharif 2026-11-14: "September alone"),
-                   its body, like the breaker; ``displaced`` = the move away left a FVG
+      order block  ``engulfed_blocks`` on 1h and 15m (15m: the last two days): the last opposite candle, engulfed by
+                   the very next candle; its body
       FVG  unfilled and not closed through; OTE  62–79% of a break still waiting
     Only areas known by ``now`` (closed 1h candles), still valid, within ``reach`` ADR of price; nearest ``per_side``
     above and below plus any that price is in. A buy area is support (bull), a sell area resistance (bear)."""
     from ict_engine.concepts.bars import resample
-    from ict_engine.concepts.events import Event, breaker_blocks, fvgs, gap_lifecycle, order_blocks
+    from ict_engine.concepts.events import breaker_blocks, fvgs, gap_lifecycle
     recent = bars[(bars.index > now - pd.Timedelta(days=days + 4)) & (bars.index <= now)]
     h1 = resample(recent[list(AGG)], "1h")
     h1 = h1[h1.index + pd.Timedelta(hours=1) <= now + pd.Timedelta(minutes=1)]       # closed candles only
     last = float(recent.close.iloc[-1])
     evs = [(e, "breaker") for e in breaker_blocks(h1, "1h", merge=True, block="body") if e.kind == "breaker"]
-    for e in order_blocks(h1, "1h", single=True):
-        top, bottom = e.meta["body"]
-        evs.append((Event(e.kind, e.tf, e.direction, e.ts, e.origin_ts, top, bottom, e.meta), "order block"))
+    m15 = resample(recent[recent.index > now - pd.Timedelta(days=2)][list(AGG)], "15m")
+    m15 = m15[m15.index + pd.Timedelta(minutes=15) <= now + pd.Timedelta(minutes=1)]
+    evs += [(e, "order block") for e in engulfed_blocks(h1, "1h") + engulfed_blocks(m15, "15m")]
     evs += [(e, "FVG") for e in fvgs(h1, "1h")]
     out = []
     for e, name in evs:
         if e.ts > now or e.ts < now - pd.Timedelta(days=days) or e.top <= e.bottom:
             continue
         st = gap_lifecycle(e, recent, until=now)                 # touched / filled: on the 1m path
-        own = gap_lifecycle(e, h1)                               # still valid: judged on closed 1h candles, its own timeframe
+        own = gap_lifecycle(e, m15 if e.tf == "15m" else h1)     # still valid: judged on closed candles of its own timeframe
         if own.retired is not None or own.inverted is not None or (name == "FVG" and st.filled is not None):
             continue
-        item = {"kind": name, "tf": "1h", "side": "buy" if e.direction == "bull" else "sell", "top": round(e.top, 2),
+        item = {"kind": name, "tf": e.tf, "side": "buy" if e.direction == "bull" else "sell", "top": round(e.top, 2),
                 "bottom": round(e.bottom, 2), "t0": _epoch(e.origin_ts), "from": e.origin_ts.strftime("%a %d %H:%M"),
                 "known": e.ts.strftime("%a %d %H:%M"), "touched": st.touched is not None}
+        src = m15 if e.tf == "15m" else h1
         if name == "order block":
-            item["displaced"] = bool(e.meta.get("fvg"))
-        if name in ("breaker", "order block") and e.origin_ts in h1.index:
-            rng = float(h1.high[e.origin_ts] - h1.low[e.origin_ts])
+            item["beyond_wick"] = bool(e.meta.get("beyond_wick"))
+        if name in ("breaker", "order block") and e.origin_ts in src.index:
+            rng = float(src.high[e.origin_ts] - src.low[e.origin_ts])
             item["body_pct"] = round(100 * (e.top - e.bottom) / rng) if rng > 0 else None
         out.append(item)
     for b in breaks or []:

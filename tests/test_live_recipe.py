@@ -73,3 +73,16 @@ def test_entry_areas_show_the_breaker_body_only_once_it_is_known():
     assert not [x for x in early if x["kind"] == "breaker"]
     assert all(x["inside"] or x["where"] == ("below" if x["side"] == "buy" else "above")
                for x in lr.entry_areas(b, pd.Timestamp("2024-01-09 12:00", tz=NY), adr=10.0))
+
+
+def test_order_block_needs_the_very_next_candle_to_engulf_it():
+    # up candle (100 → 102), then one candle closing under its open: a sell order block = its body, known at that close
+    one = bars([(100, 102.5, 99.5, 102), (102, 102.2, 98, 98.5), (98.5, 99, 97, 97.5)], "2024-01-09 10:00")
+    ob = lr.engulfed_blocks(one, "1m")
+    assert [(e.direction, e.bottom, e.top, e.meta["beyond_wick"]) for e in ob] == [("bear", 100.0, 102.0, True)]
+    assert ob[0].origin_ts == one.index[0] and ob[0].ts == one.index[1]
+    # the same fall spread over two candles: the first does not close under the open → no order block
+    two = bars([(100, 102.5, 99.5, 102), (102, 102.2, 100.5, 100.8), (100.8, 101, 98, 98.5)], "2024-01-09 10:00")
+    assert lr.engulfed_blocks(two, "1m") == []
+    buy = bars([(102, 102.5, 99.5, 100), (100, 102.4, 99.8, 102.3)], "2024-01-09 10:00")       # mirror; close inside the wick
+    assert [(e.direction, e.bottom, e.top, e.meta["beyond_wick"]) for e in lr.engulfed_blocks(buy, "1m")] == [("bull", 100.0, 102.0, False)]
