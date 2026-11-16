@@ -21,11 +21,12 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☐ B5 Tweaks that fix many more trades than they break and lift R on most datasets → change gate (option → backtest)
 
 ## C. Microstructure (the layer we had not used)
-- ◐ C1 Break the references (`references/orderflow.md`, `references/microstructure/`) into components: measure, formula, data it needs, computable with our data or not
-- ◐ C2 Compute each usable component as a fact known at the entry, with tests (bar-based on all 7 datasets; trade-flow based on NQ 2024)
-- ◐ C3 Test each component on the backtest trades: does it separate wins from losses, on how many datasets?
-- ☐ C4 Verdict per component: usable and positive / usable, no value / not usable with free data; write-up + review-log row
-- ☐ C5 Positive components → change gate as options (and a pre-registration where a clean period exists)
+- ☑ C1 Break the references (`references/orderflow.md`, `references/microstructure/`) into components: measure, formula, data it needs, computable with our data or not
+- ☑ C2 Compute each usable component as a fact known at the entry, with tests (bar-based on all 7 datasets; trade-flow based on NQ 2024)
+- ☑ C3 Test each component on the backtest trades: does it separate wins from losses, on how many datasets?
+- ☑ C4 Verdicts: 26 components, 52 tests, none passes the false-discovery check; volatility and real volume duplicate the activity measure (`research/microstructure/2026-11-16-study.md`)
+- ☑ C5 Nothing positive → nothing to the change gate. One lead (flow against the trade in the last 30 min did better) needs Sharif's go-ahead: its test would use the 2024-H2 hold-out
+- ☐ C6 Fix found by the study: the activity baseline steps back in 24-hour days, so it is an hour off around DST changes (bug fix through the change gate, after the running test)
 
 ## D. Engine fixes queued
 - ☐ D1 Thresholds in index points: make silver, the dollar index and EUR/USD tradable; index results must not move (R7)
