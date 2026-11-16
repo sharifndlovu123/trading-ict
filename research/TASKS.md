@@ -46,3 +46,33 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☑ US100 full sweep; three-index check (stop-size rule failed, 2020–21 hold-out not spent)
 - ☑ New datasets: 2020 indices, gold (silver / DXY / EUR/USD blocked by D1); cameron and MMxM-on-gold parked
 - ☑ Tweak lab; order-flow facts in trade reviews
+
+---
+
+## Round 3 (2026-11-16, after the failed confirmation; Sharif: "proceed")
+Order agreed: calendars → the unseen 2020 news split → forward log → conditions rules for the older models on 2021.
+
+### F. Calendars
+- ☐ F1 Holiday calendar (US market holidays and early closes), with tests; tag every trade; skip rule as an option
+- ☐ F2 News calendar back to 2019-10 (ALFRED vintage dates via the browser; FOMC 2019–2020)
+- ☐ F3 Missing scheduled events: 10:00 releases (ISM manufacturing / services, consumer confidence), Jackson Hole chair speeches
+- ☐ F4 Rebuild `us_calendar.csv`; tests; the conditions study re-run with the fuller calendar
+
+### G. The one unseen split
+- ☐ G1 Pre-register: recipe (mornings) on 2020, news days against the rest (36 trades, never split by news)
+- ☐ G2 Run once, record
+
+### H. Forward log
+- ☐ H1 Recipe with its conditions (news or high-volatility day, right half of the range, not Monday) defined as a fixed forward rule
+- ☐ H2 Forward log file + the command that appends new trades as data arrives
+
+### I. Older models by condition, confirmed on 2021
+- ☐ I1 Conditions leads for MMxM and silver bullet stated as fixed rules from 2020 / 2022–26
+- ☐ I2 Pre-register; run 2021 once (never run for these models); record
+- ☐ I3 Written review of the 2021 trades (at least 30)
+
+### J. Fixes the reviews asked for (after F–I, each through the change gate)
+- ☐ J1 TP1 picker: nearer qualifying pools first; not behind an opposing array; not at a pool already taken
+- ☐ J2 Resting limits cancelled after a run of ≥ 1 R without a fill
+- ☐ J3 Minimum width for areas and trigger gaps (in ticks / ADR)
+- ☐ J4 Fact sheet: same-swing turn line; print the POI, the touch time and the trigger gap
