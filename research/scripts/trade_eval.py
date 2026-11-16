@@ -355,6 +355,7 @@ def evaluate(asset: str, side: str, entry_time: pd.Timestamp, entry: float, stop
         "statements": [s["text"] for s in rd.get("statements", [])],
         "range": range_place(pin, long, entry), "momentum_adr_per_candle": pin.get("mom"), "range_tf": pin.get("rtf"),
         "activity": activity(bars, entry_time, adr), "order_flow": order_flow(asset, entry_time, long),
+        "session": __import__("ict_engine.news.holidays", fromlist=["session_note"]).session_note(_session(entry_time)),
         "clock_windows": active(entry_time, clock, include_optional=True), "news": news, "news_ahead": news_ahead,
         "swept_before": swept_before(pre, bars, entry_time - PRE_SWEEP, entry_time),
         "levels": level_checks(items + intraday_pools(bars, entry_time), long, entry, stop, [p for p, _ in tps], adr),
@@ -403,6 +404,8 @@ def markdown(f: dict, note: str = "") -> str:
           f"- clock windows: {', '.join(k['clock_windows']) or 'none'} · news: "
           + (f"{k['news']['event']} {k['news']['at']:%a %H:%M} ({k['news']['mins']:+d} min)" if k["news"] else "none near"),
           f"- scheduled news during the hold window (known in advance): {'; '.join(k['news_ahead']) or 'none'}"]
+    if k.get("session"):
+        L.append(f"- **session: {k['session']}** (US market holiday calendar) — thin or shortened trading")
     ac = k.get("activity") or {}
     if ac.get("range_adr") is not None:
         L.append(f"- market activity, last 60 min: range {ac['range_adr']} ADR = **{ac['state']}** ({ac['relative']}× the normal "

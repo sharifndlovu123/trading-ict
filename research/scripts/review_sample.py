@@ -52,6 +52,7 @@ def traits(f: dict) -> dict:
            "k_activity": (k.get("activity") or {}).get("state"), "k_activity_rel": (k.get("activity") or {}).get("relative"),
            "k_activity_range_adr": (k.get("activity") or {}).get("range_adr"),
            "k_activity_net_adr": (k.get("activity") or {}).get("net_adr"),
+           "k_session": k.get("session") or "normal",
            "k_flow_imb_5m": (k.get("order_flow") or {}).get("imb_5m"), "k_flow_imb_60m": (k.get("order_flow") or {}).get("imb_60m"),
            "k_flow_with_trade_60m": (k.get("order_flow") or {}).get("with_trade_60m"),
            "k_flow_rel_volume": (k.get("order_flow") or {}).get("rel_volume")}
