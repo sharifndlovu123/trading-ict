@@ -100,7 +100,14 @@ function marksLayer(chart, series, el, o) {
     g.save(); g.beginPath(); g.rect(0, 0, W, H); g.clip();
     g.font = "10px ui-monospace, Menlo, monospace"; g.textBaseline = "middle";
     for (const u of (o.under ? o.under() : [])) {       // read-only zones under my marks (the page's own areas): no handles, never picked up
-      const x0 = u.t0 == null ? 0 : xOf(u.t0), a = yOf(u.top), b = yOf(u.bottom);
+      const x0 = u.t0 == null ? 0 : xOf(u.t0);
+      if (u.price != null) {                            // a level: one line from where it formed, short label at its start
+        const y = yOf(u.price); if (x0 == null || y == null) continue;
+        g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 1.5; g.setLineDash([6, 3]); g.globalAlpha = .9;
+        g.beginPath(); g.moveTo(x0, y); g.lineTo(W, y); g.stroke(); g.setLineDash([]);
+        g.fillText(u.label, Math.max(x0, 0) + 4, y - 7); g.globalAlpha = 1; continue;
+      }
+      const a = yOf(u.top), b = yOf(u.bottom);
       if (x0 == null || a == null || b == null) continue;
       g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 1; g.setLineDash([2, 3]);
       g.globalAlpha = u.alpha ?? .10; g.fillRect(x0, a, W - x0, b - a); g.globalAlpha = .8;

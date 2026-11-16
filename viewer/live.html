@@ -97,6 +97,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
       <div class="card" id="read"></div>
       <div id="plans"></div>
       <div class="card" id="blocked"></div>
+      <div class="card" id="cread" style="display:none"></div>
       <div class="card" id="areas"></div>
       <div class="card" id="breaks"></div>
     </div>
@@ -140,8 +141,12 @@ const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css
 const layer = marksLayer(chart, series, $("chart"), {
   list: () => st.doc ? myMarks() : [], times: () => st.doc ? (st.doc.assets[st.asset].candles[st.tf] || []).map(c => c.time) : [],
   nowT: () => null, paletteEl: $("palette"), color: css, tfName: () => st.tf, changed: keepMarks,
-  under: () => !st.doc || !$("areason").checked ? [] : (st.doc.assets[st.asset].areas || []).map(a => ({ t0: a.t0, top: a.top, bottom: a.bottom,
-    color: css(a.side === "buy" ? "--pos" : "--neg"), alpha: weak(a) ? .04 : a.inside ? .16 : .09, label: `1h ${a.kind} · ${a.side}${weak(a) ? " · wick" : ""}` })) });
+  under: () => !st.doc ? [] : [
+    ...(!$("areason").checked ? [] : (st.doc.assets[st.asset].areas || []).map(a => ({ t0: a.t0, top: a.top, bottom: a.bottom,
+      color: css(a.side === "buy" ? "--pos" : "--neg"), alpha: weak(a) ? .04 : a.inside ? .16 : .09, label: `1h ${a.kind} · ${a.side}${weak(a) ? " · wick" : ""}` }))),
+    // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
+    ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).map(m => ({ t0: m.t0, top: m.top, bottom: m.bottom, price: m.price,
+      color: css(m.side === "buyside" ? "--bs" : m.side === "sellside" ? "--ss" : "--area"), alpha: .14, label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
 const weak = a => a.kind === "breaker" && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
 const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
 function toggleFull() {
@@ -302,6 +307,12 @@ function renderAreas() {
     (L.length ? `<table style="width:100%;margin-top:6px"><tr class="dim"><td>area</td><td>prices</td><td>from</td><td>where</td><td>quality</td></tr>${L.map(row).join("")}</table>`
               : `<div class="dim" style="margin-top:6px">none within one average day's range</div>`);
 }
+function renderClaude() {                                   // Claude's read in words: beside the chart, not on it
+  const ov = st.overlay && st.overlay[st.asset], L = ov && ov.read || [];
+  $("cread").style.display = L.length ? "" : "none";
+  if (L.length) $("cread").innerHTML = `<h2>Claude's read · ${esc(st.asset)}${st.overlay.at ? ` <span class="dim">· ${esc(st.overlay.at)}</span>` : ""}</h2>
+    <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div><ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
+}
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
 
@@ -373,7 +384,7 @@ async function save(id, body) {
 function render(fit) {
   const d = st.doc;
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
-  renderTabs(); renderCond(); renderCompare(); renderAreas();
+  renderTabs(); renderCond(); renderCompare(); renderAreas(); renderClaude();
   const a = d.assets[st.asset];
   const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
