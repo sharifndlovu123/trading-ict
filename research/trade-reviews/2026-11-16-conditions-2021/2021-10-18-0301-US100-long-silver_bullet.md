@@ -1,0 +1,34 @@
+# US100 long — 2021-10-18 03:01 NY · engine -1.03 R (stop) · own -1.00 R · day-only -1.00 R · silver_bullet
+Batch conditions-2021 (first run of this model on 2021). A batch is leads, not evidence.
+## What it tried to do
+Silver bullet London hour (03:00-04:00): bullish FVG after the run under the Asia low, long 15080.27, stop 15063.98 under the session low (POI 1h FVG 15058.38-15064.48), TP1 15102.20 = 5m swing high (1.35 R), final the Asia high 15136.29.
+## What happened
+Filled 03:01, MFE 0.6 R, stopped 03:21. Price took the 4h swing low 15056.19 at 03:22, turned at 15051.04 at 03:23 (13 points beyond the stop) and never looked back: TP1 traded 04:10, Asia high 09:47, three 4h highs by 13:15, the 1w swing high 15412.38 on Tuesday. The 2022 model took the same idea one minute later with the same stop.
+## Checklist
+| # | Step | Grade | Evidence (steps 1-8: known at the entry) |
+|---|---|---|---|
+| 1 | Time and activity | pass | London killzone + sweet spot, SB London hour; activity normal (0.8x); no news |
+| 2 | Bias / narrative | partial | Read = counter-weekly, side bear (daily bear since 03 Oct against a weekly bull); 4H and 1H bull. The long does not match the read, but the read itself only expected a small grab of the 4h swing low 15056.19 |
+| 3 | Dealing range | fail | 0.67 of the 1d range 14381-15412 = premium, the wrong half for a long |
+| 4 | POI / array | partial | Price was inside the 1d bullish IFVG 14937.42-15098.54 and on a 1d bullish VI 15058.92-15069.40: a real HTF area. The POI 1h FVG 15058.38-15064.48 sits exactly on the two 4h swing lows |
+| 5 | Liquidity before | partial | Asia low 15092.64 and a 1h swing low 15088.66 swept at 02:03-02:05; the 4h swing lows 15056.19 / 15045.21 just below were still resting |
+| 6 | Trigger | partial | First FVG of the SB hour, one minute in; the 15m was still falling |
+| 7 | Stop | fail | Stop 15063.98 = the session low 15064.11 (0.0 ADR beyond) and 0.03-0.07 ADR in FRONT of the 4h swing lows; risk only 0.06 ADR |
+| 8 | Targets | partial | No pool before TP1; R:R 1.35; final target the Asia high |
+| 9 | Management | n/a | Stopped in 20 minutes; day-only = own |
+| 10 | Attribution | fail | Right idea, stop placed on one pool and in front of two more: the lesson |
+## Market conditions
+CSV: consolidating (ER 0.057), backdrop mixed, volatility normal (1.20x), no high-impact news. Sheet: weekly bull, daily bear since 03 Oct, 4H/1H bull; London activity normal. The day's low was 03:23; RTH ran +0.77 ADR and closed at 0.96 of its range: a **trend day** up.
+## Why it lost
+The stop was at the session low with two 4h swing lows 8 and 19 points under it. Price took the first one, turned 13 points beyond the stop and ran 1.44 ADR. Stopped, then target within 50 minutes.
+## Price we should have looked at
+Turn 15051.04 (03:23): 0.108 ADR below the entry, 0.048 ADR beyond the stop, between the 4h swing lows 15056.19 and 15045.21, inside the 1d bullish IFVG (all known). A stop under 15045 was about 0.11-0.13 ADR of risk and still paid 1.5-2 R at the Asia high, far more at the 4h highs.
+## Would Sharif take it?
+**Maybe.** The daily area was there (inside the 1d IFVG) and 4H/1H were bull, but it is the premium half and the 15m was still dropping at 03:01. He would have waited for the 4h lows to go and the 15m to turn: the 03:23 low, not this entry.
+## What the market did (hindsight — lessons to test, not blame)
+- Stopped, then TP1; from the turn price ran 23.98 R (1.44 ADR) to Tuesday's high.
+- Total adverse move 1.79 R: the stop was short by 13 points.
+## Verdict
+**lesson loss.** Never rest a stop between the session low and an untaken 4h swing low a few points below.
+## For the engine
+- Both models: flag 'untaken 1h/4h swing or session pool within 0.1 ADR beyond the stop' at the plan; replay with the stop moved beyond the last such pool (same target), all years, through the change gate. Also de-duplicate: count same-asset, same-stop trades within 5 minutes across models as one event in pooled statistics.

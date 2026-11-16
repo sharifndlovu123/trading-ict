@@ -69,7 +69,7 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 ### I. Older models by condition, confirmed on 2021
 - ☑ I1 Three hypotheses fixed (`research/preregistered-conditions-2021.md`)
 - ☑ I2 Run once: H1 and H2 not supported, H3 too few to judge (MMxM high vol: 25 trades, +0.63 R); no model has an edge on 2021
-- ☐ I3 Written review of the 2021 trades (at least 30)
+- ☑ I3 30 trades reviewed in writing (`research/trade-reviews/2026-11-16-conditions-2021/SUMMARY.md`)
 
 ### J. Fixes the reviews asked for (after F–I, each through the change gate)
 - ☐ J1 TP1 picker: nearer qualifying pools first; not behind an opposing array; not at a pool already taken
