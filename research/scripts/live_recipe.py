@@ -26,6 +26,7 @@ import time as _time
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -159,6 +160,83 @@ def structure_breaks(bars: pd.DataFrame, now: pd.Timestamp, days: int = 4) -> li
     return out[::-1]                                             # newest first
 
 
+def adr_of(bars: pd.DataFrame, now: pd.Timestamp, days: int = 20) -> float | None:
+    d = bars[bars.index < now.normalize()].resample("1D").agg({"high": "max", "low": "min"}).dropna()
+    r = (d.high - d.low).tail(days)
+    return float(r.mean()) if len(r) >= 5 else None
+
+
+def strength(bars: pd.DataFrame, now: pd.Timestamp, adr: float) -> dict:
+    """Where the index stands against its own recent prices (for comparing the three): the move since the 18:00
+    session open in ADR, and the place of the last price in the previous day's range (0% = its low, 100% = its high)."""
+    last = float(bars.close.iloc[-1])
+    start = (now.normalize() - pd.Timedelta(days=1) if now.hour < 18 else now.normalize()) + pd.Timedelta(hours=18)
+    ses = bars[bars.index >= start]
+    if ses.empty or (ses.index[0] - start) > pd.Timedelta(hours=2):       # Monday before 18:00: the session began Sunday
+        ses = bars[bars.index >= bars.index[-1] - pd.Timedelta(hours=20)]
+    prev_day = bars[bars.index < ses.index[0]]
+    prev = prev_day[prev_day.index >= prev_day.index[-1].normalize()]
+    hi, lo = float(prev.high.max()), float(prev.low.min())
+    return {"session_move_adr": round((last - float(ses.open.iloc[0])) / adr, 2),
+            "prev_range_pos": round(100 * (last - lo) / (hi - lo)) if hi > lo else None,
+            "session_range_adr": round(float(ses.high.max() - ses.low.min()) / adr, 2)}
+
+
+def gap_state(bars: pd.DataFrame, now: pd.Timestamp, adr: float) -> dict | None:
+    """The session's opening gap as Sharif reads it (2026-11-16): interesting while open; a target once the equal lows
+    (highs) on the other side are swept and price pushes back. Rule pieces from ndog_study / ndog_eql."""
+    import ndog_eql as ne
+    import ndog_study as nd
+    recent = bars[bars.index >= now - pd.Timedelta(days=6)]
+    t = recent.index
+    mins = (t.hour * 60 + t.minute).to_numpy()
+    since_prev = np.r_[0, np.diff(t.tz_convert("UTC").as_unit("ns").asi8)] / 6e10
+    opens = np.flatnonzero((mins >= 1080) & (mins <= 1110) & (since_prev >= 45))   # the running session counts from its first bar
+    if not len(opens):
+        return None
+    i = int(opens[-1])
+    s = {"open_ts": t[i], "open": float(recent.open.iloc[i]), "prev_close": float(recent.close.iloc[i - 1]),
+         "weekend": bool(since_prev[i] > 30 * 60)}
+    gap = s["prev_close"] - s["open"]
+    if gap == 0:
+        return None
+    long = gap > 0
+    sg = 1.0 if long else -1.0
+    f = recent[recent.index >= s["open_ts"]][list(AGG)].resample("15min", label="left", closed="left").agg(AGG).dropna()
+    f = f[f.index + pd.Timedelta(minutes=15) <= now + pd.Timedelta(minutes=1)]                 # finished candles only
+    if len(f) < 2:
+        return None
+    C = f.close.to_numpy() * sg
+    H, L = (f.high.to_numpy(), f.low.to_numpy()) if long else (-f.low.to_numpy(), -f.high.to_numpy())
+    target = s["prev_close"] * sg
+    reach = (H.max() - s["open"] * sg) / abs(gap)
+    out = {"side": "buy closes it (gap above)" if long else "sell closes it (gap below)", "from": round(s["open"], 2), "to": round(s["prev_close"], 2),
+           "size_adr": round(abs(gap) / adr, 2), "weekend": bool(s["weekend"]), "reached_pct": round(100 * min(max(reach, 0), 1)),
+           "closed": bool(H.max() >= target), "pool": None, "sweep": None, "push": None}
+    n = len(C)
+    lows = [i for i in range(0, n - 2) if (i == 0 or L[i] < L[max(0, i - 2):i].min()) and L[i] < L[i + 1:i + 3].min()]
+    sw = ne.sweep_of(f.open.to_numpy() * sg, H, L, C, target, adr, True)       # equal lows only: that is his condition
+    k = sw["k"] if sw else n
+    untaken = [L[i] for i in lows if i < k - 2 and L[i] <= L[i + 1:k].min()] if k > 2 else []
+    if untaken:
+        base = sw["level"] if sw else min(untaken)
+        near = [v for v in untaken if abs(v - base) <= ne.EQ_TOL * adr]
+        out["pool"] = {"level": round(base * sg, 2), "count": len(near), "spread_adr": round((max(near) - min(near)) / adr, 3) if near else 0.0,
+                       "equal": len(near) >= 2}
+    if sw:
+        out["sweep"] = {"at": f.index[k].strftime("%a %H:%M"), "depth_adr": round((sw["level"] - float(L[k:].min())) / adr, 2)}
+        rng = H - L
+        for m in range(k, n):                                                # the first displacement closing back above the pool
+            base = float(np.median(rng[max(0, k - 20):k])) if k >= 4 else 0.0
+            if C[m] > sw["top"] and base > 0 and rng[m] >= 1.5 * base and C[m] >= L[m] + 0.6 * rng[m]:
+                out["push"] = {"at": f.index[m].strftime("%H:%M"), "range_adr": round(float(rng[m]) / adr, 2),
+                               "close_pct": round(100 * float(C[m] - L[m]) / float(rng[m]))}
+                break
+    out["state"] = ("closed" if out["closed"] else "equal lows / highs swept and price pushed back: the gap is a target" if out["push"] else
+                    "equal lows / highs swept, no push back yet" if out["sweep"] else "open: interesting, not a trade yet")
+    return out
+
+
 def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, mode: str) -> dict:
     from ict_engine.concepts.context import build_context
     doc = {"day": str(day), "now": now.strftime("%a %Y-%m-%d %H:%M"), "mode": mode, "variant": VARIANT, "assets": {}}
@@ -171,6 +249,15 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
             item["levels"] = {k: round(float(v), 2) for k, v in ctx.levels.items()}
             item["setups"] = setups(a, bars, day, now)
             item["breaks"] = structure_breaks(bars, now)
+            adr = adr_of(bars, now)
+            if adr:
+                item["adr"] = round(adr, 1)
+                item["strength"] = strength(bars, now, adr)
+                item["gap"] = gap_state(bars, now, adr)
+                for b in item["breaks"]:
+                    rng = abs(b["far"] - b["near"])
+                    b["range_adr"] = round(rng / adr, 2)
+                    b["retrace_pct"] = round(100 * abs(item["last"] - b["near"]) / rng) if rng else None
         except Exception as e:                                   # one index failing must not blank the page
             item["error"] = f"{type(e).__name__}: {e}"
             item.setdefault("setups", [])

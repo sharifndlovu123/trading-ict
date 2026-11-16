@@ -42,3 +42,15 @@ def test_state_of_reads_a_running_trade_as_open():
     assert lr.state_of(None, False, t("10:30"), close, exp) == "waiting for the fill"
     assert lr.state_of(None, False, t("11:00"), close, exp) == "not filled"
     assert lr.state_of("missed", False, t("10:30"), close, exp).startswith("missed")
+
+
+def test_strength_reads_the_session_move_and_the_place_in_yesterdays_range():
+    day = bars([(100, 110, 90, 100)] * 60, "2024-01-09 10:00")              # yesterday: range 90 → 110
+    eve = bars([(104, 105, 103, 104)] * 30 + [(104, 106, 104, 105)], "2024-01-09 18:00")   # session opens 104, last 105
+    s = lr.strength(pd.concat([day, eve]), pd.Timestamp("2024-01-09 18:31", tz=NY), adr=20.0)
+    assert s["session_move_adr"] == 0.05 and s["prev_range_pos"] == 75 and s["session_range_adr"] == 0.15
+
+
+def test_adr_of_uses_finished_days_only():
+    days = pd.concat([bars([(100, 100 + k, 100, 100)] * 3, f"2024-01-{d:02d} 10:00") for d, k in zip(range(2, 9), (10, 10, 10, 10, 10, 10, 50))])
+    assert lr.adr_of(days, pd.Timestamp("2024-01-08 12:00", tz=NY)) == 10.0      # 8 Jan itself (range 50) is not counted

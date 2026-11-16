@@ -53,6 +53,10 @@ textarea { width:100%; min-height:44px; resize:vertical; } input.px { width:96px
 details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
 .gate { font-size:12.5px; } .gate.f { color:var(--neg); }
 .saved { color:var(--pos); font-size:13px; }
+#compare table { border-collapse:collapse; width:100%; font-size:13px; } #compare .scroll { overflow-x:auto; }
+#compare th, #compare td { padding:4px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+#compare th { color:var(--ink2); font-weight:500; } #compare td.best { color:var(--pos); font-weight:600; } #compare td.k { color:var(--ink2); white-space:nowrap; }
+#compare tr.sec td { border-bottom:none; padding-top:9px; font-weight:600; }
 </style>
 <script src="linedrag.js"></script>
 <script src="marks.js"></script>
@@ -67,6 +71,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
   </div>
   <div class="tabs" id="tabs"></div>
   <div class="card" id="cond"></div>
+  <div class="card" id="compare"></div>
   <div class="grid">
     <div>
       <div class="card" id="chartcard">
@@ -238,6 +243,36 @@ function renderCond() {
     <span class="chip">last ${a.last} at ${a.last_bar}</span></div>`;
 }
 
+function renderCompare() {
+  const A = st.doc.assets, names = Object.keys(A), v = names.map(n => A[n]);
+  if (!v.some(x => x.strength)) { $("compare").innerHTML = ""; return; }
+  const best = (vals, pick) => { const ok = vals.map((x, i) => [x, i]).filter(([x]) => x != null && !Number.isNaN(x)); if (ok.length < 2) return -1;
+    const b = ok.reduce((p, c) => pick(c[0], p[0]) ? c : p); return ok.filter(([x]) => x === b[0]).length === 1 ? b[1] : -1; };
+  const row = (label, cells, bi = -1) => `<tr><td class="k">${label}</td>${cells.map((c, i) => `<td class="${i === bi ? "best" : ""}">${c ?? "–"}</td>`).join("")}</tr>`;
+  const sec = t => `<tr class="sec"><td colspan="${names.length + 1}">${t}</td></tr>`;
+  const sg = x => x == null ? null : (x > 0 ? "+" : "") + x;
+  const mv = v.map(x => x.strength ? x.strength.session_move_adr : null), pos = v.map(x => x.strength ? x.strength.prev_range_pos : null);
+  const g = v.map(x => x.gap || null), open = g.map(x => x && !x.closed);
+  const lb = v.map(x => (x.breaks || [])[0] || null);
+  let h = `<h2>The three side by side <span class="dim" style="font-weight:400">· green = the weakest (for a sell), the cleanest pool, the hardest push</span></h2><div class="scroll"><table>
+    <tr><th></th>${names.map(n => `<th>${n}</th>`).join("")}</tr>` + sec("Strength") +
+    row("move since the 18:00 open", mv.map(x => x == null ? null : sg(x) + " ADR"), best(mv, (a, b) => a < b)) +
+    row("place in yesterday's range", pos.map(x => x == null ? null : x + "%"), best(pos, (a, b) => a < b)) +
+    sec("Opening gap") +
+    row("size · side", g.map(x => x ? `${x.size_adr} ADR${x.weekend ? " (weekend)" : ""} · ${x.side}` : null)) +
+    row("state", g.map(x => x ? `${esc(x.state)}${x.closed ? "" : ` · ${x.reached_pct}% reached`}` : null)) +
+    row("pool on the other side", g.map((x, i) => x && x.pool && open[i] ? `${x.pool.count} ${x.pool.equal ? "equal" : "single"} at ${x.pool.level}${x.pool.count > 1 ? ` (within ${(x.pool.spread_adr * 100).toFixed(1)}% ADR)` : ""}` : null),
+        best(g.map((x, i) => x && x.pool && open[i] ? x.pool.count : null), (a, b) => a > b)) +
+    row("sweep", g.map(x => x && x.sweep ? `${x.sweep.at} · ${x.sweep.depth_adr} ADR deep` : null)) +
+    row("push back", g.map(x => x && x.push ? `${x.push.at} · ${x.push.range_adr} ADR · closed at ${x.push.close_pct}%` : null), best(g.map(x => x && x.push ? x.push.close_pct : null), (a, b) => a > b)) +
+    sec("Latest 1h structure break") +
+    row("side · when", lb.map(b => b ? `${b.side} · ${b.at} · ${b.kind.toUpperCase()}` : null)) +
+    row("range", lb.map(b => b && b.range_adr != null ? `${b.range_adr} ADR` : null), best(lb.map(b => b ? b.range_adr : null), (a, b) => a > b)) +
+    row("retraced now", lb.map(b => b && b.retrace_pct != null ? `${b.retrace_pct}% (OTE from 62%)` : null)) + `</table></div>
+    <div class="dim" style="font-size:12.5px;margin-top:4px">For a reversal take the cleanest pool; for a continuation the weakest index (your notes, 16 Nov). A weekend gap is shown the same way here; your NWOG reading on regular-hours charts is not built yet.</div>`;
+  $("compare").innerHTML = h;
+}
+
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
 
@@ -309,7 +344,7 @@ async function save(id, body) {
 function render(fit) {
   const d = st.doc;
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
-  renderTabs(); renderCond();
+  renderTabs(); renderCond(); renderCompare();
   const a = d.assets[st.asset];
   const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
