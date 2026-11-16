@@ -1,6 +1,6 @@
-# Pre-registration (DRAFT — waits for Sharif's go-ahead) — the improved recipe on 2020–2021
+# Pre-registration — the improved recipe on 2020–2021
 
-Drafted 2026-11-16, before any run of this model on any date before 2022. Nothing below has been run.
+Written 2026-11-16, before any run of this model on any date before 2022. **Approved by Sharif on 2026-11-16: "go ahead with 2020–21 once the review is done"** (the 30-trade review of the in-sample run, `research/trade-reviews/2026-11-16-recipe2/`). If that review finds a look-ahead or realism flaw, it is fixed first and this file is amended before the run.
 
 ## The rule (fixed; commit of the code is recorded when the run is made)
 PD-array-return model, variant `recipe2: full + not against 1h&4h + within 0.25 ADR + before 14:00` in `ict_engine/eval/variants.py`:
