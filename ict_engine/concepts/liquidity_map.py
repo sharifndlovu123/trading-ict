@@ -43,6 +43,7 @@ LOOKBACK = {"1w": timedelta(days=730), "1d": timedelta(days=180), "4h": timedelt
 EQ_BP = {"1w": 20.0, "1d": 10.0, "4h": 4.0, "1h": 2.0}
 REACH = {"1w": 2.0}                     # weekly levels may sit up to 2× max_adr away
 PER_SIDE = {"swing": 4, "eq": 2, "gap": 3}
+TF_SPAN = {"4h": pd.Timedelta(hours=4), "1h": pd.Timedelta(hours=1)}    # intraday candles: complete only at their end
 # top-down liquidity per side and timeframe; context kinds skipped unless they coincide with a swing / equal level
 TOPDOWN = {"n": 2, "skip": (), "min_area_adr": 0.1}   # slivers (< 0.1 ADR wide) aren't areas to watch (his 1w ≥ 0.15)
 TF_ORDER = {"1w": -1, "1d": 0, "4h": 1, "1h": 2, "session": 3}
@@ -193,6 +194,8 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
             sess = (as_of + pd.Timedelta(hours=6)).normalize()
             b = b[b.index < sess - pd.Timedelta(days=sess.weekday())]
         b = b[b.close_ts < as_of]
+        if tf in TF_SPAN:                                    # drop the candle still forming: resampling history cut
+            b = b[b.index + TF_SPAN[tf] <= as_of]            # at as_of gives it a close_ts, but it has not closed
         if len(b) < 3:
             continue
         sw = [e for e in swings(b, tf) if e.ts < as_of]
@@ -219,7 +222,7 @@ def build(bars_1m: pd.DataFrame, as_of: pd.Timestamp, max_adr: float = 4.0) -> d
                     f"{tf} equal {'highs' if high else 'lows'}")
         gaps = {"above": [], "below": []}
         for g in list(fvgs(b, tf)) + list(volume_imbalances(b, tf)):
-            if round(g.top, 2) <= round(g.bottom, 2):                 # a sliver (< 0.01 wide), not an area (audit 2026-11-16)
+            if g.top - g.bottom < 0.01:                               # a sliver (< 0.01 wide), not an area (audit 2026-11-16)
                 continue
             if g.ts >= as_of:
                 continue
