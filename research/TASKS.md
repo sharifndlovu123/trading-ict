@@ -9,7 +9,8 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☑ A2 In-sample variant run (decision-time gate): weak — 2022 model −0.066 → −0.059 R (2 of 3 indices, removed trades −0.16 R, z −0.75); MMxM worse; silver bullet unchanged
 - ☑ A3 Decision: the decision-time gate is NOT taken to 2021 (too weak; the clean year is kept)
 - ☑ A3b Fill-time mode built (`min_activity_at="fill"`: the order is pulled when the market is quiet at the fill; suite 565 passed)
-- ◐ A3c In-sample run of the fill-time gate, 2022 model, three indices
+- ☑ A3c Fill-time gate in-sample (2022 model): −0.066 → −0.033 R pooled, 2 of 3 indices, removed 114 trades at −0.36 R (z −2.7); mostly US100
+- ◐ A3d Re-check after the DST fix (same run, corrected baseline window)
 - ☐ A4 If A3c holds (pooled and ≥ 2 of 3 indices, removed trades clearly worse): one run on 2021 (approved by Sharif); else stop here
 - ☐ A5 Pass → new default through the change gate; fail / not confirmed → logged, option stays off
 
@@ -27,11 +28,11 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 - ☑ C3 Test each component on the backtest trades: does it separate wins from losses, on how many datasets?
 - ☑ C4 Verdicts: 26 components, 52 tests, none passes the false-discovery check; volatility and real volume duplicate the activity measure (`research/microstructure/2026-11-16-study.md`)
 - ☑ C5 Nothing positive → nothing to the change gate. One lead (flow against the trade in the last 30 min did better) needs Sharif's go-ahead: its test would use the 2024-H2 hold-out
-- ☐ C6 Fix found by the study: the activity baseline steps back in 24-hour days, so it is an hour off around DST changes (bug fix through the change gate, after the running test)
+- ☑ C6 DST fix: the activity baseline uses calendar days (test first; suite 570 passed)
 
 ## D. Engine fixes queued
-- ☐ D1 Thresholds in index points: make silver, the dollar index and EUR/USD tradable; index results must not move (R7)
-- ☐ D2 Backtest the newly tradable assets through pipeline A (scores, time/activity, tweak lab)
+- ☑ D1 Index-point thresholds scale by the futures tick outside the indices and gold (`instruments.unit` / `scaled`); futures cost for DXY and EUR/USD; indices untouched by construction
+- ◐ D2 Backtests: silver, dollar index, EUR/USD × 2022 model, MMxM, silver bullet (2022–24)
 
 ## E. Wrap-up
 - ☐ E1 One summary document for Sharif: what was done, what holds, what failed, what needs his decision

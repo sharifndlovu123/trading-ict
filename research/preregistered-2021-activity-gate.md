@@ -25,7 +25,30 @@ One year of quiet-market trades is a small sample (about 10% of trades are quiet
 - **Pass:** `min_activity = 0.6` becomes the default for the qualifying models through the change gate.
 - **Not confirmed / fail:** logged; the option stays off; 2021 is not reused for this rule.
 
-## In-sample variant run (2022-01-03 → 2024-06-28)
+## In-sample variant runs (2022-01-03 → 2024-06-28, three indices)
+**Decision-time gate (`activity >= 0.6`), run 2026-11-16:** weak, not taken to 2021.
+| Model | Baseline R | Gate R | Indices better | Trades removed |
+|---|---|---|---|---|
+| 2022 model | −0.066 (n 1,105) | −0.059 (n 1,017) | 2 of 3 | 106 at −0.157 R vs kept −0.057, z −0.75 |
+| MMxM | −0.004 (n 618) | −0.023 (n 574) | 1 of 3 | 49 at +0.266 R |
+| Silver bullet | +0.013 (n 1,216) | +0.014 (n 1,176) | 1 of 3 | 77 at +0.054 R |
+
+## Amendment 1 (2026-11-16, before any run on 2021): the rule tested is the fill-time mode, 2022 model only
+The evidence in review log #40 measured activity at the **fill**; the decision-time gate above acts at a different moment and the effect mostly disappears. The rule taken to 2021 is therefore:
+
+> `activity at fill >= 0.6` (`min_activity=0.6, min_activity_at="fill"`): the resting order is pulled when the range of the 60 minutes before the fill is under 0.6 × normal for that clock time. **2022 model only** (MMxM and silver bullet showed no effect at either moment and are not run).
+
+First in-sample run of this mode (before the DST fix to the baseline window):
+| | Baseline | Fill-time gate |
+|---|---|---|
+| Pooled | −0.066 R, 33.8% win (n 1,105) | −0.033 R, 34.8% (n 998) |
+| US100 / US500 / US30 | −0.076 / +0.009 / −0.104 | −0.011 / +0.017 / −0.110 |
+| Removed trades | | 114 at −0.356 R (25% win) vs kept −0.033 R; Welch z −2.67; both halves better |
+Caution written before the hold-out: almost all of the effect is US100 (68 removed at −0.565 R); on US30 and US500 the removed trades were no worse than the kept ones. The pass bar's "at least 2 of 3 indices" is the check on that.
+
+The in-sample run is repeated after the DST fix (calendar-day baseline) and its table appended below; the condition (pooled better and ≥ 2 of 3 indices) must still hold for the 2021 run to go ahead. Pass bar, hold-out period and outcomes are unchanged from above, with "the qualifying models" = the 2022 model.
+
+### In-sample, fill-time gate, after the DST fix
 _(appended when the run finishes)_
 
 ## Hold-out result (2021)
