@@ -31,7 +31,7 @@ def traded(path: str) -> pd.DataFrame:
     d = pd.read_parquet(path)
     d = d[(d.status == "traded") & d.r.notna() & d.filled_at.notna()].copy()
     d["filled_at"] = pd.to_datetime(d.filled_at, utc=True).dt.tz_convert(te.NY)
-    return d[d.filled_at < UNSEEN].reset_index(drop=True)
+    return (d if _W.get("unseen") else d[d.filled_at < UNSEEN]).reset_index(drop=True)
 
 
 def traits(f: dict) -> dict:
@@ -82,7 +82,7 @@ def _one(i: int):
 
 def _bars(assets) -> dict:
     from ict_engine.data import dukascopy
-    return {a: dukascopy.load(a, date(2019, 10, 1) if a.startswith("US") else date(2021, 10, 1), date(2024, 7, 5)) for a in assets}
+    return {a: dukascopy.load(a, date(2019, 10, 1) if a.startswith("US") else date(2021, 10, 1), date(2026, 11, 14) if _W.get("unseen") else date(2024, 7, 5)) for a in assets}
 
 
 def facts(path: str, workers: int, cap: int) -> Path:
@@ -142,7 +142,10 @@ def main():
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--out", type=Path)
     ap.add_argument("--balanced", type=int, default=0, help="sheets: this many winners and this many losers, spread over the comma-separated runs")
+    ap.add_argument("--include-unseen", action="store_true",
+                    help="only for reviewing the trades of a pre-registered confirmation run on 2024-07 onward")
     a = ap.parse_args()
+    _W["unseen"] = a.include_unseen
     if a.cmd == "facts":
         facts(a.path, a.workers, a.max)
     else:

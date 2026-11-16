@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Market Conditions</title>
+<style>
+:root { --bg:#f2f3f0; --panel:#fcfcfb; --ink:#141614; --ink2:#52514e; --line:#d9ddd7; --pos:#1f7a55; --neg:#b23b3b;
+  --up:#2a78d6; --down:#eb6834; --flat:#b9bcb5; --hi:#eb6834; --mid:#b9bcb5; --lo:#2a78d6; }
+:root[data-theme="dark"] { --bg:#111110; --panel:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --line:#34342f; --pos:#4cc28c; --neg:#e66767;
+  --up:#3987e5; --down:#d95926; --flat:#55554f; --hi:#d95926; --mid:#55554f; --lo:#3987e5; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
+main { max-width:1150px; margin:0 auto; padding:20px 16px 60px; }
+h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:28px 0 6px; }
+.sub { color:var(--ink2); margin:0 0 12px; } .note { color:var(--ink2); font-size:13px; }
+button { float:right; font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:3px 9px; cursor:pointer; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:8px 0; }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:13px; }
+th, td { padding:5px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+th:first-child, td:first-child, td.l, th.l { text-align:left; }
+th { color:var(--ink2); font-weight:500; }
+td.num { font-family:ui-monospace,Menlo,monospace; }
+.pos { color:var(--pos); font-weight:600; } .neg { color:var(--neg); font-weight:600; } .dim { color:var(--ink2); }
+.bar { display:flex; height:14px; width:220px; border-radius:3px; overflow:hidden; gap:2px; background:var(--panel); }
+.bar span { display:block; height:100%; }
+.legend { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink2); margin:4px 0 8px; }
+.sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:3px 7px; }
+</style>
+</head>
+<body>
+<main>
+  <button id="theme">☾ dark</button>
+  <h1>Market conditions, and each model in each condition</h1>
+  <p class="sub">US100, US500 and US30, 2020 → 2026. Conditions are read before each trading day starts. Descriptive: this shows where a tool has worked, not a tested rule.</p>
+
+  <h2>What each year was</h2>
+  <div class="card scroll">
+    <div class="legend">
+      <span><span class="sw" style="background:var(--up)"></span>trending up</span><span><span class="sw" style="background:var(--down)"></span>trending down</span><span><span class="sw" style="background:var(--flat)"></span>consolidating</span>
+      <span style="margin-left:14px"><span class="sw" style="background:var(--hi)"></span>high volatility</span><span><span class="sw" style="background:var(--mid)"></span>normal</span><span><span class="sw" style="background:var(--lo)"></span>low</span>
+    </div>
+    <table id="years"></table>
+    <p class="note">State: trending when the last 20 days moved mostly one way (efficiency ≥ 0.30), else consolidating. Backdrop: price against its 50-day average and the 50-day against the 200-day. Volatility: the 20-day average daily range against its own one-year median.</p>
+  </div>
+
+  <h2>Each model, year by year <span class="note">(R per trade; trades in brackets)</span></h2>
+  <div class="card scroll"><table id="peryear"></table>
+    <p class="note">The older models have never been run on 2021 (kept as a clean year). "recipe, mornings" = Sharif's entry recipe on the PD-array-return model, New York morning, no stop buffer.</p></div>
+
+  <h2>Each model by condition</h2>
+  <div class="card">
+    <label class="note">Condition: <select id="cut"></select></label>
+    <div class="scroll"><table id="cond" style="margin-top:8px"></table></div>
+    <p class="note">"Years positive" = in how many calendar years with at least 15 trades in that condition the model made money. A condition is worth trusting only when many trades and most years agree.</p>
+  </div>
+
+  <h2>State × volatility <span class="note">(cells with at least 25 trades)</span></h2>
+  <div class="card scroll"><table id="combo"></table></div>
+</main>
+<script>
+const D = /*DATA*/null;
+const $ = id => document.getElementById(id);
+const sg = x => x == null ? "–" : (x > 0 ? "+" : "") + (+x).toFixed(3);
+const cls = x => x == null ? "dim" : x > 0.02 ? "pos" : x < -0.02 ? "neg" : "";
+(function(){ let t="light"; try{ t=localStorage.getItem("mc-theme")||"light"; }catch(e){}
+  const b=$("theme"), set=v=>{ document.documentElement.dataset.theme=v; b.textContent=v==="light"?"☾ dark":"☀ light"; };
+  set(t); b.onclick=()=>{ t=t==="light"?"dark":"light"; set(t); try{ localStorage.setItem("mc-theme",t); }catch(e){} }; })();
+const bar = (parts) => `<div class="bar">${parts.map(([v,c,l])=>`<span title="${l} ${v}%" style="width:${v}%;background:var(${c})"></span>`).join("")}</div>`;
+$("years").innerHTML = `<tr><th>year</th><th>US500 return</th><th>avg daily range</th><th class="l">state of the days</th><th>up / down / consol.</th><th class="l">volatility of the days</th><th>high / normal / low</th><th>backdrop bull / bear / mixed</th></tr>` +
+  D.years.map(y => `<tr><td>${y.year}</td><td class="num ${cls(y["US500 return %"])}">${y["US500 return %"]>0?"+":""}${y["US500 return %"]}%</td><td class="num">${y["avg daily range %"]}%</td>
+    <td class="l">${bar([[y["trending up %"],"--up","trending up"],[y["trending down %"],"--down","trending down"],[y["consolidating %"],"--flat","consolidating"]])}</td>
+    <td class="num">${y["trending up %"]} / ${y["trending down %"]} / ${y["consolidating %"]}</td>
+    <td class="l">${bar([[y["vol high %"],"--hi","high"],[y["vol normal %"],"--mid","normal"],[y["vol low %"],"--lo","low"]])}</td>
+    <td class="num">${y["vol high %"]} / ${y["vol normal %"]} / ${y["vol low %"]}</td>
+    <td class="num">${y["backdrop bull %"]} / ${y["backdrop bear %"]} / ${y["backdrop mixed %"]}</td></tr>`).join("");
+const models = [...new Set(D.per_year.map(r => r.model))], yrs = [...new Set(D.per_year.map(r => r.year))].sort();
+$("peryear").innerHTML = `<tr><th>model</th>${yrs.map(y=>`<th>${y}</th>`).join("")}</tr>` + models.map(m => `<tr><td>${m}</td>${yrs.map(y => {
+  const r = D.per_year.find(x => x.model === m && x.year === y); return r ? `<td class="num ${cls(r.r)}">${sg(r.r)} <span class="dim" style="font-weight:400">(${r.n})</span></td>` : `<td class="dim">–</td>`; }).join("")}</tr>`).join("");
+const cuts = Object.keys(D.tables);
+$("cut").innerHTML = cuts.map(c => `<option>${c}</option>`).join("");
+function cond() {
+  const rows = D.tables[$("cut").value];
+  $("cond").innerHTML = `<tr><th>model</th><th class="l">condition</th><th>trades</th><th>win %</th><th>range</th><th>R per trade</th><th>z</th><th>years positive</th></tr>` +
+    rows.map((r,i) => `<tr><td>${i && rows[i-1].model === r.model ? "" : r.model}</td><td class="l">${r.condition}</td><td class="num">${r.n}</td><td class="num">${r.win}</td><td class="num dim">${r.lo}–${r.hi}</td><td class="num ${cls(r.r)}">${sg(r.r)}</td><td class="num">${r.z ?? "–"}</td><td class="num">${r["years positive"]}</td></tr>`).join("");
+}
+$("cut").onchange = cond; cond();
+$("combo").innerHTML = `<tr><th>model</th><th class="l">state</th><th class="l">volatility</th><th>trades</th><th>win %</th><th>R per trade</th><th>z</th><th>years positive</th></tr>` +
+  D.combo.map((r,i) => `<tr><td>${i && D.combo[i-1].model === r.model ? "" : r.model}</td><td class="l">${r.state}</td><td class="l">${r.vol}</td><td class="num">${r.n}</td><td class="num">${r.win}</td><td class="num ${cls(r.r)}">${sg(r.r)}</td><td class="num">${r.z ?? "–"}</td><td class="num">${r["years positive"]}</td></tr>`).join("");
+</script>
+</body>
+</html>
