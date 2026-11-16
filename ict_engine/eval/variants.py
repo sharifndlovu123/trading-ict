@@ -245,6 +245,22 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
     "entry: sweep then displacement": replace(PR, entry_gate="sweep_disp"),
     "entry: no chop in the zone": replace(PR, entry_gate="no_chop"),
     "entry: both": replace(PR, entry_gate="both"),
+    # Sharif's recipe from his handling / plan saves (research/entry-trigger-from-saves-2026-11-16.md): be patient
+    # until the 1h/4h area is reached (its 50%), watch the 15m for momentum, enter on the retrace into that gap,
+    # side from the area + momentum (no daily bias), New York session
+    "recipe: 1h+4h area, 15m trigger": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240),
+    "recipe: 1h+4h area, 5m trigger": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="5m", trigger_wait_min=120),
+    "recipe: 15m trigger, area 50%": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240,
+                                             return_level="ce"),
+    "recipe: 15m trigger, no bias": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240,
+                                            use_bias=False),
+    "recipe: 15m trigger, NY only": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240,
+                                            windows=("ny_am_kz", "ny_pm_kz")),
+    "recipe: full (15m, 50%, no bias, NY)": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240,
+                                                    return_level="ce", use_bias=False, windows=("ny_am_kz", "ny_pm_kz")),
+    "recipe: full + order blocks": replace(PR, htf_tfs=("1h", "4h"), arrays=("fvg", "ob"), ob_confirm="open",
+                                           ob_measure="body", trigger_tf="15m", trigger_wait_min=240,
+                                           return_level="ce", use_bias=False, windows=("ny_am_kz", "ny_pm_kz")),
 }
 SETS = {"2022_model": VARIANTS, "mmxm": MMXM_VARIANTS, "silver_bullet": SB_VARIANTS, "cameron": CAMERON_VARIANTS,
         "pd_return": PD_RETURN_VARIANTS}

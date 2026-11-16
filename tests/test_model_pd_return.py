@@ -212,3 +212,17 @@ def test_ifvg_bias_override_only_lifts_the_bias_gate_for_ifvg_arrays(monkeypatch
     assert not gate(ifvg, pr.Params(arrays=("ifvg",))).passed      # default: the bias still gates
     assert not gate(fvg, over).passed                               # only IFVG arrays may go against the bias
     assert "ifvg_bias=override" in over.variant
+
+
+def test_return_level_ce_waits_for_the_50pct_of_the_array():
+    """Sharif's handling notes (2026-11-16): "sold too early … try 50% of the 4h FVG" — the return can be the first
+    trade to the array's consequent encroachment instead of its near edge. Default unchanged."""
+    g = one_h_gap()
+    day = bars()[bars().index >= ts("00:00")]
+    edge = pr.returns([g], day, ts("00:00"))[0][1]
+    ce = pr.returns([g], day, ts("00:00"), level="ce")[0][1]
+    assert ce > edge and day.loc[ce].low <= g.ce and (day[(day.index > g.ts) & (day.index < ce)].low > g.ce).all()
+    assert pr.Params().return_level == "proximal" and "return_level" not in pr.Params().variant
+    assert "return_level=ce" in replace(pr.Params(), return_level="ce").variant
+    with pytest.raises(ValueError):
+        pr.returns([g], day, ts("00:00"), level="nope")

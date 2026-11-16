@@ -53,6 +53,7 @@ class Params:
     ob_confirm: str = "extreme"          # OB known on a close beyond its extreme (Bible p.16) | "open" (close through its open)
     ob_measure: str = "range"            # OB zone + 50% on the full range | "body" (ICT Month 04: open to close, no wicks)
     lookback_days: int = 5
+    return_level: str = "proximal"       # the return = the first trade to the array's near edge | "ce" (its 50%)
     trigger_tf: str = "1m"
     trigger_wait_min: int = 30
     min_trigger_gap_bp: float = 0.2      # ignore sliver gaps (< 0.2 bp of price, e.g. < 0.3 pt on NQ)
@@ -79,7 +80,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
@@ -123,13 +124,17 @@ def fail_level(array: Event) -> float:
     return array.bottom if array.direction == "bull" else array.top
 
 
-def returns(arrays: list[Event], day_1m: pd.DataFrame, window_start: pd.Timestamp) -> list[tuple[Event, pd.Timestamp]]:
+def returns(arrays: list[Event], day_1m: pd.DataFrame, window_start: pd.Timestamp,
+            level: str = "proximal") -> list[tuple[Event, pd.Timestamp]]:
     """(array, first touch) for every array that is still valid when price first trades back into it,
-    with the touch on or after ``window_start`` (the day's 00:00; time windows are gated later)."""
+    with the touch on or after ``window_start`` (the day's 00:00; time windows are gated later).
+    ``level`` "proximal" = the touch of the near edge; "ce" = the first trade to the array's 50%."""
+    if level not in ("proximal", "ce"):
+        raise ValueError(f"return level must be 'proximal' or 'ce', not {level!r}")
     out = []
     for g in arrays:
         st = gap_lifecycle(g, day_1m[day_1m.index >= g.ts])
-        t = st.touched
+        t = st.touched if level == "proximal" else st.ce
         if t is None or t < window_start or not st.valid_at(t):
             continue
         out.append((g, t))
@@ -176,7 +181,7 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     swing_pts = swings(resample(day_1m, "5m"), "5m") + swings(resample(day_1m, "15m"), "15m")
     out, seen = [], set()
     # bigger timeframes first, so one reaction is credited to the largest array it came from
-    for g, touch in sorted(returns(arrays, day_1m, d0), key=lambda x: (x[1], -TF_RANK.get(x[0].tf, 0))):
+    for g, touch in sorted(returns(arrays, day_1m, d0, p.return_level), key=lambda x: (x[1], -TF_RANK.get(x[0].tf, 0))):
         s = _evaluate(g, touch, ctx, day, asset, p, day_1m, ltf, swing_pts, bars_1m=bars_1m)
         key = (s.side, s.decided_at)
         if key in seen:
