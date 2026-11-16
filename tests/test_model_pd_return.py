@@ -264,3 +264,17 @@ def test_min_area_adr_drops_sliver_areas():
     assert pr.wide_enough([wide, thin], adr=10.0, min_frac=None) == [wide, thin]
     assert pr.wide_enough([wide, thin], adr=None, min_frac=0.1) == [wide, thin]      # ADR unknown: nothing is dropped
     assert pr.Params().min_area_adr is None and "min_area_adr=0.1" in replace(pr.Params(), min_area_adr=0.1).variant
+
+
+def test_stop_buffer_in_adr_moves_the_stop_beyond_the_extreme():
+    """Hold-out review 2026-11-16 (77 trades): stops sat exactly on the reaction extreme and were run by 0.02–0.1 ADR
+    before price turned. ``stop_buffer_adr`` adds a share of the 20-day ADR beyond the anchor; off by default."""
+    assert pr.Params().stop_buffer_adr is None and "stop_buffer_adr" not in pr.Params().variant
+    assert "stop_buffer_adr=0.1" in replace(pr.Params(), stop_buffer_adr=0.1).variant
+    assert pr.buffered_stop(100.0, long=True, p=replace(pr.Params(), stop_buffer_adr=0.1), adr=20.0) == 98.0
+    assert pr.buffered_stop(100.0, long=False, p=replace(pr.Params(), stop_buffer_adr=0.1), adr=20.0) == 102.0
+    assert pr.buffered_stop(100.0, long=True, p=replace(pr.Params(), stop_buffer=0.5), adr=20.0) == 99.5      # the old absolute buffer
+    assert pr.buffered_stop(100.0, long=True, p=replace(pr.Params(), stop_buffer_adr=0.1), adr=None) == 100.0  # ADR unknown: no buffer
+    plain = planned(pr.find_setups(bars(), DAY, "US100", P))[0].plan
+    wide = planned(pr.find_setups(bars(), DAY, "US100", replace(P, stop_buffer_adr=0.1)))
+    assert wide and wide[0].plan.stop < plain.stop and wide[0].plan.entry == plain.entry                      # a long: lower stop

@@ -1,0 +1,41 @@
+# Trade facts — US30 short Mon 23 Nov 2020 10:46 NY
+entry 29461.289 · stop 29582.239 · TPs 29312.099 (50%), 29180.499 (50%) · stop to entry after TP1
+
+**Trader's note:** [engine pd_return trade · window ny_am_kz · POI 1h FVG · bias bear · engine result -1.02 R (stop)]
+
+## Known at the entry (only bars before it)
+- price 29448.0 · ADR 666.25 · risk 0.182 ADR · R:R to TP1 1.23
+- engine read: **ltf_pullback**, side bull → trade side matches the read: **False**
+- clock windows: ny_am_kz, sb_am · news: none near
+- scheduled news during the hold window (known in advance): none
+- market activity, last 60 min: range 0.307 ADR = **normal** (1.08× the normal for this time of day), net move 0.169 ADR
+- current 1d range 26537.76–30091.099: entry at 0.823 from the low = **premium** (right half for a short) · momentum 0.16 ADR/candle
+- liquidity taken in the 6 h before: sellside 1h swing low 29327.27 at 08:42; sellside Asia low 29319.30 at 08:42; buyside 4h swing high 29523.29 at 09:45; buyside 4h equal highs 29527.50 at 09:45
+- stop vs liquidity: nearest pool on the stop side session so far high 29582.24 — stop is SHORT of it by 0.0 ADR (sits at the liquidity)
+- TP1 vs liquidity: pools before TP1: 1h swing low 29312.10; TP1 just past 1h swing low 29312.10
+- pools above: 1h swing high 29921.76 (0.71 ADR); 4h swing high 29957.30 (0.76 ADR); 4h swing high 29981.28 (0.80 ADR); previous week high 30072.80 (0.94 ADR)
+- pools below: 1h swing low 29312.10 (0.20 ADR); 4h swing low 29164.73 (0.43 ADR); 1d swing low 28899.23 (0.82 ADR); 4h swing low 28866.29 (0.87 ADR)
+- arrays near: 1d bearish IFVG 29446.75–29518.27; 1d bearish volume imbalance 29313.78–29423.71; 1h bearish FVG 29480.80–29640.70; 4h bearish FVG 29482.27–29689.29; 4h bullish FVG 28735.10–29323.22
+
+<details><summary>engine read statements</summary>
+
+- Monthly: structure broke up — Aug 2020 closed 28443.23 above the Jun 2020 swing high 27632.23 (BOS). Equal highs 29196.30 (Sep 2020 29196.30, Oct 2020 28957.50) = the buyside that leg is drawn to; still resting.
+- Order blocks: 1M bearish OB Dec 2019 [not one to use: weak body, no aggressive push, no event, failed: closed through its MT, then traded through the body; body 0.33 of its range, 0.90× the mean body; push 0.54×; closed beyond its low]: body 28100.97–28567.70 (MT 28334.33), no event before it — just a candle; premium 0.75 of the look-back 24685.41–29574.49 = the right place. | 1M bullish OB Mar 2020 [not one to use: weak body, no event; holding; body 0.37 of its range, 3.68× the mean body; push 2.81×; closed beyond its high]: body 21829.59–25124.25 (MT 23476.92), no event before it — just a candle; discount 0.47 of the look-back 18165.79–29574.49 = the right place. Draw: the remaining 1M FVG 27094.00–28119.70 (CE 27606.85) — closed through → IFVG, continuation; the current 1M candle (close pending) reached 30091.10 = right through it (wick), now 29191.20. | 1w bearish OB wk 05 Oct 2020 [not one to use: no aggressive push, no event, no HTF level, failed: closed through its MT, then traded through the body; body 0.79 of its range, 1.89× the mean body; push 0.16×; closed beyond its low]: body 27834.79–28635.20 (MT 28235.00), no event before it — just a candle; premium 0.79 of the dealing range 26537.76–28674.50 = the right place. Draw: the remaining 1w FVG 22529.20–23089.12 (CE 22809.16), liquidity at its edge 22785.77 — not reached yet. | 1w bullish OB wk 26 Oct 2020 [tradeable; holding; body 0.77 of its range, 4.25× the mean body; push 4.75×; closed beyond its high; into 1M bullish IFVG 27094.00–28119.70]: body 26545.72–28237.28 (MT 27391.50), after swing low 26537.76 (to 26064.72); discount 0.42 of the dealing range 26064.72–29196.30 = the right place. | 1d bearish OB 16 Nov 2020 [not one to use: no aggressive push; holding; body 0.81 of its range, 1.34× the mean body; push 0.44×; closed beyond its low; into 1M old high 29574.49]: body 29523.21–29971.00 (MT 29747.10), after swing high 29658.30 (to 30072.80); premium 0.92 of the dealing range 26064.72–30072.80 = the right place. Draw: the remaining 1w FVG 28249.79–28418.79 (CE 28334.29) — not reached yet. | 1d bearish OB 19 Nov 2020 [not one to use: weak body, no aggressive push, no event; body traded through (no close past MT); body 0.13 of its range, 0.12× the mean body; push 0.37×; closed beyond its low; into 1w old high 29400.90]: body 29423.71–29462.77 (MT 29443.24), no event before it — just a candle; premium 0.98 of the dealing range 26064.72–29527.50 = the right place. Draw: the remaining 1w FVG 28559.07–29180.50 (CE 28869.78) — reached by the current candle; the current 1w candle (close pending) reached 29164.73 = 3% into it, now 29529.20.
+- Weekly: bull since 10 Aug 2020. Protected higher low 22785.77 (10.0 ADR away) — until a W close breaks it, moves the other way are shifts inside a bull trend.
+- Daily: bull since 09 Nov 2020. Protected higher low 26537.76 (4.4 ADR away) — until a D close breaks it, moves the other way are shifts inside a bull trend.
+- 4H: bear since 19 Nov 06:00. Protected lower high 29957.30 (0.8 ADR away) — until a 4H close breaks it, moves the other way are shifts inside a bear trend.
+- 1H: bull since 23 Nov 09:00. Protected higher low 29164.73 (0.4 ADR away) — until a 1H close breaks it, moves the other way are shifts inside a bull trend.
+- Areas I'm watching: 1w FVG 28559.07–29180.50 (below, 0.4 ADR); 1d IFVG 29446.75–29518.27 (price is inside); 1d VI 29313.78–29423.71 (below, 0.0 ADR).
+- Liquidity — buyside above: 1h swing high 29921.76 (0.7 ADR), 4h swing high 29957.30 (0.8 ADR), 1d previous week high 30072.80 (0.9 ADR); sellside below: 1h swing low 29312.10 (0.2 ADR), 4h swing low 29164.73 (0.4 ADR), 1d swing low 28899.23 (0.8 ADR).
+- Where the play is: Weekly and daily bull, the 4H against them: a lower-TF pullback reaching for lower-TF sellside (1h swing low 29312.10) — the higher TF should be respected at an area (price is inside one now), then bull resumes toward 1d previous week high 30072.80. Price is inside the 1d IFVG — respect there (reaction, closes holding) comes first.
+- Current range (D): the fake-out low 26537.76 (it took sellside 26708.25 first, against us) → the high of the move up since, 30091.10 — the distribution our PD arrays come from (momentum: the move ran 5.3 ADR in 33 D candles). fib of the move: 0 = 30091.10, 0.5 EQ = 28314.43, OTE 0.62–0.79 = 27888.03–27283.96, 1 = 26537.76; price has pulled back to 0.18. Hoping for a discount: buy at an array on the pullback, in the order price meets them: 1h bullish FVG 28735.10–29432.01 (0.19–0.38, shallow — risk: knocked out if price goes deeper); 1h bullish FVG 29386.29–29391.01 (0.20–0.20, shallow — risk: knocked out if price goes deeper); 1h bullish FVG 29354.30–29366.26 (0.20–0.21, shallow — risk: knocked out if price goes deeper); 4h bullish FVG 28735.10–29323.22 (0.22–0.38, shallow — risk: knocked out if price goes deeper); 1h bullish FVG 29278.76–29319.30 (0.22–0.23, shallow — risk: knocked out if price goes deeper); 1h bullish IFVG 29267.29–29319.27 (0.22–0.23, shallow — risk: knocked out if price goes deeper). Shallow or deep is not right or wrong: shallow risks a knock-out, deep risks missing it — momentum decides. Target beyond the move: the liquidity in the play above.
+
+</details>
+
+## After the entry (hindsight — not knowable at the entry)
+- your management: **-1.00 R** — filled Mon 23 Nov 10:46 → stopped Mon 14:53 at 29582.24
+- MFE 0.9 R · MAE -1.0 R before the exit · held overnight: False
+- same trade, flat 16:55 NY that day: **-1.00 R** — stopped Mon 14:53 at 29582.24
+- price went on to 0.9 R in favour (at Mon 11:35) and -6.21 R against within the window
+- **where price actually turned:** 29506.0 at Mon 10:58 — 0.37 R (0.067 ADR) past our entry, inside our stop; from there it ran 1.27 R (0.23 ADR) our way. Known levels at that price: 1d bearish IFVG 29446.75–29518.27; 1h bearish FVG 29480.80–29640.70; 4h bearish FVG 29482.27–29689.29
+- pools price took next: 1h swing high 29921.76 (-3.81 R) Tue 06:08; 4h swing high 29957.30 (-4.1 R) Tue 10:06; 4h swing high 29981.28 (-4.3 R) Tue 10:18; previous week high 30072.80 (-5.06 R) Tue 11:54; 1w swing high 30091.10 (-5.21 R) Tue 11:54

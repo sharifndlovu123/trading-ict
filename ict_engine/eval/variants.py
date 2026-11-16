@@ -271,6 +271,16 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
         area_history="formation"),
+    # the two leads of the 77-trade hold-out review that hold in both periods (2020–21 and 2022–24): mornings only,
+    # and the stop 0.10 ADR beyond the reaction extreme (review log #49)
+    "recipe4: recipe3, mornings only, stop + 0.10 ADR": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation", stop_buffer_adr=0.10),
+    "recipe4: recipe3, mornings only": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz",), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation"),
     "recipe3: recipe2 + fresh areas + area >= 0.1 ADR": replace(
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",

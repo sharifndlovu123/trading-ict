@@ -70,6 +70,7 @@ class Params:
     entry_level: str = "proximal"        # proximal | ce
     stop_mode: str = "reaction"          # reaction | array
     stop_buffer: float = 0.0
+    stop_buffer_adr: float | None = None  # extra buffer beyond the stop anchor, as a share of the 20-day ADR (None = off)
     min_tp1_r: float = 1.0
     tp1_cap_r: float | None = None
     max_cost_r: float | None = 0.1
@@ -90,7 +91,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer", "stop_buffer_adr",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
@@ -174,6 +175,13 @@ def reaction_trigger(array: Event, touch: pd.Timestamp, day_1m: pd.DataFrame, lt
         ext = float(seg.low.min()) if long else float(seg.high.max())
         return f, ext
     return None
+
+
+def buffered_stop(anchor: float, long: bool, p: Params, adr: float | None) -> float:
+    """The stop: ``anchor`` (the reaction extreme, or the array's far edge) plus the absolute ``stop_buffer`` and,
+    when set and the ADR is known, ``stop_buffer_adr`` × ADR beyond it."""
+    buf = p.stop_buffer + (p.stop_buffer_adr * adr if p.stop_buffer_adr is not None and adr else 0.0)
+    return anchor - buf if long else anchor + buf
 
 
 def wide_enough(arrays: list[Event], adr: float | None, min_frac: float | None) -> list[Event]:
@@ -272,7 +280,11 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
     setup.evidence["fvg"] = f
     entry = {"proximal": f.top if long else f.bottom, "ce": f.ce}[p.entry_level]
     anchor = ext if p.stop_mode == "reaction" else (g.bottom if long else g.top)   # array: beyond the whole zone
-    stop = anchor - p.stop_buffer if long else anchor + p.stop_buffer
+    adr_stop = None
+    if p.stop_buffer_adr is not None:
+        from ict_engine.concepts import momentum
+        adr_stop = momentum.adr(day_1m if bars_1m is None else bars_1m, decided)
+    stop = buffered_stop(anchor, long, p, adr_stop)
     if (long and not stop < entry) or (not long and not stop > entry):
         setup.gates.append(Gate("trigger", False, f"stop {stop:.2f} on wrong side of entry {entry:.2f}"))
         return setup
