@@ -15,7 +15,7 @@ The goal every pipeline serves: **≥ 50% win rate (TP1 before the stop) with po
 2. **Score** each model: trades, win % with its Wilson range, mean R, z, R capped at 10 R, and the change vs the previous run. `uv run python -m ict_engine.eval.review <parquet>` gives the diagnosis and gate value.
 3. **Trade-review facts for every trade:** `research/scripts/review_sample.py facts <parquet>` adds the checklist facts (side vs read, range half, sweep before, stop vs pools, pools before TP1, news) to each trade.
 4. **Pattern-finder** on those facts, on both R and win rate (`--target win`): which checklist steps and traits separate wins from losses.
-5. **Written trade-review on a subset** (`review_sample.py sheets … --n 12`: worst, typical losers, winners), using the trade-review skill. This is where the numbers get a reason.
+5. **Written trade-review on at least 30 trades** (Sharif's standing rule, 2026-11-16: "after every major modification or backtest, our trades must be reviewed … no less than 30 trades"). Half winners, half losers, spread over the models and assets in the run: `review_sample.py sheets <parquet>[,<parquet>…] --balanced 15` (15 + 15 = the minimum; more for a big run), then the trade-review skill on every sheet, in batches of 15 a reviewer. A run with fewer than 30 trades gets all of them reviewed. The synthesis names what repeats on the losers, what the winners did differently, and where price really turned; every lead is then checked on all trades (steps 4 and 6) before it is believed. This is where the numbers get a reason, and it is not optional: a backtest or a code change is not finished until this review is written.
 6. **Tweak lab:** `research/scripts/tweak_lab.py` replays every trade under alternative pricing (stops, targets, entry depth) and counts how many trades each tweak fixes or breaks, and on how many datasets. Add the tweaks the written reviews suggest (a level-based stop, a different target level) to its `TWEAKS` table first. A tweak worth pursuing fixes many more trades than it breaks **and** improves mean R on most datasets; a tweak that only trades win rate for payoff (mean R unchanged) is not an improvement.
 7. **Array trigger** (rule R4): run pd-array-audit when the problems cluster on one array kind or TF, or when a reviewed trade can't be explained.
 8. **Findings** → `research/sweeps/<date>-<name>.md` and a row in `research/review-log.md`. Each recommendation goes to pipeline B.
@@ -31,6 +31,7 @@ The goal every pipeline serves: **≥ 50% win rate (TP1 before the stop) with po
 2. **Witnesses:** pattern-finder, pd-array-audit, trade reviews, the review log + FABLES_FINDINGS, Sharif's saves. A disagreement with evidence stops the change and goes to Sharif.
 3. **Test first**, then the change (options keep the current default), then the full suite.
 4. **Re-run the affected backtest** (pipeline A, steps 1–2 at least) and report before → after. A bug fix that moves results is reported with the size of the move.
+   For a major modification (a new option that changes which trades are taken, a model change, a bug fix that moves results): the re-run also gets the 30-trade written review of pipeline A step 5, on the changed trades.
 5. **Decision record** in `research/decisions/`.
 
 ## C. Full review — "evaluate everything again"
