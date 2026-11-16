@@ -243,6 +243,8 @@ def test_merge_finds_the_breaker_behind_a_minor_lower_high():
     assert br[0].origin_ts == t(2) and (br[0].top, br[0].bottom) == (103.0, 96.0) and br[0].ts == t(10)
     for n in range(6, len(df)):                                                        # nothing known early
         assert all(e.ts <= df.index[n - 1] for e in breaker_blocks(df.iloc[:n], "1m", merge=True))
+    body = [e for e in breaker_blocks(df, "1m", merge=True, block="body") if e.direction == "bull"]
+    assert body[0].origin_ts == t(4) and (body[0].top, body[0].bottom) == (102.0, 100.5) and body[0].ts == t(10)
     base = _three_swings(94.0)                                                         # merge only adds
     assert breaker_blocks(base, "1m", merge=True) == breaker_blocks(base, "1m")
 

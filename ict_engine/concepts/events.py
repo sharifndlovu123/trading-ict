@@ -267,14 +267,16 @@ def _merge_swings(sw: list[Event]) -> list[Event]:
 
 
 def breaker_blocks(df: pd.DataFrame, tf: str, strength: int = 1, swing_events: list[Event] | None = None,
-                   merge: bool = False) -> list[Event]:
+                   merge: bool = False, block: str = "run") -> list[Event]:
     """Breakers and mitigation blocks (Bible pp.19-26). Bullish (bearish is the mirror):
         swing low L1 → swing high H → swing low L2 → a candle CLOSES above H.
         L2 < L1 (sell stops taken) → ``breaker``; L2 > L1 (a higher low, no sweep) → ``mitigation``.
         The block = the last up-close candle(s) in the swing high H; known at the closing break (and not before
         L2 is confirmed). Only consecutive swings in strict low/high/low order count (no look-ahead).
         ``merge`` (off by default; Sharif's 12–13 Nov 2026 breakers): also read the swings with same-kind neighbours
-        collapsed to the most extreme, so a minor lower high inside the leg down does not hide the breaker."""
+        collapsed to the most extreme, so a minor lower high inside the leg down does not hide the breaker.
+        ``block``: "run" (default) = the whole run of same-colour candles, wicks included; "body" = the body of the
+        last candle of that run only, as Sharif draws it (2026-11-16)."""
     sw = sorted(swing_events if swing_events is not None else swings(df, tf, strength), key=lambda e: e.origin_ts)
     o, h, l, c, cts = (*(_arr(df, x) for x in ("open", "high", "low", "close")), _close_ts(df).to_numpy())
     pos = {t: i for i, t in enumerate(df.index)}
@@ -314,9 +316,14 @@ def breaker_blocks(df: pd.DataFrame, tf: str, strength: int = 1, swing_events: l
             continue
         a, b = run
         known = max(pd.Timestamp(cts[k]), s3.ts)
-        out.append(Event(kind, tf, "bull" if bull else "bear", known, df.index[a],
-                         float(h[a:b + 1].max()), float(l[a:b + 1].min()),
-                         {"swept": kind == "breaker", "broke": float(level)}))
+        if block == "body":
+            a, top, bottom = b, float(max(o[b], c[b])), float(min(o[b], c[b]))
+        else:
+            top, bottom = float(h[a:b + 1].max()), float(l[a:b + 1].min())
+        ev = Event(kind, tf, "bull" if bull else "bear", known, df.index[a], top, bottom,
+                   {"swept": kind == "breaker", "broke": float(level)})
+        if ev not in out:                            # the strict and the merged reading can give the same block
+            out.append(ev)
     return sorted(out, key=lambda e: e.ts)
 
 
