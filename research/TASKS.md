@@ -6,16 +6,18 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 
 ## A. Activity gate (hunt when price is moving)
 - ☑ A1 Build `min_activity` as an option, off by default (tests first, suite 506 passed)
-- ◐ A2 In-sample variant run: 2022 model / MMxM / silver bullet, three indices, 2022–24
-- ☐ A3 Append the in-sample table to `research/preregistered-2021-activity-gate.md`; decide which models qualify
-- ☐ A4 One run on 2021 for the qualifying models (approved by Sharif), append the result, log it
+- ☑ A2 In-sample variant run (decision-time gate): weak — 2022 model −0.066 → −0.059 R (2 of 3 indices, removed trades −0.16 R, z −0.75); MMxM worse; silver bullet unchanged
+- ☑ A3 Decision: the decision-time gate is NOT taken to 2021 (too weak; the clean year is kept)
+- ☑ A3b Fill-time mode built (`min_activity_at="fill"`: the order is pulled when the market is quiet at the fill; suite 565 passed)
+- ◐ A3c In-sample run of the fill-time gate, 2022 model, three indices
+- ☐ A4 If A3c holds (pooled and ≥ 2 of 3 indices, removed trades clearly worse): one run on 2021 (approved by Sharif); else stop here
 - ☐ A5 Pass → new default through the change gate; fail / not confirmed → logged, option stays off
 
 ## B. 30-trade review (15 winners / 15 losers), price focus
 - ☑ B1 Fact sheets with the turn point (where price really turned + known levels there)
-- ◐ B2 Written reviews, two reviewers × 15 trades
+- ☑ B2 Written reviews, two reviewers × 15 trades (`research/trade-reviews/2026-11-16-30-trades/`)
 - ☐ B3 Synthesis: pricing mistakes that repeat, levels we should have priced
-- ☐ B4 Add the level-based tweaks the reviews suggest to the tweak lab; run on all trades and datasets
+- ◐ B4 Level-based tweaks from the reviews (`tweak_levels.py`): stop beyond array / pool, TP1 front-run, entry at the HTF array, skip gates — running on all 4,656 trades
 - ☐ B5 Tweaks that fix many more trades than they break and lift R on most datasets → change gate (option → backtest)
 
 ## C. Microstructure (the layer we had not used)
