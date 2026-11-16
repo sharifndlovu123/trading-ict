@@ -37,7 +37,7 @@ Status: ☐ open · ◐ running · ☑ done · ✗ dropped
 ## E. Wrap-up
 - ☑ E1 Summary: `research/SESSION-2026-11-16.md`
 - ☑ E2 Suite 570 passed after the last engine change; committed; review log #35–44; memory updated
-- ☐ E3 Power the machine off
+- ☑ E3 Machine powered off (scheduled after the final commit)
 
 ## Done earlier this session
 - ☑ Engine-plan confirmation entries, zone stop, results page
