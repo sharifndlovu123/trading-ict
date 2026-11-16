@@ -100,7 +100,7 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☐ L7 The engine's `order_blocks` does not follow his rule (`engulfed_blocks` lives in the live script only); move it into the engine behind an option once K1–K3 are settled
 
 ### M. Housekeeping
-- ☑ M1 Hunting schedule set for 2026-11-17 (London prep 08:05 SAST, every 5 minutes 09:00–12:00; New York prep 14:45 SAST; live every minute 08:20–09:00, 09:20–10:00, 10:20–11:00 and 13:20–14:00 New York, every 5 minutes between). Session-only: re-create it if the Claude session was closed; expires after 7 days
+- ☑ M1 Hunting schedule set for 2026-11-17 (London prep 08:05 SAST, every 5 minutes 09:00–12:00; New York prep 14:45 SAST; live every minute 08:20–09:00, 09:20–10:00, 10:20–11:00 and 13:20–14:00 New York, every 5 minutes everywhere else from 02:00 to 14:00 New York). Session-only: re-create it if the Claude session was closed; expires after 7 days
 - ☐ M2 Push (the remote is behind)
 - ☐ M3 Forward test: first look when candidate 2 has 60 trades or on 2027-11-16 (`research/forward-recipe-v1.md`)
 
