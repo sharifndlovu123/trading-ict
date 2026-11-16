@@ -24,5 +24,25 @@ Every period of US100 / US500 / US30 has been used to look at the recipe (`resea
 - Whatever the outcome, the forward test's rules do not change.
 - After the run: at least 30 trades reviewed in writing (15 winners, 15 losers).
 
-## Result
-_(not run)_
+## Result — run once, 2026-11-16 (`reports/recipe-new-indices-2020-01-02-2026-11-13.parquet`, trades with conditions in `reports/recipe-new-indices-trades.parquet`)
+Data check first: full mornings on all three (median 300 of 300 one-minute bars 07:00–12:00), no bad candles, thin days comparable to US500.
+
+| | Trades | Win % [95%] | Mean R | z |
+|---|---|---|---|---|
+| **US2000, every trade (candidate 1)** | 83 | 36.1 [27–47] | +0.063 | +0.45 |
+| **US2000, high-volatility or news day (candidate 2)** | 34 | 38.2 [24–55] | +0.041 | +0.19 |
+| US2000, other days | 49 | 34.7 [23–49] | +0.079 | +0.41 |
+| DE40, every trade | 61 | 34.4 [24–47] | +0.106 | +0.74 |
+| DE40, candidate 2 / other days | 29 / 32 | 37.9 / 31.2 | +0.268 / −0.040 | |
+| UK100, every trade | 49 | 26.5 [16–40] | −0.204 | −1.48 |
+| UK100, candidate 2 / other days | 25 / 24 | 20.0 / 33.3 | −0.292 / −0.111 | |
+| Three pooled | 193 | 33.2 [27–40] | +0.009 | +0.11 (day-clustered 0.11) |
+| Three pooled, candidate 2 / other days | 88 / 105 | 33.0 / 33.3 | +0.021 / −0.001 | |
+
+**Outcomes by the rules written above**
+- **Candidate 1: "supports"** by the letter (83 trades, mean R above zero), and it is a weak one: +0.06 R with z 0.45 is indistinguishable from zero.
+- **Candidate 2: "does not support".** On the Russell the volatile-or-news days did no better than the rest (+0.041 against +0.079). High-volatility days alone lost (−0.30 R, 12 trades); news days alone +0.16 (25).
+
+Beside them: US2000 by year 2020 −0.29, 2021 +0.18, 2022 +0.08, 2023 +0.77, 2024 +0.04, 2025 −0.20, 2026 −0.01 (4 of 7 positive); shorts +0.30 (40), longs −0.16 (43); Mondays −0.11 (18) against +0.11 (65). DE40 Mondays −0.32 (15) against +0.25 (46). The DAX leans the way of the conditions lead (+0.27 against −0.04), the FTSE the other way.
+
+**Reading:** on instruments it had never seen, the recipe is about break-even (the pooled 193 trades: +0.009 R, 33% wins) and the "volatile or news day" split does not repeat on the primary. The split found on the three US indices is weaker evidence than it looked; the forward test stays as written and decides it. "Not Monday" points the same way on the Russell and the DAX (not a registered outcome).
