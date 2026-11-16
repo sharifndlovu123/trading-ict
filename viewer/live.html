@@ -407,7 +407,7 @@ async function poll(first) {
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
 async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false);
-  if (st.doc) { chart.applyOptions({ rightPriceScale: { autoScale: true } }); render(true); }      // back to the latest candles, price axis re-centred $("refresh").textContent = "↻ refresh"; }
+  if (st.doc) { chart.applyOptions({ rightPriceScale: { autoScale: true } }); render(true); } $("refresh").textContent = "↻ refresh"; }
 $("areason").onchange = () => drawChart(false); $("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
 (async () => {
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
