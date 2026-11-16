@@ -145,8 +145,8 @@ const layer = marksLayer(chart, series, $("chart"), {
     ...(!$("areason").checked ? [] : (st.doc.assets[st.asset].areas || []).map(a => ({ t0: a.t0, top: a.top, bottom: a.bottom,
       color: css(a.side === "buy" ? "--pos" : "--neg"), alpha: weak(a) ? .04 : a.inside ? .16 : .09, label: `1h ${a.kind} · ${a.side}${weak(a) ? " · wick" : ""}` }))),
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
-    ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).map(m => ({ t0: m.t0, top: m.top, bottom: m.bottom, price: m.price,
-      color: css(m.side === "buyside" ? "--bs" : m.side === "sellside" ? "--ss" : "--area"), alpha: .14, label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
+    ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).map(m => ({ ...m, bold: true,
+      color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
 const weak = a => a.kind === "breaker" && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
 const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
 function toggleFull() {

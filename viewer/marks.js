@@ -101,6 +101,27 @@ function marksLayer(chart, series, el, o) {
     g.font = "10px ui-monospace, Menlo, monospace"; g.textBaseline = "middle";
     for (const u of (o.under ? o.under() : [])) {       // read-only zones under my marks (the page's own areas): no handles, never picked up
       const x0 = u.t0 == null ? 0 : xOf(u.t0);
+      if (u.bold) {                                     // someone else's marks, drawn as strongly as my own: solid, filled, a readable tag
+        const x1 = u.t1 == null ? W : xOf(u.t1); if (x0 == null || x1 == null) continue;
+        g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 2; g.setLineDash([]);
+        let tx = Math.max(x0, 0) + 4, ty;
+        if (u.p0 != null) {
+          const y0 = yOf(u.p0), y1 = yOf(u.p1); if (y0 == null || y1 == null) continue;
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); arrowHead(g, x0, y0, x1, y1);
+          tx = (x0 + x1) / 2 + 6; ty = (y0 + y1) / 2;
+        } else if (u.price != null) {
+          const y = yOf(u.price); if (y == null) continue;
+          g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); ty = y - 9;
+        } else {
+          const a = yOf(u.top), b = yOf(u.bottom); if (a == null || b == null) continue;
+          g.globalAlpha = .22; g.fillRect(x0, a, x1 - x0, b - a); g.globalAlpha = 1; g.strokeRect(x0, a, x1 - x0, b - a);
+          ty = Math.min(a, b) - 9;
+        }
+        g.font = "bold 12px ui-monospace, Menlo, monospace";
+        const w = g.measureText(u.label).width;
+        g.fillStyle = "rgba(0,0,0,.72)"; g.fillRect(tx - 3, ty - 8, w + 6, 16); g.fillStyle = u.color; g.fillText(u.label, tx, ty);
+        g.font = "10px ui-monospace, Menlo, monospace"; continue;
+      }
       if (u.price != null) {                            // a level: one line from where it formed, short label at its start
         const y = yOf(u.price); if (x0 == null || y == null) continue;
         g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 1.5; g.setLineDash([6, 3]); g.globalAlpha = .9;
