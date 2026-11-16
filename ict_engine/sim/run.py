@@ -75,6 +75,14 @@ def run_day(bars_1m: pd.DataFrame, day: date, asset: str, params=model_2022.Para
             s.gates.append(Gate("news", False, why))
             s.plan = None
             continue
+        min_act = getattr(params, "min_activity", None)
+        if min_act is not None:
+            from ict_engine.concepts import activity
+            ok, why = activity.gate(bars_1m, s.decided_at, min_act)
+            s.gates.append(Gate("activity", ok, why))
+            if not ok:
+                s.plan = None
+                continue
         gate = getattr(params, "entry_gate", None)
         if gate:
             from ict_engine.models import entry_quality

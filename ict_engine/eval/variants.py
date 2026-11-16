@@ -42,6 +42,8 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
     # model with risk >= 0.05 ADR was 41% / +0.20 R in-sample on US100; premarket 22% / -0.40 R
     "cost <= 0.05R": replace(BASE, max_cost_r=0.05),
     "no premarket": replace(BASE, windows=NO_PREMARKET),
+    # new-dataset sweep 2026-11-16 (review log #40): quiet-market entries lose on 6 of 7 datasets
+    "activity >= 0.6": replace(BASE, min_activity=0.6),
     "cost <= 0.05R, no premarket": replace(BASE, max_cost_r=0.05, windows=NO_PREMARKET),
     "no London": replace(BASE, windows=NO_LONDON),
     "bias prev_day (old default)": replace(BASE, bias_rule="prev_day"),
@@ -97,6 +99,7 @@ VARIANTS: dict[str, Params] = {             # baseline = current defaults (TP1 c
 MB = model_mmxm.Params()
 MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
     "baseline": MB,
+    "activity >= 0.6": replace(MB, min_activity=0.6),
     "re-accumulation zone 1": replace(MB, entry="reacc1"),
     "re-accumulation zone 2": replace(MB, entry="reacc2"),
     "frame 1h": replace(MB, frame_tf="1h", oc_bars=3),
@@ -153,6 +156,7 @@ MMXM_VARIANTS: dict[str, model_mmxm.Params] = {
 SB = model_sb.Params()
 SB_VARIANTS: dict[str, model_sb.Params] = {
     "baseline": SB,
+    "activity >= 0.6": replace(SB, min_activity=0.6),
     "+ 15:00-16:00 window": replace(SB, late_window=True),
     "FVG must form in the hour": replace(SB, strict_fvg_in_hour=True),
     "entry at CE": replace(SB, entry_level="ce"),

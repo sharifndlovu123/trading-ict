@@ -79,6 +79,8 @@ class Params:
     # scheduled news (ict_engine/news): (minutes before, after) a high-impact release with no new
     # entries; FOMC day rule trade | after_statement | skip. Off until a sweep supports them.
     news_blackout: tuple[int, int] | None = None
+    # no new setup when the last hour's range is under this × normal for the time of day (concepts.activity); None = off
+    min_activity: float | None = None
     target_mode: str = "default"         # targets.MODES (liquidity-targets pre-registration)
     entry_gate: str | None = None        # entry_quality.GATES (entry-quality pre-registration)
     range_entry: str | None = None       # range_entry.MODES (range-in-play pre-registration)
@@ -133,6 +135,8 @@ class Params:
             extra.append(f"newsblackout{self.news_blackout[0]}-{self.news_blackout[1]}")
         if self.fomc_day != "trade":
             extra.append(f"fomc_{self.fomc_day}")
+        if self.min_activity is not None:
+            extra.append(f"activity>={self.min_activity:g}")
         if (self.partial_frac, self.runner_stop) != (0.5, "entry"):
             extra.append(f"partial{self.partial_frac:g}_{self.runner_stop}")
         if self.entry_mode != "limit":
