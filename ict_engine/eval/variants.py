@@ -266,6 +266,18 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
     "recipe2: full + with 1h&4h + within 0.25 ADR + before 14:00": replace(
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz", "ny_pm_kz"), structure_gate="with", max_entry_dist_adr=0.25, last_entry="14:00"),
+    # recipe2 with the area read from its formation (a spent FVG is not a fresh area; trade review of recipe2)
+    "recipe3: recipe2 + fresh areas only": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation"),
+    "recipe3: recipe2 + fresh areas + area >= 0.1 ADR": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00",
+        area_history="formation", min_area_adr=0.1),
+    "recipe3: full recipe + fresh areas only (no other gates)": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), area_history="formation"),
     "recipe2: full + not against 1h&4h": replace(
         PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
         windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against"),

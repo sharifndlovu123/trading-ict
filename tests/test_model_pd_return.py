@@ -226,3 +226,41 @@ def test_return_level_ce_waits_for_the_50pct_of_the_array():
     assert "return_level=ce" in replace(pr.Params(), return_level="ce").variant
     with pytest.raises(ValueError):
         pr.returns([g], day, ts("00:00"), level="nope")
+
+
+def test_area_history_formation_drops_an_area_spent_on_an_earlier_day():
+    """Trade review 2026-11-16: the model read an area's history from 00:00 of the trade day only, so an FVG filled
+    and closed through the day before came back as a fresh area. ``area_history="formation"`` reads it from the
+    area's formation; the default ("day") is unchanged."""
+    from ict_engine.concepts.events import Event
+    y = lambda hm: pd.Timestamp(f"2024-01-08 {hm}", tz=NY)
+    g = Event("fvg", "1h", "bull", y("09:59"), y("09:00"), 104.0, 102.0, {})
+    spent = path_bars([("2024-01-08 10:00", 106.0), ("2024-01-08 12:00", 100.0), ("2024-01-08 16:00", 106.0),
+                       ("2024-01-09 08:00", 106.0), ("2024-01-09 09:00", 103.5), ("2024-01-09 10:00", 107.0)],
+                      "2024-01-08 10:00", "2024-01-09 10:30")
+    today = spent[spent.index >= ts("00:00")]
+    assert len(pr.returns([g], today, ts("00:00"))) == 1                       # the old reading: looks fresh
+    assert pr.returns([g], today, ts("00:00"), hist=spent) == []               # filled and closed through yesterday
+    # touched (near edge only) yesterday, its 50% first reached today: a return for level="ce", not for "proximal"
+    tapped = path_bars([("2024-01-08 10:00", 106.0), ("2024-01-08 12:00", 103.6), ("2024-01-08 16:00", 106.0),
+                        ("2024-01-09 08:00", 106.0), ("2024-01-09 09:00", 102.6), ("2024-01-09 10:00", 107.0)],
+                       "2024-01-08 10:00", "2024-01-09 10:30")
+    t2 = tapped[tapped.index >= ts("00:00")]
+    assert pr.returns([g], t2, ts("00:00"), hist=tapped) == []
+    ce = pr.returns([g], t2, ts("00:00"), level="ce", hist=tapped)
+    assert len(ce) == 1 and ce[0][1] >= ts("08:00")
+    assert pr.Params().area_history == "day" and "area_history" not in pr.Params().variant
+    assert "area_history=formation" in replace(pr.Params(), area_history="formation").variant
+
+
+def test_min_area_adr_drops_sliver_areas():
+    """Trade review 2026-11-16: an "area" 0.18 points wide produced a +4.4 R winner. A minimum width in ADR (the
+    liquidity map's convention from Sharif's zones: under 0.1 ADR is a sliver) is an option, off by default."""
+    from ict_engine.concepts.events import Event
+    t = pd.Timestamp("2024-01-08 09:59", tz=NY)
+    wide = Event("fvg", "1h", "bull", t, t, 104.0, 102.0, {})
+    thin = Event("fvg", "1h", "bull", t, t, 102.18, 102.0, {})
+    assert pr.wide_enough([wide, thin], adr=10.0, min_frac=0.1) == [wide]
+    assert pr.wide_enough([wide, thin], adr=10.0, min_frac=None) == [wide, thin]
+    assert pr.wide_enough([wide, thin], adr=None, min_frac=0.1) == [wide, thin]      # ADR unknown: nothing is dropped
+    assert pr.Params().min_area_adr is None and "min_area_adr=0.1" in replace(pr.Params(), min_area_adr=0.1).variant

@@ -54,6 +54,11 @@ class Params:
     ob_measure: str = "range"            # OB zone + 50% on the full range | "body" (ICT Month 04: open to close, no wicks)
     lookback_days: int = 5
     return_level: str = "proximal"       # the return = the first trade to the array's near edge | "ce" (its 50%)
+    # "day": the area's touches and failure are read from 00:00 of the trade day (the first version: an area filled
+    # on an earlier day comes back as fresh). "formation": read from the area's formation, so only an area that is
+    # still valid and reached for the first time today is traded (trade review 2026-11-16).
+    area_history: str = "day"
+    min_area_adr: float | None = None    # skip areas narrower than this share of the 20-day ADR (0.1 = the map's sliver rule)
     # recipe gates from Sharif's notes (research/entry-trigger-from-saves-2026-11-16.md), all off by default:
     structure_gate: str | None = None    # "not_against": skip when 1h AND 4h structure oppose the side | "with": both must agree
     structure_tfs: tuple[str, ...] = ("1h", "4h")
@@ -85,7 +90,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "area_history", "min_area_adr", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
@@ -130,15 +135,18 @@ def fail_level(array: Event) -> float:
 
 
 def returns(arrays: list[Event], day_1m: pd.DataFrame, window_start: pd.Timestamp,
-            level: str = "proximal") -> list[tuple[Event, pd.Timestamp]]:
+            level: str = "proximal", hist: pd.DataFrame | None = None) -> list[tuple[Event, pd.Timestamp]]:
     """(array, first touch) for every array that is still valid when price first trades back into it,
     with the touch on or after ``window_start`` (the day's 00:00; time windows are gated later).
-    ``level`` "proximal" = the touch of the near edge; "ce" = the first trade to the array's 50%."""
+    ``level`` "proximal" = the touch of the near edge; "ce" = the first trade to the array's 50%.
+    ``hist`` (1m bars from before the day) = read each array's life from its formation instead of from the day's
+    bars: an array touched (or, for "ce", taken to its 50%) or failed on an earlier day is not a return today."""
     if level not in ("proximal", "ce"):
         raise ValueError(f"return level must be 'proximal' or 'ce', not {level!r}")
     out = []
     for g in arrays:
-        st = gap_lifecycle(g, day_1m[day_1m.index >= g.ts])
+        src = day_1m if hist is None else hist
+        st = gap_lifecycle(g, src[src.index >= g.ts])
         t = st.touched if level == "proximal" else st.ce
         if t is None or t < window_start or not st.valid_at(t):
             continue
@@ -166,6 +174,13 @@ def reaction_trigger(array: Event, touch: pd.Timestamp, day_1m: pd.DataFrame, lt
         ext = float(seg.low.min()) if long else float(seg.high.max())
         return f, ext
     return None
+
+
+def wide_enough(arrays: list[Event], adr: float | None, min_frac: float | None) -> list[Event]:
+    """Arrays at least ``min_frac`` × ADR wide (all of them when the rule is off or the ADR is unknown)."""
+    if min_frac is None or not adr:
+        return list(arrays)
+    return [g for g in arrays if float(g.top - g.bottom) >= min_frac * adr]
 
 
 def recipe_gates(p: Params, *, long: bool, decided: pd.Timestamp, entry: float, area: tuple[float, float],
@@ -208,12 +223,18 @@ def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params
     hist = bars_1m[(bars_1m.index >= d0 - timedelta(days=p.lookback_days + 2 + extra)) & (bars_1m.index < d1)]
     arrays = [g for g in htf_arrays(hist, p.htf_tfs, p.arrays, p.ob_confirm, p.ob_measure, p.ifvg_close)
               if g.ts >= d0 - timedelta(days=p.lookback_days)]
+    if p.min_area_adr is not None:
+        from ict_engine.concepts import momentum
+        arrays = wide_enough(arrays, momentum.adr(bars_1m, d0), p.min_area_adr)
     ref = float(day_1m.close.iloc[0])
     ltf = fvgs(resample(day_1m, p.trigger_tf), p.trigger_tf, min_size=ref * p.min_trigger_gap_bp / 1e4)
     swing_pts = swings(resample(day_1m, "5m"), "5m") + swings(resample(day_1m, "15m"), "15m")
     out, seen = [], set()
     # bigger timeframes first, so one reaction is credited to the largest array it came from
-    for g, touch in sorted(returns(arrays, day_1m, d0, p.return_level), key=lambda x: (x[1], -TF_RANK.get(x[0].tf, 0))):
+    if p.area_history not in ("day", "formation"):
+        raise ValueError(f"area_history must be 'day' or 'formation', not {p.area_history!r}")
+    life = hist[hist.index < d1] if p.area_history == "formation" else None
+    for g, touch in sorted(returns(arrays, day_1m, d0, p.return_level, hist=life), key=lambda x: (x[1], -TF_RANK.get(x[0].tf, 0))):
         s = _evaluate(g, touch, ctx, day, asset, p, day_1m, ltf, swing_pts, bars_1m=bars_1m)
         key = (s.side, s.decided_at)
         if key in seen:
