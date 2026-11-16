@@ -83,7 +83,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <button id="refresh" title="reload the chart with the newest candles (Alt+R)">↻ refresh</button>
           <button id="resetmarks" title="remove everything I drew or wrote on this index's chart (Claude's marks stay)">Reset my marks</button>
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
-          <label title="the 1h entry areas near price: breaker, order block, FVG, OTE"><input type="checkbox" id="areason"> entry areas</label>
+          <label title="the 1h entry areas near price: breaker, order block, FVG, OTE"><input type="checkbox" id="areason" autocomplete="off"> entry areas</label>
           <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked> Claude's marks</label>
           <span id="marksn" class="dim"></span>
           <span id="fsinfo" class="dim num"></span>
@@ -307,7 +307,7 @@ function renderAreas() {
   $("areas").innerHTML = `<h2>Entry areas near price · ${esc(st.asset)}</h2>
     <div class="dim">Places to get in once the idea and the target are there; an area alone is not a trade. Buy areas sit under price, sell areas over it. Breaker = the body of the last candle before the leg. Order block = the last opposite candle, engulfed by the very next candle.</div>` +
     (L.length ? `<table style="width:100%;margin-top:6px"><tr class="dim"><td>area</td><td>prices</td><td>from</td><td>where</td><td>quality</td></tr>${L.map(row).join("")}</table>`
-              : `<div class="dim" style="margin-top:6px">none within one average day's range</div>`);
+              : `<div class="dim" style="margin-top:6px">${st.doc.hunting === false ? "Not hunting now: the chart stays clean. Areas are pointed out from 01:00 New York (an hour before London) to the New York close." : "none within one average day's range"}</div>`);
 }
 function renderClaude() {                                   // Claude's read in words: beside the chart, not on it
   const ov = st.overlay && st.overlay[st.asset], L = ov && ov.read || [];

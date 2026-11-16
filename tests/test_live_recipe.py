@@ -103,3 +103,10 @@ def test_higher_timeframe_candles_follow_the_futures_clock():
     assert len(w) == 1 and pd.Timestamp(w[0]["time"], unit="s").strftime("%a %d") == "Mon 08" and w[0]["close"] == len(idx) - 1
     m = lr.htf_candles(h1, "1M")
     assert len(m) == 1 and pd.Timestamp(m[0]["time"], unit="s").strftime("%Y-%m-%d") == "2024-01-01" and m[0]["open"] == 0
+
+
+def test_hunting_window_is_an_hour_before_london_to_the_new_york_close_on_weekdays():
+    at = lambda s: lr.hunting(pd.Timestamp(s, tz=NY))  # noqa: E731
+    assert at("2026-11-17 01:00") and at("2026-11-17 09:45") and at("2026-11-17 15:59")
+    assert not at("2026-11-17 00:59") and not at("2026-11-16 16:19") and not at("2026-11-16 20:30")   # Asia: never
+    assert not at("2026-11-15 10:00")                                                                 # Sunday

@@ -353,9 +353,15 @@ def entry_areas(bars: pd.DataFrame, now: pd.Timestamp, adr: float, breaks: list[
     return sorted(keep, key=lambda a: -a["top"])
 
 
+def hunting(now: pd.Timestamp) -> bool:
+    """Sharif 2026-11-16: areas are only pointed out from an hour before London (01:00 New York) through the New York
+    session (to 16:00), Monday to Friday. Outside that the chart stays clean (never the Asian session)."""
+    return now.weekday() < 5 and time(1, 0) <= now.time() < time(16, 0)
+
+
 def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, mode: str) -> dict:
     from ict_engine.concepts.context import build_context
-    doc = {"day": str(day), "now": now.strftime("%a %Y-%m-%d %H:%M"), "mode": mode, "variant": VARIANT, "assets": {}}
+    doc = {"day": str(day), "now": now.strftime("%a %Y-%m-%d %H:%M"), "mode": mode, "variant": VARIANT, "hunting": hunting(now), "assets": {}}
     for a, full in bars_by_asset.items():
         bars = full[full.index <= now]
         item = {"last_bar": bars.index[-1].strftime("%a %H:%M"), "last": round(float(bars.close.iloc[-1]), 2)}
@@ -370,7 +376,7 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
                 item["adr"] = round(adr, 1)
                 item["strength"] = strength(bars, now, adr)
                 item["gap"] = gap_state(bars, now, adr)
-                item["areas"] = entry_areas(bars, now, adr, item["breaks"])
+                item["areas"] = entry_areas(bars, now, adr, item["breaks"]) if doc["hunting"] else []
                 for b in item["breaks"]:
                     rng = abs(b["far"] - b["near"])
                     b["range_adr"] = round(rng / adr, 2)
