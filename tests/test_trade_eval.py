@@ -175,3 +175,17 @@ def test_order_flow_imbalance_is_aligned_with_the_trade_and_uses_only_the_past()
     short = order_flow("US100", at, False, flow=f)
     assert short["imb_5m"] == 0.5 and not short["with_trade_60m"]
     assert order_flow("XAUUSD", at, True) is None                                      # no futures flow on disk
+
+
+def test_turn_uses_only_the_trades_own_day():
+    """Trade reviews 2026-11-16: the 2-day turn line picked a later swing on about a third of the sheets. The turn
+    is now read from the fill's trading day only (to 16:55 NY)."""
+    from trade_eval import flat_time, turn_point
+    day1 = bars([(100, 101, 99, 100), (100, 103, 100, 102), (102, 102, 96, 97)], "2024-01-09 10:00")     # short: high 103
+    day2 = bars([(97, 120, 97, 119), (119, 119, 80, 81)], "2024-01-10 10:00")                             # next day: 120, then 80
+    both = pd.concat([day1, day2])
+    fill = day1.index[0]
+    own = turn_point(both[both.index < flat_time(fill)], False, 100, 105, fill, [], adr=10)
+    assert own["price"] == 103 and not own["beyond_stop"]
+    wide = turn_point(both, False, 100, 105, fill, [], adr=10)
+    assert wide["price"] == 120                                                                           # the old 2-day reading

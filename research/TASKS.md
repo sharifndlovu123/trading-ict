@@ -75,4 +75,4 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☐ J1 TP1 picker: nearer qualifying pools first; not behind an opposing array; not at a pool already taken
 - ☐ J2 Resting limits cancelled after a run of ≥ 1 R without a fill
 - ☐ J3 Minimum width for areas and trigger gaps (in ticks / ADR)
-- ☐ J4 Fact sheet: same-swing turn line; print the POI, the touch time and the trigger gap
+- ☑ J4 Fact sheet: the turn line uses the trade's own day (to 16:55 NY); the note prints the area, the decision time and the trigger gap

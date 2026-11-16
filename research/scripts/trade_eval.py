@@ -379,7 +379,9 @@ def evaluate(asset: str, side: str, entry_time: pd.Timestamp, entry: float, stop
                                             filled_at=sim["filled"])
         out["after"]["reach"] = reach(path, long, entry, risk, sim["filled"])
         out["after"]["pools_taken"] = taken(items, path, sim["filled"], entry, risk, long)[:10]
-        out["after"]["turn"] = turn_point(path, long, entry, stop, sim["filled"], items + intraday_pools(bars, entry_time), adr)
+        # the turn of the trade's own swing: only the fill's trading day (to 16:55 NY). A later day is another swing.
+        same_day = path[path.index < flat_time(sim["filled"])]
+        out["after"]["turn"] = turn_point(same_day, long, entry, stop, sim["filled"], items + intraday_pools(bars, entry_time), adr)
         if sim["why"] == "stop":
             later = path[path.index > sim["exit"]]
             t1 = tps[0][0]
@@ -442,7 +444,7 @@ def markdown(f: dict, note: str = "") -> str:
         L.append(f"- price went on to {rc['best_r']} R in favour (at {rc['best_at']:%a %H:%M}) and {rc['worst_r']} R against within the window")
         tn = a.get("turn")
         if tn:
-            L.append(f"- **where price actually turned:** {tn['price']} at {tn['at']:%a %H:%M} — {tn['depth_r']} R ({tn['depth_adr']} ADR) past our entry"
+            L.append(f"- **where price turned that day (the trade's own swing, to 16:55 NY):** {tn['price']} at {tn['at']:%a %H:%M} — {tn['depth_r']} R ({tn['depth_adr']} ADR) past our entry"
                      + (f", {tn['beyond_stop_adr']} ADR beyond our stop" if tn["beyond_stop"] else ", inside our stop")
                      + f"; from there it ran {tn['run_after_r']} R ({tn['run_after_adr']} ADR) our way. Known levels at that price: "
                      + ("; ".join(tn["levels"]) if tn["levels"] else "**none on the map**"))

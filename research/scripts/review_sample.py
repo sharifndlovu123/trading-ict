@@ -128,7 +128,13 @@ def sheets(path: str, n: int, out: Path, balanced: int = 0):
     out.mkdir(parents=True, exist_ok=True)
     for r in d.itertuples():
         f = te.evaluate(r.asset, r.side, r.filled_at, float(r.entry), float(r.stop), _tps(r), be=True, bars=bars[r.asset])
-        note = f"[engine {r.model} trade · window {r.window} · POI {r.poi} · bias {r.bias} · engine result {r.r:+.2f} R ({r.exit})]"
+        area = getattr(r, "liquidity", None)
+        gap = getattr(r, "fvg_size", None)
+        dec = getattr(r, "decided_at", None)
+        note = (f"[engine {r.model} trade · window {r.window} · POI {r.poi} · bias {r.bias} · engine result {r.r:+.2f} R ({r.exit})"
+                + (f" · area / liquidity: {area}" if isinstance(area, str) and area else "")
+                + (f" · decided {pd.Timestamp(dec).tz_convert(te.NY):%H:%M}" if dec is not None and pd.notna(dec) else "")
+                + (f" · trigger gap {float(gap):.2f} points" if gap is not None and pd.notna(gap) else "") + "]")
         name = f"{r.filled_at:%Y-%m-%d-%H%M}-{r.asset}-{r.side}-{r.model}.md"
         (out / name).write_text(te.markdown(f, note))
         print(name, f"{r.r:+.2f} R")
