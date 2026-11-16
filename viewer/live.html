@@ -80,6 +80,8 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <button id="full" title="full screen (F)">⛶ full screen</button>
           <span class="tabs" id="fstabs"></span>
           <button id="notetool" title="write on the chart (N): click where the note belongs">✎ write on chart</button>
+          <button id="refresh" title="reload the chart with the newest candles (Alt+R)">↻ refresh</button>
+          <button id="resetmarks" title="remove everything I drew or wrote on this index's chart (Claude's marks stay)">Reset my marks</button>
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
           <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked> Claude's marks</label>
           <span id="marksn" class="dim"></span>
@@ -108,8 +110,17 @@ const mkKey = () => "live-marks-" + (st.doc ? st.doc.day : "");
 const myMarks = () => (st.marks[st.asset] ||= []);
 function loadMarks() { try { st.marks = JSON.parse(localStorage.getItem(mkKey()) || "{}"); } catch (e) { st.marks = {}; }
   try { st.notes = JSON.parse(localStorage.getItem(mkKey() + "-notes") || "{}"); } catch (e) { st.notes = {}; }
-  for (const a of Object.values(st.answers)) if (a.notes && a.asset && a.day === st.doc.day && !(st.notes[a.asset] || []).length) st.notes[a.asset] = a.notes;
-  for (const a of Object.values(st.answers)) if (a.marks && a.asset && a.day === st.doc.day && !(st.marks[a.asset] || []).length) st.marks[a.asset] = a.marks; }
+  let wiped = {}; try { wiped = JSON.parse(localStorage.getItem(mkKey() + "-reset") || "{}"); } catch (e) {}   // a reset chart stays empty on reload
+  for (const a of Object.values(st.answers)) if (a.notes && a.asset && !wiped[a.asset] && a.day === st.doc.day && !(st.notes[a.asset] || []).length) st.notes[a.asset] = a.notes;
+  for (const a of Object.values(st.answers)) if (a.marks && a.asset && !wiped[a.asset] && a.day === st.doc.day && !(st.marks[a.asset] || []).length) st.marks[a.asset] = a.marks; }
+// reset: my own marks and notes for this index go (earlier saves stay on file); Claude's overlay is not touched
+function resetMarks() {
+  const n = myMarks().length + myNotes().length;
+  if (!n || !confirm(`Remove your ${myMarks().length} marks and ${myNotes().length} notes from the ${st.asset} chart? Claude's marks stay, and what you already saved stays on file.`)) return;
+  st.marks[st.asset] = []; st.notes[st.asset] = []; st.sel = null;
+  try { const w = JSON.parse(localStorage.getItem(mkKey() + "-reset") || "{}"); w[st.asset] = true; localStorage.setItem(mkKey() + "-reset", JSON.stringify(w)); } catch (e) {}
+  drawChart(false); placeNotes();
+}
 // my notes: free writing pinned to a time and price ("what you missed"); same draft + save path as the marks
 const myNotes = () => (st.notes[st.asset] ||= []);
 function keepMarks() { try { localStorage.setItem(mkKey(), JSON.stringify(st.marks)); localStorage.setItem(mkKey() + "-notes", JSON.stringify(st.notes)); } catch (e) {}
@@ -189,7 +200,8 @@ notesEl.addEventListener("contextmenu", e => { const el = e.target.closest(".cno
   const l = myNotes(), i = l.findIndex(x => x.uid === el.dataset.u); if (i >= 0) { l.splice(i, 1); keepMarks(); } });
 $("savenotes").onclick = () => save(`${st.doc.day}-${st.asset}-notes`, { kind: "notes", asset: st.asset, day: st.doc.day, marked_at: st.doc.now });
 document.addEventListener("fullscreenchange", () => { $("full").textContent = fsOn() ? "✕ exit full screen" : "⛶ full screen"; renderTabs(); });
-document.addEventListener("keydown", e => { if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.ctrlKey || e.metaKey) return;
+document.addEventListener("keydown", e => { if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); refreshChart(); return; }
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.ctrlKey || e.metaKey) return;
   if (e.key.toLowerCase() === "f") toggleFull(); else if (e.key.toLowerCase() === "n") setNoteTool(!st.noteTool); else if (e.key === "Escape") setNoteTool(false); });
 
 function line(price, color, title, style) {
@@ -364,6 +376,8 @@ async function poll(first) {
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
+async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false); if (st.doc) render(true); $("refresh").textContent = "↻ refresh"; }
+$("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
 (async () => {
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
   await poll(true);

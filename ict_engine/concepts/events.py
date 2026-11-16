@@ -253,17 +253,40 @@ def _colour_run(o: np.ndarray, c: np.ndarray, at: int, up: bool, lo: int) -> tup
     return k, j
 
 
-def breaker_blocks(df: pd.DataFrame, tf: str, strength: int = 1, swing_events: list[Event] | None = None) -> list[Event]:
+def _merge_swings(sw: list[Event]) -> list[Event]:
+    """Consecutive swings of one kind collapse to the most extreme one (two swing highs with no swing low between
+    them → the higher), so the list alternates low / high / low."""
+    out: list[Event] = []
+    for s in sw:
+        if out and out[-1].kind == s.kind:
+            if (s.kind == "swing_high" and s.top > out[-1].top) or (s.kind == "swing_low" and s.bottom < out[-1].bottom):
+                out[-1] = s
+        else:
+            out.append(s)
+    return out
+
+
+def breaker_blocks(df: pd.DataFrame, tf: str, strength: int = 1, swing_events: list[Event] | None = None,
+                   merge: bool = False) -> list[Event]:
     """Breakers and mitigation blocks (Bible pp.19-26). Bullish (bearish is the mirror):
         swing low L1 → swing high H → swing low L2 → a candle CLOSES above H.
         L2 < L1 (sell stops taken) → ``breaker``; L2 > L1 (a higher low, no sweep) → ``mitigation``.
         The block = the last up-close candle(s) in the swing high H; known at the closing break (and not before
-        L2 is confirmed). Only consecutive swings in strict low/high/low order count (no merging, no look-ahead)."""
+        L2 is confirmed). Only consecutive swings in strict low/high/low order count (no look-ahead).
+        ``merge`` (off by default; Sharif's 12–13 Nov 2026 breakers): also read the swings with same-kind neighbours
+        collapsed to the most extreme, so a minor lower high inside the leg down does not hide the breaker."""
     sw = sorted(swing_events if swing_events is not None else swings(df, tf, strength), key=lambda e: e.origin_ts)
     o, h, l, c, cts = (*(_arr(df, x) for x in ("open", "high", "low", "close")), _close_ts(df).to_numpy())
     pos = {t: i for i, t in enumerate(df.index)}
-    out = []
-    for s1, s2, s3 in zip(sw, sw[1:], sw[2:]):
+    out, seen = [], set()
+    triples = list(zip(sw, sw[1:], sw[2:]))
+    if merge:
+        m = _merge_swings(sw)
+        triples += list(zip(m, m[1:], m[2:]))
+    for s1, s2, s3 in triples:
+        if (s1.origin_ts, s2.origin_ts, s3.origin_ts) in seen:
+            continue
+        seen.add((s1.origin_ts, s2.origin_ts, s3.origin_ts))
         if [s.kind for s in (s1, s2, s3)] == ["swing_low", "swing_high", "swing_low"]:
             bull, mid, level = True, s2, s2.top
             kind = "breaker" if s3.bottom < s1.bottom else "mitigation" if s3.bottom > s1.bottom else None

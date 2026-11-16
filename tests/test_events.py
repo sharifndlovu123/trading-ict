@@ -226,6 +226,27 @@ def test_bullish_breaker_after_lower_low_and_mitigation_after_higher_low():
     assert [e.kind for e in mb] == ["mitigation"]
 
 
+def _lower_high_in_the_leg():
+    """As ``_three_swings`` but with a minor lower high (bar 6, 102.5) inside the leg down and no swing low before
+    it: swings read low (1) / high (4) / high (6) / low (8)."""
+    return candles([(98, 98, 96, 97), (97, 97, 95, 96), (96, 98, 96, 97.5), (97.5, 101, 97, 100.5),
+                    (100.5, 103, 100, 102), (102, 102.2, 99.5, 99.8), (99.8, 102.5, 99.2, 99.4),
+                    (99.4, 99.5, 95, 95.5), (95.5, 98.5, 94, 98.2), (98.2, 101, 98, 100.5),
+                    (100.5, 104, 100, 103.6), (103.6, 104.5, 103, 104)])
+
+
+def test_merge_finds_the_breaker_behind_a_minor_lower_high():
+    df = _lower_high_in_the_leg()
+    assert not [e for e in breaker_blocks(df, "1m") if e.direction == "bull"]          # strict order: hidden
+    br = [e for e in breaker_blocks(df, "1m", merge=True) if e.direction == "bull"]
+    assert [e.kind for e in br] == ["breaker"]
+    assert br[0].origin_ts == t(2) and (br[0].top, br[0].bottom) == (103.0, 96.0) and br[0].ts == t(10)
+    for n in range(6, len(df)):                                                        # nothing known early
+        assert all(e.ts <= df.index[n - 1] for e in breaker_blocks(df.iloc[:n], "1m", merge=True))
+    base = _three_swings(94.0)                                                         # merge only adds
+    assert breaker_blocks(base, "1m", merge=True) == breaker_blocks(base, "1m")
+
+
 def test_blocks_retire_on_a_body_close_beyond_their_50pct():
     ob = Event("ob", "1m", "bull", t(0), t(0), 102.0, 100.0)
     after = candles([(103, 103, 101.5, 102.5), (102.5, 102.6, 100.8, 101.2), (101.2, 101.3, 100.5, 100.7)],
