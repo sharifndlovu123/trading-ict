@@ -248,17 +248,22 @@ def entry_areas(bars: pd.DataFrame, now: pd.Timestamp, adr: float, breaks: list[
     an OTE or an order block; the idea and the target come first, the area is only where to get in).
       breaker      body of the last candle before the leg, after a close back through it (``merge`` + ``block="body"``);
                    ``body_pct`` = the body's share of that candle (he rejects "more wick than body")
-      order block  the engine's block; FVG  unfilled and not closed through; OTE  62–79% of a break still waiting
+      order block  the LAST opposite candle before the move only (``single``; Sharif 2026-11-14: "September alone"),
+                   its body, like the breaker; ``displaced`` = the move away left a FVG
+      FVG  unfilled and not closed through; OTE  62–79% of a break still waiting
     Only areas known by ``now`` (closed 1h candles), still valid, within ``reach`` ADR of price; nearest ``per_side``
     above and below plus any that price is in. A buy area is support (bull), a sell area resistance (bear)."""
     from ict_engine.concepts.bars import resample
-    from ict_engine.concepts.events import breaker_blocks, fvgs, gap_lifecycle, order_blocks
+    from ict_engine.concepts.events import Event, breaker_blocks, fvgs, gap_lifecycle, order_blocks
     recent = bars[(bars.index > now - pd.Timedelta(days=days + 4)) & (bars.index <= now)]
     h1 = resample(recent[list(AGG)], "1h")
     h1 = h1[h1.index + pd.Timedelta(hours=1) <= now + pd.Timedelta(minutes=1)]       # closed candles only
     last = float(recent.close.iloc[-1])
     evs = [(e, "breaker") for e in breaker_blocks(h1, "1h", merge=True, block="body") if e.kind == "breaker"]
-    evs += [(e, "order block") for e in order_blocks(h1, "1h")] + [(e, "FVG") for e in fvgs(h1, "1h")]
+    for e in order_blocks(h1, "1h", single=True):
+        top, bottom = e.meta["body"]
+        evs.append((Event(e.kind, e.tf, e.direction, e.ts, e.origin_ts, top, bottom, e.meta), "order block"))
+    evs += [(e, "FVG") for e in fvgs(h1, "1h")]
     out = []
     for e, name in evs:
         if e.ts > now or e.ts < now - pd.Timedelta(days=days) or e.top <= e.bottom:
@@ -270,7 +275,9 @@ def entry_areas(bars: pd.DataFrame, now: pd.Timestamp, adr: float, breaks: list[
         item = {"kind": name, "tf": "1h", "side": "buy" if e.direction == "bull" else "sell", "top": round(e.top, 2),
                 "bottom": round(e.bottom, 2), "t0": _epoch(e.origin_ts), "from": e.origin_ts.strftime("%a %d %H:%M"),
                 "known": e.ts.strftime("%a %d %H:%M"), "touched": st.touched is not None}
-        if name == "breaker" and e.origin_ts in h1.index:
+        if name == "order block":
+            item["displaced"] = bool(e.meta.get("fvg"))
+        if name in ("breaker", "order block") and e.origin_ts in h1.index:
             rng = float(h1.high[e.origin_ts] - h1.low[e.origin_ts])
             item["body_pct"] = round(100 * (e.top - e.bottom) / rng) if rng > 0 else None
         out.append(item)

@@ -147,7 +147,7 @@ const layer = marksLayer(chart, series, $("chart"), {
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
     ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).map(m => ({ ...m, bold: true,
       color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
-const weak = a => a.kind === "breaker" && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
+const weak = a => (a.kind === "breaker" || a.kind === "order block") && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
 const fsOn = () => document.fullscreenElement === $("chartcard") || $("chartcard").classList.contains("full");
 function toggleFull() {
   const c = $("chartcard");
@@ -301,9 +301,9 @@ function renderAreas() {
   const row = x => `<tr style="${weak(x) ? "opacity:.55" : ""}"><td><b style="color:${css(x.side === "buy" ? "--pos" : "--neg")}">${x.side}</b> · ${esc(x.kind)}</td>
     <td class="num">${x.bottom}–${x.top}</td><td>${esc(x.from)}</td>
     <td>${x.inside ? "<b>price is in it</b>" : `${x.where}, ${x.dist_adr} ADR`}${x.touched && !x.inside ? " · touched" : x.inside ? "" : " · fresh"}</td>
-    <td>${x.kind === "breaker" && x.body_pct != null ? (weak(x) ? `more wick than body (${x.body_pct}%)` : `clean body (${x.body_pct}%)`) : ""}</td></tr>`;
+    <td>${x.body_pct != null ? (weak(x) ? `more wick than body (${x.body_pct}%)` : `clean body (${x.body_pct}%)`) : ""}${x.kind === "order block" ? (x.displaced ? " · left a gap" : " · no gap left") : ""}</td></tr>`;
   $("areas").innerHTML = `<h2>Entry areas near price · 1h · ${esc(st.asset)}</h2>
-    <div class="dim">Places to get in once the idea and the target are there; an area alone is not a trade. Buy areas sit under price, sell areas over it. Breaker = the body of the last candle before the leg.</div>` +
+    <div class="dim">Places to get in once the idea and the target are there; an area alone is not a trade. Buy areas sit under price, sell areas over it. Breaker and order block = the body of the last candle only.</div>` +
     (L.length ? `<table style="width:100%;margin-top:6px"><tr class="dim"><td>area</td><td>prices</td><td>from</td><td>where</td><td>quality</td></tr>${L.map(row).join("")}</table>`
               : `<div class="dim" style="margin-top:6px">none within one average day's range</div>`);
 }
