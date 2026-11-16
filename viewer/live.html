@@ -87,6 +87,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
       <div class="card" id="read"></div>
       <div id="plans"></div>
       <div class="card" id="blocked"></div>
+      <div class="card" id="breaks"></div>
     </div>
   </div>
 </main>
@@ -190,6 +191,9 @@ function drawChart(fit) {
   st.lines.forEach(l => series.removePriceLine(l)); st.lines = [];
   for (const [k, v] of Object.entries(a.levels || {})) line(v, css("--ink2"), k.replace(/_/g, " "), 1);
   const s = (a.setups || []).find(x => x.id === st.sel);
+  const b = (a.breaks || []).find(x => x.id === st.sel);
+  if (b) { line(b.far, css("--neg"), "range end · stop"); line(b.ote_hi, css("--area"), "79%", 2); line(b.entry, css("--accent"), "62% · entry");
+    line(b.eq, css("--ink2"), "50%", 2); line(b.near, css("--pos"), "range " + (b.side === "short" ? "low" : "high") + " · TP1"); }
   if (s) {
     const poi = s.evidence && s.evidence.poi;
     if (poi && poi.top != null) { line(poi.top, css("--area"), `${poi.tf} ${poi.kind} top`, 2); line(poi.bottom, css("--area"), `${poi.tf} ${poi.kind} bottom`, 2); }
@@ -270,7 +274,22 @@ function renderPlans() {
     return `<details><summary>${s.side} · ${s.decided} · stopped at: ${esc(f.map(g => g.name).join(", ") || "no plan")}</summary>${f.map(g => `<div class="gate f">✗ ${esc(g.name)}: ${esc(g.detail)}</div>`).join("")}
       ${s.evidence.poi ? `<div class="gate">area: ${esc(s.evidence.poi.tf)} ${esc(s.evidence.poi.kind)} ${s.evidence.poi.bottom}–${s.evidence.poi.top} <button data-show="${s.id}">show</button></div>` : ""}</details>`; }).join("") : `<div class="dim">nothing yet</div>`);
   $("blocked").querySelectorAll("[data-show]").forEach(b => b.onclick = () => { st.sel = b.dataset.show; drawChart(false); });
-  document.querySelectorAll("#plans input, #plans textarea, #read input, #read textarea").forEach(e => e.addEventListener("input", () => { st.dirty = true; }));
+  const br = a.breaks || [];
+  $("breaks").innerHTML = `<h2>1h structure breaks → OTE <span class="dim">(${br.length}, last 4 days)</span></h2>
+    <div class="dim" style="font-size:13px">Every 1h close through a swing, with its range. Taken mechanically this has no edge on record (5,197 trades, 27% wins, −0.02 R), so your marks on which breaks count are the point.</div>` +
+    (br.length ? br.map(b => { const ans = st.answers[b.id] || {};
+      return `<details ${b.id === st.sel ? "open" : ""}><summary>${b.side} · ${b.at} · ${b.kind.toUpperCase()}${b.displacement ? " · displacement" : ""}${ans.mark ? " · ✓ " + esc(ans.mark) : ""}</summary>
+        <div class="kv num"><span class="dim">range</span><span>${b.far} → ${b.near}</span><span class="dim">OTE</span><span>${b.entry} (62%) – ${b.ote_hi} (79%)</span></div>
+        <div class="row"><button data-show="${b.id}">show on chart</button>${choice("bmark-" + b.id, [["valid", "I'd trade this"], ["no", "not this one"], ["watch", "watching"]], ans.mark)}</div>
+        <textarea data-note placeholder="Why this break counts, or doesn't">${esc(ans.note)}</textarea>
+        <div class="row">${saveBtn(b.id)}</div>
+        ${st.answers[b.id] ? `<div class="res">Mechanical version: <b>${esc(b.state)}</b>${b.filled ? ` · filled ${b.filled}` : ""}${b.r != null ? ` · <span class="num">${b.r > 0 ? "+" : ""}${b.r} R</span>` : ""}</div>` : `<div class="res dim">What the mechanical version did shows after you save.</div>`}
+      </details>`; }).join("") : `<div class="dim">none in the last 4 days</div>`);
+  $("breaks").querySelectorAll("[data-show]").forEach(x => x.onclick = () => { st.sel = x.dataset.show; drawChart(false); });
+  $("breaks").querySelectorAll("details").forEach((d, i) => { const b = br[i];
+    d.querySelector("[data-save]").onclick = () => save(b.id, { kind: "break", asset: st.asset, day: st.doc.day, side: b.side, break_at: b.at, range: [b.far, b.near], entry: b.entry,
+      marked_at: st.doc.now, mark: (d.querySelector(`input[name="bmark-${b.id}"]:checked`) || {}).value || null, note: d.querySelector("[data-note]").value }); });
+  document.querySelectorAll("#plans input, #plans textarea, #read input, #read textarea, #breaks input, #breaks textarea").forEach(e => e.addEventListener("input", () => { st.dirty = true; }));
 }
 
 async function save(id, body) {
@@ -285,7 +304,7 @@ function render(fit) {
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
   renderTabs(); renderCond();
   const a = d.assets[st.asset];
-  const sig = st.asset + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
+  const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
   drawChart(fit);
 }

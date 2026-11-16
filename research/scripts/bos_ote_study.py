@@ -112,6 +112,31 @@ def _after_fill(idx, o, h, lo, c, j, ev, fill, far, near, frac) -> dict | None:
     return None
 
 
+def live_state(idx, o, h, lo, c, ev: dict, frac: float = PRIMARY, cancel_at=None) -> dict:
+    """Where one break stands on bars that end "now" (the live sheet): waiting / cancelled / expired / open / tp1 /
+    stop / time, with the range as it stands and the retrace levels."""
+    s = 1.0 if ev["short"] else -1.0
+    far, near = ev["far"], ev["near0"]
+    i0 = int(np.searchsorted(idx, ev["ts"].value))
+    lv = lambda f: near + f * (far - near)  # noqa: E731
+    base = lambda state: {"state": state, "far": far, "near": near, "entry": lv(frac), "ote_hi": lv(0.79), "eq": lv(0.5)}  # noqa: E731
+    for j in range(i0, min(len(idx), i0 + EXPIRY_MIN)):
+        if cancel_at is not None and idx[j] >= cancel_at:
+            return base("cancelled (structure broke the other way)")
+        against, ours = (h[j], lo[j]) if ev["short"] else (lo[j], h[j])
+        if (against - lv(frac)) * s >= 0 and abs(far - near) > 0:
+            t = replay(idx, o, h, lo, c, {**ev, "near0": near, "ts": pd.Timestamp(idx[j], tz="UTC")}, frac, None)
+            out = {**base("open"), "filled_at": pd.Timestamp(idx[j], tz="UTC").tz_convert(NY), "entry": lv(frac)}
+            if t is not None:
+                out.update(state={"tp1": "TP1 hit", "stop": "stopped", "time": "closed at the session end"}[t["exit"]], r=t["r"], entry=t["entry"])
+            else:
+                out["r"] = (out["entry"] - c[-1]) * s / abs(far - out["entry"])
+            return out
+        if (near - ours) * s > 0:
+            near = ours
+    return base("expired" if i0 + EXPIRY_MIN <= len(idx) else "waiting for the retrace")
+
+
 def run_asset(asset: str, start: date = START, end: date = END) -> pd.DataFrame:
     bars = dukascopy.load(asset, start - timedelta(days=30), end)
     evs = [e for e in breaks(bars) if e["ts"] >= pd.Timestamp(start, tz=NY)]

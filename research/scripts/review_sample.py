@@ -83,7 +83,8 @@ def _one(i: int):
 
 def _bars(assets) -> dict:
     from ict_engine.data import dukascopy
-    return {a: dukascopy.load(a, date(2019, 10, 1) if a.startswith("US") else date(2021, 10, 1), date(2026, 11, 14) if _W.get("unseen") else date(2024, 7, 5)) for a in assets}
+    early = ("US100", "US500", "US30", "US2000", "DE40", "UK100")          # cached from 2019-10; the rest from 2021-10
+    return {a: dukascopy.load(a, date(2019, 10, 1) if a in early else date(2021, 10, 1), date(2026, 11, 14) if _W.get("unseen") else date(2024, 7, 5)) for a in assets}
 
 
 def facts(path: str, workers: int, cap: int) -> Path:

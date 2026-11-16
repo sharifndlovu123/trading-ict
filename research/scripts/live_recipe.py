@@ -138,6 +138,27 @@ def setups(asset: str, bars: pd.DataFrame, day: date, now: pd.Timestamp) -> list
     return out
 
 
+def structure_breaks(bars: pd.DataFrame, now: pd.Timestamp, days: int = 4) -> list[dict]:
+    """The 1h structure breaks of the last few days with their range, OTE levels and where each stands (Sharif's
+    BOS → OTE notes, 2026-11-16; rule in bos_ote_study.py). For him to mark which breaks count."""
+    import bos_ote_study as bo
+    recent = bars[bars.index >= now - pd.Timedelta(days=days + 12)]
+    evs = [e for e in bo.breaks(recent) if e["ts"] >= now - pd.Timedelta(days=days)]
+    idx = recent.index.tz_convert("UTC").as_unit("ns").asi8
+    o, h, lo, c = (recent[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    out = []
+    for n, e in enumerate(evs):
+        nxt = next((x["ts"] for x in evs[n + 1:] if x["short"] != e["short"]), None)
+        st = bo.live_state(idx, o, h, lo, c, e, cancel_at=nxt.tz_convert("UTC").value if nxt is not None else None)
+        f = st.get("filled_at")
+        out.append({"id": f"bos-{e['ts']:%Y%m%d-%H%M}-{'short' if e['short'] else 'long'}", "side": "short" if e["short"] else "long",
+                    "at": e["ts"].strftime("%a %d %H:%M"), "kind": e["kind"], "displacement": e["displacement"],
+                    "far": round(st["far"], 2), "near": round(st["near"], 2), "entry": round(st["entry"], 2), "ote_hi": round(st["ote_hi"], 2),
+                    "eq": round(st["eq"], 2), "state": st["state"], "filled": f.strftime("%a %H:%M") if f is not None else None,
+                    "r": None if st.get("r") is None else round(float(st["r"]), 2)})
+    return out[::-1]                                             # newest first
+
+
 def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, mode: str) -> dict:
     from ict_engine.concepts.context import build_context
     doc = {"day": str(day), "now": now.strftime("%a %Y-%m-%d %H:%M"), "mode": mode, "variant": VARIANT, "assets": {}}
@@ -149,6 +170,7 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
             ctx = build_context(bars, day)
             item["levels"] = {k: round(float(v), 2) for k, v in ctx.levels.items()}
             item["setups"] = setups(a, bars, day, now)
+            item["breaks"] = structure_breaks(bars, now)
         except Exception as e:                                   # one index failing must not blank the page
             item["error"] = f"{type(e).__name__}: {e}"
             item.setdefault("setups", [])

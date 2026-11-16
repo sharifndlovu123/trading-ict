@@ -57,3 +57,17 @@ def test_a_break_the_other_way_cancels_the_resting_order():
     ev = {"ts": idx[0], "short": True, "far": 110.0, "near0": 100.0}
     assert bo.replay(ix, o, h, lo, c, ev, 0.62, idx[2].tz_convert("UTC").value) is None
     assert bo.replay(ix, o, h, lo, c, ev, 0.62, None)["filled_at"] == idx[2]        # without it the order fills
+
+
+def test_live_state_walks_waiting_open_and_done():
+    rows = [(101, 102, 100.5, 101), (101, 105, 101, 104), (104, 106.5, 104, 105), (105, 105, 99.5, 100)]
+    ev = lambda idx: {"ts": idx[0], "short": True, "far": 110.0, "near0": 100.0}  # noqa: E731
+    idx, ix, o, h, lo, c = arrays(rows[:2])
+    w = bo.live_state(ix, o, h, lo, c, ev(idx))
+    assert w["state"] == "waiting for the retrace" and w["entry"] == pytest.approx(106.2) and w["ote_hi"] == pytest.approx(107.9)
+    idx, ix, o, h, lo, c = arrays(rows[:3])
+    op = bo.live_state(ix, o, h, lo, c, ev(idx))
+    assert op["state"] == "open" and op["filled_at"] == idx[2] and op["r"] == pytest.approx((106.2 - 105) / 3.8)
+    idx, ix, o, h, lo, c = arrays(rows)
+    assert bo.live_state(ix, o, h, lo, c, ev(idx))["state"] == "TP1 hit"
+    assert bo.live_state(ix, o, h, lo, c, ev(idx), cancel_at=ix[1])["state"].startswith("cancelled")
