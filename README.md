@@ -11,6 +11,10 @@ An engine that tests **ICT (Inner Circle Trader) trading models** on historical 
 
 > Research tool only. Nothing here is financial advice.
 
+![The live sheet: a chart with marking tools, the recipe's plans and the entry areas for one index](docs/img/live-sheet.png)
+
+*The live sheet (`research/scripts/live_recipe.py` + `viewer/live.html`): the three indices on the free feed, marking tools, the recipe's plans and the day's structure breaks.*
+
 ## Ideas it is built on
 
 - **Time first.** Every candle is checked in a fixed order: time window → bias → premium/discount → higher-timeframe POI → entry trigger. A fair value gap outside its time window or POI never opens a trade, but it is still logged.
