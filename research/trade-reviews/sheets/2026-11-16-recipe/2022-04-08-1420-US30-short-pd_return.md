@@ -1,0 +1,41 @@
+# Trade facts — US30 short Fri 08 Apr 2022 14:20 NY
+entry 34834.787 · stop 34915.789 · TPs 34675.239 (50%), 34186.249 (50%) · stop to entry after TP1
+
+**Trader's note:** [engine pd_return trade · window ny_pm_kz · POI 1h FVG · bias bear · engine result +1.95 R (tp1)]
+
+## Known at the entry (only bars before it)
+- price 34817.78 · ADR 520.94 · risk 0.155 ADR · R:R to TP1 1.97
+- engine read: **counter_weekly**, side bull → trade side matches the read: **False**
+- clock windows: ny_pm_kz, sb_pm · news: none near
+- scheduled news during the hold window (known in advance): none
+- market activity, last 60 min: range 0.146 ADR = **normal** (0.61× the normal for this time of day), net move 0.058 ADR
+- current 1d range 32340.27–35383.249: entry at 0.82 from the low = **premium** (right half for a short) · momentum 0.37 ADR/candle
+- liquidity taken in the 6 h before: sellside 1h swing low 34649.52 at 08:48; sellside London low 34607.22 at 09:02; sellside 1h swing low 34557.79 at 09:33; sellside Asia low 34539.23 at 09:40; sellside previous week low 34537.00 at 09:40; buyside 1h swing high 34741.80 at 10:51; buyside London high 34759.30 at 10:52
+- stop vs liquidity: nearest pool on the stop side session so far high 34915.79 — stop is SHORT of it by 0.0 ADR (sits at the liquidity)
+- TP1 vs liquidity: pools before TP1: none
+- pools above: 4h swing high 34915.79 (0.19 ADR); 1h equal highs 34918.50 (0.19 ADR); 1d swing high 35106.29 (0.55 ADR); 4h swing high 35310.28 (0.95 ADR)
+- pools below: 4h swing low 34461.71 (0.68 ADR); previous day low 34186.25 (1.21 ADR); 4h swing low 33865.02 (1.83 ADR); 4h swing low 33387.80 (2.74 ADR)
+- arrays near: 1w bearish FVG 34816.76–35637.27; 4h bullish FVG 34741.80–34797.30; 1h bullish FVG 34643.30–34782.76; 1w bullish volume imbalance 34745.22–34749.50; 1d bearish FVG 34903.10–35053.29
+
+<details><summary>engine read statements</summary>
+
+- Monthly: structure broke up — Oct 2021 closed 35840.72 above the Aug 2021 swing high 35628.30 (BOS). Equal highs 36683.28 (Nov 2021 36560.78, Dec 2021 36683.28) = the buyside that leg is drawn to; taken in Jan 2022 (36954.29).
+- Order blocks: 1M bullish OB Nov 2021 [not one to use: no event, wrong half, failed: closed through its MT, then traded through the body; body 0.65 of its range, 1.26× the mean body; push 1.66×; traded through its high]: body 34495.23–35889.73 (MT 35192.48), no event before it — just a candle; premium 0.64 of the dealing range 34429.23–35628.30 = the wrong half. | 1M bearish OB Dec 2021 [not one to use: no aggressive push, no event; holding; body 0.67 of its range, 1.58× the mean body; push 1.18×; closed beyond its low]: body 34561.27–36389.70 (MT 35475.48), no event before it — just a candle; premium 0.77 of the look-back 30543.50–36954.29 = the right place. Draw: the remaining 1M FVG 32081.24–32963.30 (CE 32522.27) — reached and respected so far (no body past its midpoint). | 1w bearish OB wk 21 Feb 2022 [not one to use: weak body, no aggressive push, no event, no HTF level, failed: closed through its MT, then traded through the body; body 0.04 of its range, 0.13× the mean body; push 0.20×; open crossed only]: body 33962.69–34042.80 (MT 34002.74), no event before it — just a candle; premium 0.67 of the dealing range 33143.80–34418.93 = the right place. Draw: the remaining 1M FVG 32081.24–32963.30 (CE 32522.27) — reached and respected so far (no body past its midpoint). | 1w bullish OB wk 07 Mar 2022 [not one to use: weak body, no event; holding; body 0.34 of its range, 0.88× the mean body; push 3.17×; closed beyond its high; into 1M bullish FVG 33256.30–33287.00]: body 32976.30–33441.23 (MT 33208.76), no event before it — just a candle; discount 0.19 of the dealing range 32340.27–36954.29 = the right place. Draw: the remaining 1w FVG 36021.00–36108.72 (CE 36064.86), liquidity at its edge 35858.57 — not reached yet. | 1d bullish OB 01 Apr 2022 [not one to use: weak body, no aggressive push, failed: closed through its MT, then traded through the body; body 0.11 of its range, 0.14× the mean body; push 0.38×; closed beyond its high; into 1w bullish IFVG 34418.93–34620.20]: body 34751.50–34792.26 (MT 34771.88), after equal lows 34550.00 (to 34537.00); discount 0.28 of the dealing range 34537.00–35383.25 = the right place. Draw: the remaining 1w FVG 36021.00–36108.72 (CE 36064.86), liquidity at its edge 35858.57 — not reached yet. | 1d bearish OB 04 Apr 2022 [not one to use: weak body, no aggressive push; body traded through (no close past MT); body 0.33 of its range, 0.38× the mean body; push 0.86×; closed beyond its low; into 1w bearish FVG 34816.76–35637.27]: body 34803.28–34913.25 (MT 34858.26), after 1d bearish FVG revisited 34903.10 (to 35106.29); premium 0.97 of the dealing range 32340.27–34947.29 = the right place. Draw: the remaining 1M FVG 32081.24–32963.30 (CE 32522.27), liquidity at its edge 32228.50 — not reached yet.
+- Weekly: bear since 07 Mar 2022. Protected lower high 36954.29 (4.1 ADR away) — until a W close breaks it, moves the other way are shifts inside a bear trend.
+- Daily: bull since 16 Mar 2022. Protected higher low 32340.27 (4.8 ADR away) — until a D close breaks it, moves the other way are shifts inside a bull trend.
+- 4H: bear since 06 Apr 02:00. Protected lower high 35106.29 (0.6 ADR away) — until a 4H close breaks it, moves the other way are shifts inside a bear trend.
+- 1H: bull since 07 Apr 14:00. Protected higher low 34461.71 (0.7 ADR away) — until a 1H close breaks it, moves the other way are shifts inside a bull trend.
+- Areas I'm watching: 1w FVG 34816.76–35637.27 (price is inside); 1w FVG 36021.00–36108.72 (above, 2.3 ADR); 1w IFVG 34418.93–34620.20 (below, 0.4 ADR); 1d FVG 34903.10–35053.29 (above, 0.2 ADR); 1d FVG 34090.29–34208.01 (below, 1.2 ADR).
+- Liquidity — buyside above: 4h swing high 34915.79 (0.2 ADR), 1d swing high 35106.29 (0.6 ADR), 1d previous month high 35383.25 (1.1 ADR); sellside below: 4h swing low 34461.71 (0.7 ADR), 1d previous day low 34186.25 (1.2 ADR), 1w swing low 32340.27 (4.8 ADR).
+- Where the play is: Daily bull against the weekly bear: the play sits on the daily — a counter-weekly leg. Expect small grabs (4h swing high 34915.79), not the distant weekly areas; the weekly protected level 36954.29 decides if it becomes more. Price is inside the 1w FVG — respect there (reaction, closes holding) comes first.
+- Current range (D): the fake-out low 32340.27 (it took sellside 33099.70 first, against us) → the high of the move up since, 35383.25 — the distribution our PD arrays come from (momentum: the move ran 5.8 ADR in 16 D candles). fib of the move: 0 = 35383.25, 0.5 EQ = 33861.76, OTE 0.62–0.79 = 33496.60–32979.30, 1 = 32340.27; price has pulled back to 0.19. Hoping for a discount: buy at an array on the pullback, in the order price meets them: 1h bullish FVG 34643.30–34782.76 (0.20–0.24, shallow — risk: knocked out if price goes deeper); 4h bullish IFVG 34687.27–34762.21 (0.20–0.23, shallow — risk: knocked out if price goes deeper); 1h bullish IFVG 34761.24–34762.21 (0.20–0.20, shallow — risk: knocked out if price goes deeper); 1h bullish IFVG 34673.00–34737.21 (0.21–0.23, shallow — risk: knocked out if price goes deeper); 1h bullish IFVG 34643.30–34699.55 (0.22–0.24, shallow — risk: knocked out if price goes deeper); 4h bullish IFVG 34498.10–34583.22 (0.26–0.29, shallow — risk: knocked out if price goes deeper). Shallow or deep is not right or wrong: shallow risks a knock-out, deep risks missing it — momentum decides. Target beyond the move: the liquidity in the play above.
+
+</details>
+
+## After the entry (hindsight — not knowable at the entry)
+- your management: **+1.65 R** — filled Fri 08 Apr 14:20 → TP1 Fri 15:59 at 34675.24 (50%) → still open Fri 16:14 ≈ 34726.80
+- MFE 1.99 R · MAE -0.16 R before the exit · held overnight: False
+- same trade, flat 16:55 NY that day: **+1.65 R** — TP1 Fri 15:59 at 34675.24 (50%) → flat Fri 16:14 ≈ 34726.80
+- price went on to 1.99 R in favour (at Fri 15:59) and -0.16 R against within the window
+- **where price actually turned:** 34847.8 at Fri 14:21 — 0.16 R (0.025 ADR) past our entry, inside our stop; from there it ran 2.15 R (0.33 ADR) our way. Known levels at that price: 1w bearish FVG 34816.76–35637.27
+- pools price took next: none

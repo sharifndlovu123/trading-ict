@@ -54,6 +54,11 @@ class Params:
     ob_measure: str = "range"            # OB zone + 50% on the full range | "body" (ICT Month 04: open to close, no wicks)
     lookback_days: int = 5
     return_level: str = "proximal"       # the return = the first trade to the array's near edge | "ce" (its 50%)
+    # recipe gates from Sharif's notes (research/entry-trigger-from-saves-2026-11-16.md), all off by default:
+    structure_gate: str | None = None    # "not_against": skip when 1h AND 4h structure oppose the side | "with": both must agree
+    structure_tfs: tuple[str, ...] = ("1h", "4h")
+    max_entry_dist_adr: float | None = None   # skip an entry further than this many ADR from the area ("shorting quite late")
+    last_entry: str | None = None        # "HH:MM" NY: no new setup after this time
     trigger_tf: str = "1m"
     trigger_wait_min: int = 30
     min_trigger_gap_bp: float = 0.2      # ignore sliver gaps (< 0.2 bp of price, e.g. < 0.3 pt on NQ)
@@ -80,7 +85,7 @@ class Params:
     def variant(self) -> str:
         d = Params()
         parts = [f"pdr-{'+'.join(self.htf_tfs)}>{self.trigger_tf}"]
-        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
+        for name in ("arrays", "ifvg_close", "ifvg_bias", "ob_confirm", "ob_measure", "windows", "lookback_days", "return_level", "structure_gate", "structure_tfs", "max_entry_dist_adr", "last_entry", "trigger_wait_min", "min_trigger_gap_bp", "entry_level", "stop_mode", "stop_buffer",
                      "min_tp1_r", "tp1_cap_r", "max_cost_r", "use_bias", "bias_rule", "cap_scope", "invalidate_tf",
                      "news_blackout", "fomc_day", "partial_frac", "runner_stop", "target_mode", "entry_gate"):
             if getattr(self, name) != getattr(d, name):
@@ -163,6 +168,33 @@ def reaction_trigger(array: Event, touch: pd.Timestamp, day_1m: pd.DataFrame, lt
     return None
 
 
+def recipe_gates(p: Params, *, long: bool, decided: pd.Timestamp, entry: float, area: tuple[float, float],
+                 states: dict[str, str], adr: float | None) -> list[Gate]:
+    """The optional recipe gates for one setup (an empty list when all are off):
+      time       no new setup after ``last_entry``
+      structure  the side against the intraday structure (``states``: tf → bull / bear / neutral)
+      location   the entry no further than ``max_entry_dist_adr`` × ADR from the area"""
+    from ict_engine.concepts import momentum
+    out = []
+    if p.last_entry is not None:
+        hh, mm = (int(x) for x in p.last_entry.split(":"))
+        ok = (decided.hour, decided.minute) <= (hh, mm)
+        out.append(Gate("time", ok, f"decided {decided:%H:%M}, last entry {p.last_entry}"))
+    if p.structure_gate is not None:
+        if p.structure_gate not in ("not_against", "with"):
+            raise ValueError(f"structure_gate must be 'not_against' or 'with', not {p.structure_gate!r}")
+        rel = momentum.side_vs_structure(states, long)
+        ok = rel != "against" if p.structure_gate == "not_against" else rel == "with"
+        out.append(Gate("structure", ok, f"{'long' if long else 'short'} {rel} the structure "
+                                         + ", ".join(f"{tf} {s}" for tf, s in states.items())))
+    if p.max_entry_dist_adr is not None:
+        d = momentum.dist_from_area(entry, min(area), max(area))
+        ok = adr is None or adr <= 0 or d / adr <= p.max_entry_dist_adr
+        out.append(Gate("location", ok, f"entry {d / adr:.2f} ADR from the area (max {p.max_entry_dist_adr:g})"
+                        if adr else "ADR unknown"))
+    return out
+
+
 # --- model --------------------------------------------------------------------------------------
 
 def find_setups(bars_1m: pd.DataFrame, day: date, asset: str, p: Params = Params(),
@@ -226,6 +258,13 @@ def _evaluate(g: Event, touch, ctx, day, asset, p: Params, day_1m, ltf, swing_pt
     risk = abs(entry - stop)
     setup.gates.append(Gate("trigger", True, f"returned to {g.tf} {name} {g.bottom:.2f}-{g.top:.2f} at {touch:%H:%M}; "
                                              f"{p.trigger_tf} FVG {f.bottom:.2f}-{f.top:.2f}"))
+    if p.structure_gate is not None or p.max_entry_dist_adr is not None or p.last_entry is not None:
+        from ict_engine.concepts import momentum
+        src = day_1m if bars_1m is None else bars_1m
+        states = {tf: momentum.tf_state(src, decided, tf) for tf in p.structure_tfs} if p.structure_gate else {}
+        adr = momentum.adr(src, decided) if p.max_entry_dist_adr is not None else None
+        setup.gates += recipe_gates(p, long=long, decided=decided, entry=entry, area=(float(g.bottom), float(g.top)),
+                                    states=states, adr=adr)
     tp1, tp1_name, final, final_name = _targets(entry, long, ctx, day_1m, decided, swing_pts,
                                                 min_dist=p.min_tp1_r * risk)
     if tp1 is None:

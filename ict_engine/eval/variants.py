@@ -258,6 +258,23 @@ PD_RETURN_VARIANTS: dict[str, model_pd_return.Params] = {
                                             windows=("ny_am_kz", "ny_pm_kz")),
     "recipe: full (15m, 50%, no bias, NY)": replace(PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240,
                                                     return_level="ce", use_bias=False, windows=("ny_am_kz", "ny_pm_kz")),
+    # the three things the 30-trade review said the coded recipe lacked, each in his notes (review log #47):
+    # side with the current 1h/4h structure, not late / far from the area, no late-afternoon entries
+    "recipe2: full + not against 1h&4h + within 0.25 ADR + before 14:00": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against", max_entry_dist_adr=0.25, last_entry="14:00"),
+    "recipe2: full + with 1h&4h + within 0.25 ADR + before 14:00": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), structure_gate="with", max_entry_dist_adr=0.25, last_entry="14:00"),
+    "recipe2: full + not against 1h&4h": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), structure_gate="not_against"),
+    "recipe2: full + within 0.25 ADR": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), max_entry_dist_adr=0.25),
+    "recipe2: full + before 14:00": replace(
+        PR, htf_tfs=("1h", "4h"), trigger_tf="15m", trigger_wait_min=240, return_level="ce", use_bias=False,
+        windows=("ny_am_kz", "ny_pm_kz"), last_entry="14:00"),
     "recipe: full + order blocks": replace(PR, htf_tfs=("1h", "4h"), arrays=("fvg", "ob"), ob_confirm="open",
                                            ob_measure="body", trigger_tf="15m", trigger_wait_min=240,
                                            return_level="ce", use_bias=False, windows=("ny_am_kz", "ny_pm_kz")),
