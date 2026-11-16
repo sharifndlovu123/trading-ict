@@ -41,6 +41,7 @@ textarea { width:100%; min-height:44px; resize:vertical; } input.px { width:96px
 .cnote { position:absolute; transform:translate(8px,-50%); max-width:260px; padding:2px 7px; border-radius:5px; background:var(--mine); color:#fff;
   font-size:12.5px; line-height:1.35; white-space:pre-wrap; pointer-events:auto; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.35); }
 .cnote::before { content:""; position:absolute; left:-8px; top:50%; width:7px; height:7px; margin-top:-4px; border-radius:50%; background:var(--mine); }
+.cnote.claude { background:var(--warn); color:#111; cursor:default; } .cnote.claude::before { background:var(--warn); }
 #noteedit { position:absolute; z-index:8; display:none; width:270px; padding:6px; background:var(--panel); border:1px solid var(--mine); border-radius:6px; }
 #noteedit textarea { min-height:60px; } #noteedit .row { margin-top:4px; }
 #fsinfo { display:none; margin-left:auto; } #chartcard.full #fsinfo, #chartcard:fullscreen #fsinfo { display:inline; }
@@ -75,6 +76,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <span class="tabs" id="fstabs"></span>
           <button id="notetool" title="write on the chart (N): click where the note belongs">✎ write on chart</button>
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
+          <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked> Claude's marks</label>
           <span id="marksn" class="dim"></span>
           <span id="fsinfo" class="dim num"></span>
           <span class="dim" id="legend">Prices are the CFD's (not the futures'). Dotted = session levels · purple = the higher-timeframe area · blue / red / green = entry / stop / TP1 of the selected plan. Pick a type below, then click or drag on the chart.</span>
@@ -141,9 +143,11 @@ function snap(t) { const a = barTimes(); if (!a.length) return null; let lo = 0,
   if (t <= a[0]) return a[0]; if (t >= a[hi]) return a[hi];
   while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m] <= t) lo = m; else hi = m; } return a[lo]; }
 function placeNotes() {
-  const list = st.doc ? myNotes() : [];
+  const mine = st.doc ? myNotes() : [];
+  const ov = st.doc && st.overlay && $("ovon").checked && st.overlay[st.asset] ? (st.overlay[st.asset].notes || []).map((n, i) => ({ ...n, uid: "claude-" + i, claude: true })) : [];
+  const list = mine.concat(ov);
   if (notesEl.children.length !== list.length) notesEl.innerHTML = list.map(n => `<div class="cnote" data-u="${n.uid}"></div>`).join("");
-  list.forEach((n, i) => { const el = notesEl.children[i], t = snap(n.t), x = t == null ? null : chart.timeScale().timeToCoordinate(t), y = series.priceToCoordinate(n.price);
+  list.forEach((n, i) => { notesEl.children[i].classList.toggle("claude", !!n.claude); const el = notesEl.children[i], t = snap(n.t), x = t == null ? null : chart.timeScale().timeToCoordinate(t), y = series.priceToCoordinate(n.price);
     el.dataset.u = n.uid; if (el.textContent !== n.text) el.textContent = n.text;
     el.style.display = x == null || y == null ? "none" : ""; if (x != null && y != null) { el.style.left = x + "px"; el.style.top = y + "px"; } });
   requestAnimationFrame(placeNotes);
@@ -166,6 +170,7 @@ ed.querySelector("[data-del]").onclick = () => closeEditor(false, true);
 ed.querySelector("textarea").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) closeEditor(true); else if (e.key === "Escape") closeEditor(false); e.stopPropagation(); });
 ed.addEventListener("mousedown", e => e.stopPropagation()); ed.addEventListener("pointerdown", e => e.stopPropagation());
 $("notetool").onclick = () => setNoteTool(!st.noteTool);
+$("ovon").onchange = () => drawChart(false);
 chart.subscribeClick(p => {
   if (!st.noteTool || !p.point) return;
   const a = barTimes(), t = p.time != null ? p.time : a[a.length - 1], price = series.coordinateToPrice(p.point.y);
@@ -199,6 +204,8 @@ function drawChart(fit) {
     if (poi && poi.top != null) { line(poi.top, css("--area"), `${poi.tf} ${poi.kind} top`, 2); line(poi.bottom, css("--area"), `${poi.tf} ${poi.kind} bottom`, 2); }
     if (s.plan) { line(s.plan.entry, css("--accent"), "entry"); line(s.plan.stop, css("--neg"), "stop"); line(s.plan.tp1, css("--pos"), "TP1 " + (s.plan.tp1_name || "")); }
   }
+  const ov = st.overlay && $("ovon").checked ? st.overlay[st.asset] : null;      // Claude's read-only marks (out/live/overlay.json)
+  if (ov) for (const l of ov.levels || []) line(l.price, css(l.color || "--warn"), l.title, l.style ?? 2);
   if (fit) {
     const n = (a.candles[st.tf] || []).length, show = { "5m": 150, "15m": 110, "1h": 120 }[st.tf];
     chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - show), to: n + 6 });
@@ -316,6 +323,8 @@ async function poll(first) {
     st.doc = d;
     if (!st.asset || !d.assets[st.asset]) st.asset = Object.keys(d.assets)[0];
     if (first) loadMarks();
+    try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
+    $("ovwrap").style.display = st.overlay ? "" : "none";
     $("fresh").textContent = `page checked ${new Date().toLocaleTimeString()}`;
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
