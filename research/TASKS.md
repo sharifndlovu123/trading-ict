@@ -77,3 +77,33 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ J3 Minimum widths: checked, the size effect is US100 / 2022-model only, MMxM opposite → not built (same decision file)
 - ☑ J4 Fact sheet: the turn line uses the trade's own day (to 16:55 NY); the note prints the area, the decision time and the trigger gap
 
+
+## Round 4 (2026-11-16 evening: the live sheet and Sharif's lessons; to go through on 2026-11-17, with the live chart)
+
+### K. Waiting on Sharif's answer
+- ☐ K1 Order blocks on the page: show only the ones that form when price retraces into an area of interest. Is the right set "a breaker, an unfilled gap, the OTE of a break, a swept pool"?
+- ☐ K2 Order-block details: is "engulf" = the next candle closes beyond the block candle's open? Is the block the candle's body (as with the breaker) or open-to-wick?
+- ☐ K3 Weak blocks (more wick than body): drop them, or only dim them as now?
+- ☐ K4 His stop on the gap trade (trade 1, US100 Thu 12 Nov 10:03)
+- ☐ K5 The weekend gap (NWOG) on regular-hours charts: which two prices define it
+- ☐ K6 Watching 05:00–09:00 New York (tradable by his rule, no check-ins now); is 15 minutes the right rhythm
+- ☐ K7 Should his marks carry from London into New York, or stay one session each (as now)
+
+### L. To do
+- ☐ L1 Does a breaker / order-block entry pay? In-sample run + 30 trades reviewed in writing (so far only his examples)
+- ☐ L2 Gap-trade entry (`ndog_eql.py` `fvg_entry`): the "gap fully above the pool" rule is too strict (skipped US500 on 12 Nov, 2 points inside)
+- ☐ L3 Choosing the index (weakest for a sell, cleanest pool) as a testable step
+- ☐ L4 A script scoring his live marks against what happened (needs more saves)
+- ☐ L5 Jackson Hole 2026 in the news calendar
+- ☐ L6 A switch to hide the dotted reference levels until the hunt (if he wants it)
+- ☐ L7 The engine's `order_blocks` does not follow his rule (`engulfed_blocks` lives in the live script only); move it into the engine behind an option once K1–K3 are settled
+
+### M. Housekeeping
+- ☐ M1 Re-create the hunting schedule when he turns Claude on (London prep 08:05 SAST, New York prep 15:35 SAST, a check every 15 minutes in each session; session-only, expires after 7 days)
+- ☐ M2 Push (the remote is behind)
+- ☐ M3 Forward test: first look when candidate 2 has 60 trades or on 2027-11-16 (`research/forward-recipe-v1.md`)
+
+### Done in round 4
+- ☑ Breaker detector: `merge` and `block="body"` options, off by default (`research/decisions/2026-11-16-breaker-merge.md`)
+- ☑ Live sheet: entry areas, Claude's marks + "Claude's read", 1M–5m charts, Alt+R, reset, full-width layout, hunting window, clean chart per session
+- ☑ README screenshot; CLAUDE.md updated; full suite 618 passed
