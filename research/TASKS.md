@@ -63,12 +63,12 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ G2 Run once: UNCLEAR (news days +0.39 R, others +0.25; volatility separates more)
 
 ### H. Forward log
-- ☐ H1 Recipe with its conditions (news or high-volatility day, right half of the range, not Monday) defined as a fixed forward rule
-- ☐ H2 Forward log file + the command that appends new trades as data arrives
+- ☑ H1 Forward rules frozen: `research/forward-recipe-v1.md`, tag `forward-recipe-v1`, three candidates
+- ☑ H2 `research/scripts/forward_recipe.py` → `reports/forward/recipe-forward.parquet` + `research/forward/recipe-forward-log.md` (counts only until the first look); 0 trades so far
 
 ### I. Older models by condition, confirmed on 2021
-- ☐ I1 Conditions leads for MMxM and silver bullet stated as fixed rules from 2020 / 2022–26
-- ☐ I2 Pre-register; run 2021 once (never run for these models); record
+- ☑ I1 Three hypotheses fixed (`research/preregistered-conditions-2021.md`)
+- ☑ I2 Run once: H1 and H2 not supported, H3 too few to judge (MMxM high vol: 25 trades, +0.63 R); no model has an edge on 2021
 - ☐ I3 Written review of the 2021 trades (at least 30)
 
 ### J. Fixes the reviews asked for (after F–I, each through the change gate)

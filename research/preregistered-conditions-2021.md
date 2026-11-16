@@ -26,5 +26,23 @@ Reported beside them, with no bearing on the outcomes: each model's plain result
 ## After the run
 A written review of at least 30 of the 2021 trades (15 winners, 15 losers, spread over the three models).
 
-## Result
-_(not run)_
+## Result — run once, 2026-11-16 (`reports/backtest[-mmxm|-silver_bullet]-<ASSET>-2021-01-04-2021-12-31-futures.parquet`, `reports/conditions-2021-trades.parquet`)
+
+**The plain models on 2021 (their first run on it):**
+| Model | n | Win % [95%] | Mean R | z | US100 / US500 / US30 |
+|---|---|---|---|---|---|
+| 2022 model | 351 | 33.0 [28–38] | −0.088 | −1.22 | −0.052 / +0.054 / −0.278 |
+| MMxM | 286 | 32.2 [27–38] | +0.031 | +0.37 | −0.001 / +0.274 / −0.145 |
+| Silver bullet | 446 | 30.9 [27–35] | −0.098 | −1.42 | −0.064 / −0.007 / −0.203 |
+No model has an edge at its defaults on 2021 either.
+
+**The hypotheses:**
+| # | In the condition | Other days | Difference (z) | Outcome |
+|---|---|---|---|---|
+| H1 silver bullet, low volatility | 251 trades, 30.7% win, −0.126 R | 195 trades, −0.062 R | −0.064 (−0.46) | **Not supported** (opposite sign) |
+| H2 2022 model, trending up | 79 trades, 32.9% win, −0.063 R | 272 trades, −0.095 R | +0.031 (+0.19; the hypothesis was negative) | **Not supported** (opposite sign) |
+| H3 MMxM, high volatility | 25 trades, 48.0% win, +0.627 R | 261 trades, −0.026 R | +0.652 (+1.58) | **Too few to judge** (25 < 30); same direction |
+
+Beside them (no bearing on the outcomes): silver bullet on trending-up days +0.192 R (114) and on consolidating days −0.163 R (311); the 2022 model on normal volatility +0.087 (123) and on high −0.396 (50); MMxM on news days −0.126 (103) against +0.120 (183) without.
+
+**Reading:** the conditions leads for silver bullet and the 2022 model were noise: they do not repeat on the one clean year. MMxM on high-volatility days is the only conditions lead for an older model that keeps its sign (2020 +0.14, 2021 +0.63, 2022 +0.17, 2026 +0.09; 2024 −0.02, 2025 −0.18), on few trades. 2021 is now used for these three models.
