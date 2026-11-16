@@ -55,5 +55,24 @@ The same variant, unchanged, on gold, silver, the dollar index and EUR/USD for 2
 ## After the run
 A 30-trade written review of the hold-out trades (15 winners, 15 losers), as for every run.
 
-## Result
-_(not run)_
+## Result — run once, 2026-11-16, code at dc780ac (`reports/variants-pd_return-2020-01-02-2021-12-31-only.*`)
+
+| | n | Win % [95%] | Mean R | z | US100 / US30 / US500 | 2020 / 2021 |
+|---|---|---|---|---|---|---|
+| Model baseline | 2,040 | 27.9 [26–30] | −0.057 | −1.45 | −0.048 / −0.041 / −0.104 | −0.042 / −0.074 |
+| **recipe3 (the rule)** | **77** | **32.5 [23–44]** | **+0.121** | **+0.79** | +0.204 (27) / +0.027 (27) / +0.133 (23) | +0.165 (42) / +0.069 (35) |
+| recipe3 + area ≥ 0.1 ADR (secondary) | 47 | 34.0 [22–48] | +0.154 | +0.77 | +0.245 / +0.015 / +0.221 | +0.174 / +0.135 |
+
+**Outcome: CONSISTENT** (≥ 60 trades, mean R > 0, positive on all three indices and in both years, z below 2.4). Not confirmed, not proven.
+
+Reported beside it:
+- **Without the 5 best trades: −0.071 R.** The profit sits in a few trades.
+- **Entry must trade more than 4 ticks through: +0.015 R** (3 trades drop out, all winners). On the in-sample run the same rule gives +0.196 (from +0.226).
+- TP1 at 1 R: 42.9% win, −0.051 R. TP1 at 2 R: 27.3%, +0.055 R. Stop × 1.5 with TP1 at 1 R: 41.6%, +0.064 R (in-sample this was 52.3%, +0.233 R: it did not repeat).
+- Decided before 09:30: +0.066 R (n 31); later: +0.158 R (n 46). The in-sample concentration before 09:30 did not repeat. Longs +0.04 (40), shorts +0.21 (37): the in-sample long bias did not repeat either.
+- Exits: 40 stops, 25 TP1, 12 time exits. Runner R +0.103.
+- Hold-out and in-sample together: 163 trades, 35.6% win [29–43], +0.177 R, z 1.73 (+0.110 R under the 4-tick fill rule).
+
+**Reading:** the sign repeated on data the rule never saw, on every index and in both years, where the unfiltered model loses on every one of those cuts. The size roughly halved (+0.23 → +0.12 R), the details that looked strongest in-sample (early entries, longs, the wide-stop 1 R version) did not carry over, and under a stricter fill the hold-out is about zero. It is the lead candidate, with a win rate of about a third; it is not an edge one could size a trade on yet.
+
+**What follows (as written above):** the second check on gold, silver, the dollar index and EUR/USD; a written review of every hold-out trade; the recipe goes to the forward log. No re-tuning on 2020–2021.
