@@ -73,6 +73,39 @@ def candles(bars: pd.DataFrame, rule: str, since: pd.Timestamp) -> list[dict]:
             for x, o, h, lo, c in zip(t, b.open, b.high, b.low, b.close)]
 
 
+def htf_candles(h1: pd.DataFrame, tf: str) -> list[dict]:
+    """4h / daily / weekly candles on the futures clock from 1h bars (NY index): 4h candles start at 18:00, 22:00,
+    02:00 …; a day runs 18:00 → 17:00 and carries the date it closes on; a week is Sunday 18:00 → Friday.
+    time = New York wall clock as a UTC epoch (midnight of the date for days; the Monday for weeks)."""
+    b = h1[list(AGG)]
+    if tf == "4h":
+        g = b.set_axis(b.index.tz_localize(None)).resample("4h", offset="2h", label="left", closed="left").agg(AGG).dropna()
+        t = g.index                                              # on the wall clock, so the bins stay at 18:00 across DST changes
+    else:
+        d = (b.index + pd.Timedelta(hours=6)).tz_localize(None).normalize()          # 18:00 belongs to the next date
+        key = d if tf == "1D" else d - pd.to_timedelta(d.dayofweek, unit="D")
+        g = b.groupby(key).agg(AGG)
+        t = g.index
+    sec = (t - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1)
+    return [{"time": int(x), "open": round(float(o), 2), "high": round(float(h), 2), "low": round(float(lo), 2), "close": round(float(c), 2)}
+            for x, o, h, lo, c in zip(sec, g.open, g.high, g.low, g.close)]
+
+
+_LONG: dict = {}
+
+
+def long_h1(asset: str, day: date, days: int = 900) -> pd.DataFrame:
+    """1h bars of the last ~2.5 years from the local cache, loaded once per index and day (for the 4h / D / W charts)."""
+    if (asset, day) not in _LONG:
+        from ict_engine.data import dukascopy
+        try:
+            b = dukascopy.load(asset, day - timedelta(days=days), day)
+            _LONG[(asset, day)] = b[list(AGG)].resample("1h", label="left", closed="left").agg(AGG).dropna()
+        except Exception:
+            _LONG[(asset, day)] = pd.DataFrame(columns=list(AGG))
+    return _LONG[(asset, day)]
+
+
 def conditions(asset: str, bars: pd.DataFrame, day: date) -> dict:
     """What is known before the day starts: regime, scheduled news, weekday, session. ``recipe_day`` = the forward
     test's candidate 2 (high volatility or a high-impact release)."""
@@ -349,6 +382,15 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
         item["candles"] = {"5m": candles(bars, "5min", midnight - pd.Timedelta(days=1)),
                            "15m": candles(bars, "15min", midnight - pd.Timedelta(days=6)),
                            "1h": candles(bars, "1h", midnight - pd.Timedelta(days=25))}
+        try:                                                     # higher timeframes for the bias: cache history + the live bars
+            live_h1 = bars[list(AGG)].resample("1h", label="left", closed="left").agg(AGG).dropna()
+            old = long_h1(a, day)
+            h1 = pd.concat([old[old.index < live_h1.index[0]], live_h1])
+            h1 = h1[h1.index <= now]
+            item["candles"].update({"4h": htf_candles(h1[h1.index >= now - pd.Timedelta(days=120)], "4h"),
+                                    "1D": htf_candles(h1[h1.index >= now - pd.Timedelta(days=500)], "1D"), "1W": htf_candles(h1, "1W")})
+        except Exception as e:
+            item["htf_error"] = f"{type(e).__name__}: {e}"
         doc["assets"][a] = item
     return doc
 

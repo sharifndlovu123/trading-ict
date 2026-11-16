@@ -86,3 +86,18 @@ def test_order_block_needs_the_very_next_candle_to_engulf_it():
     assert lr.engulfed_blocks(two, "1m") == []
     buy = bars([(102, 102.5, 99.5, 100), (100, 102.4, 99.8, 102.3)], "2024-01-09 10:00")       # mirror; close inside the wick
     assert [(e.direction, e.bottom, e.top, e.meta["beyond_wick"]) for e in lr.engulfed_blocks(buy, "1m")] == [("bull", 100.0, 102.0, False)]
+
+
+def test_higher_timeframe_candles_follow_the_futures_clock():
+    # 1h bars from Sunday 18:00 to Tuesday 16:00 (no 17:00 hour), each bar open = close = its number
+    idx = [t for t in pd.date_range(pd.Timestamp("2024-01-07 18:00", tz=NY), pd.Timestamp("2024-01-09 16:00", tz=NY), freq="1h") if t.hour != 17]
+    h1 = pd.DataFrame({"open": range(len(idx)), "high": [x + 0.5 for x in range(len(idx))], "low": [x - 0.5 for x in range(len(idx))],
+                       "close": range(len(idx))}, index=pd.DatetimeIndex(idx), dtype=float)
+    h4 = lr.htf_candles(h1, "4h")
+    assert pd.Timestamp(h4[0]["time"], unit="s").strftime("%a %H:%M") == "Sun 18:00" and (h4[0]["open"], h4[0]["close"]) == (0, 3)
+    assert pd.Timestamp(h4[1]["time"], unit="s").strftime("%H:%M") == "22:00"
+    d = lr.htf_candles(h1, "1D")                                   # Sunday evening belongs to Monday's candle
+    assert [pd.Timestamp(x["time"], unit="s").strftime("%a %d") for x in d] == ["Mon 08", "Tue 09"]
+    assert d[0]["open"] == 0 and d[0]["close"] == 22 and d[1]["open"] == 23 and d[0]["high"] == 22.5
+    w = lr.htf_candles(h1, "1W")
+    assert len(w) == 1 and pd.Timestamp(w[0]["time"], unit="s").strftime("%a %d") == "Mon 08" and w[0]["close"] == len(idx) - 1
