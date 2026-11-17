@@ -1,0 +1,354 @@
+{
+ "at": "Tue 17 Nov, London prep (02:05 New York)",
+ "US100": {
+  "marks": [
+   {
+    "kind": "EQL swept",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794834000,
+    "t1": 1794852000,
+    "price": 27148.71,
+    "watch": false
+   },
+   {
+    "kind": "overnight low (taken)",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794852000,
+    "t1": null,
+    "price": 27098.54,
+    "watch": false
+   },
+   {
+    "kind": "range low (taken)",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794877200,
+    "t1": null,
+    "price": 27143.31,
+    "watch": false
+   },
+   {
+    "kind": "Asia high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794866400,
+    "t1": null,
+    "price": 27414.15
+   },
+   {
+    "kind": "lower high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794826800,
+    "t1": null,
+    "price": 27533.54
+   },
+   {
+    "kind": "1D IFVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 27420.02,
+    "bottom": 27318.65
+   },
+   {
+    "kind": "old 1D FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1793836800,
+    "t1": null,
+    "top": 27494.71,
+    "bottom": 27318.65
+   },
+   {
+    "kind": "4h order block (dim)",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794852000,
+    "t1": null,
+    "top": 27307.7,
+    "bottom": 27224.73
+   },
+   {
+    "kind": "high 00:25",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794875100,
+    "t1": null,
+    "price": 27303.3
+   },
+   {
+    "kind": "1M FVG (May)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1777593600,
+    "t1": null,
+    "top": 28233.64,
+    "bottom": 27489.61,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Apr)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1775001600,
+    "t1": null,
+    "top": 27408.46,
+    "bottom": 25207.97,
+    "watch": false
+   },
+   {
+    "kind": "July low (taken)",
+    "tf": "1M",
+    "side": "sellside",
+    "t0": 1782864000,
+    "t1": null,
+    "price": 27063.33,
+    "watch": false
+   },
+   {
+    "kind": "5m FVG",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794888000,
+    "t1": null,
+    "top": 27143.14,
+    "bottom": 27106.56
+   }
+  ],
+  "read": [
+   "Bias: weekly and daily down (lower highs since 31,365; yesterday was a trend day down, closing near its low).",
+   "Overnight: yesterday's equal lows (27,148.7) were swept at 18:00 (low 27,098.5) and price pushed back to 27,414, into the bottom of the 5 Nov daily gap (27,319\u201327,495), where it was rejected. The 01:00 dip held a higher low (27,143).",
+   "Where price is: 27,245, low in yesterday's range (16%). Selling here is selling the bottom, so I wait.",
+   "Idea 1, with the bias (sell): London raids the Asia high 27,414 into the daily gap or up to the lower high 27,534, then turns. Target the overnight low 27,098.5, then last week's low 26,649.",
+   "Idea 2, against the bias (buy, small): London takes 27,098.5 first and pushes back hard, as the 18:00 sweep did. Target the Asia high 27,414. Only after the sweep and the push.",
+   "Of the three, US100 is the only one that held a higher low at 01:00: the strongest overnight, so the chart for a buy, not for a sell.",
+   "02:30: small equal highs at 27,250 (02:00 and 02:20), while US500 and US30 sit on equal lows. US100 still the strongest.",
+   "Daily: the gap left by 9 Nov's rally (27,319\u201327,420) was closed through by yesterday's candle, so it has turned into resistance. The overnight high 27,414 was a test of it from below, and it held.",
+   "4h (Sharif): the old gap from the big red candle of 5 Nov (27,319\u201327,495) held as support on 10 Nov (low 27,420). Yesterday's 10:00 candle broke below it, closing at 27,317. Since then three 4h candles have respected it from below: 14:00 could not get back in (high 27,316.6), 18:00 and 22:00 wicked into it (27,356 and 27,414) and both closed back under.",
+   "Compared with US500 (Sharif): US500 never retested its old gap; US100 did, and it held. That makes US100 the interesting one.",
+   "4h (Sharif): since the break, no 4h body has gone inside the gap. The bodies stop at 27,317 / 27,308 / 27,308, all under the gap's bottom (27,319); only wicks reach in. A 4h body closing inside it would be the first sign the gap is failing.",
+   "4h: the 18:00 up candle (body 27,225\u201327,308) was engulfed by the single 22:00 down candle (close 27,207, under its open), while price was retracing into the gap: a sell order block, sitting right under the gap. Its body is only about a third of the candle (long lower wick from the 27,098.5 sweep), so it is a dim order block: valid, not clean, not as powerful (Sharif).",
+   "02:51: equal 15m lows at 27,200 (01:00 and 02:40) under price; equal highs at 27,250 above. Price is boxed between the two small pools, at the bottom edge of the dim 4h block.",
+   "02:55: a push up took the small equal highs at 27,250 (5m candle 27,212 \u2192 27,259). Price is now inside the dim 4h block and moving toward the gap's underside (27,319). This is the retrace I was waiting for; no sell until price reaches the area and turns.",
+   "Context (Sharif): the small equal highs were swept inside an important area: the 4h block, right under the respected gap. A sweep of buyside inside a higher-timeframe sell area is what gives a small pool its meaning.",
+   "03:01: the push ran to 27,288 twice (02:55 and 03:00 highs, 0.1 apart), inside the 4h block and 31 points under the gap, then the 03:00 candle fell back to 27,251. US500 and US30 bounced far less.",
+   "Sharif, 03:05: the 5m high at 00:25 is 27,303.3; London's push stopped under it at 27,288. If that high is not taken out and price leaves a strong 5m order block soon, the equal lows (27,200) and the higher low (27,143) become very interesting. Watching for exactly that: a clean 5m sell order block under 27,303.3.",
+   "03:07, teaching example (London is not traded): the 5m order block is the 02:55 up candle, body 27,257.0\u201327,277.9 (61% of the candle: clean), engulfed by the 03:00 candle (close 27,237.9), under the 00:25 high. Sell plan: entry on a retrace to the block's 50% at 27,267.5; stop 27,304, just above the 00:25 high (36.5 points); TP1 the equal lows 27,200 (1.8 R, 50%); TP2 the higher low 27,143 (3.4 R, 30%); runner the overnight low 27,098.5 (4.6 R, 20%), with the higher-timeframe bias.",
+   "Monthly: two rising gaps from the April\u2013May rally. May's (27,490\u201328,234) has been traded through this month and price is now under it. April's (25,208\u201327,408) starts just under where we are: price is entering it. The strip between them, 27,408\u201327,490, is the same area the daily gap and the 4h bodies are respecting. July's low 27,063 is monthly sellside 35 points under the overnight low.",
+   "Long time vs short time (Sharif): long term the monthly buy area is valid; short term the weekly and daily are falling. The 5m sell is with the short term and against the long term. Two scenarios stay open: price breaks a bit lower first (the overnight low 27,098.5, July's low 27,063) and buys later, or it buys aggressively from here without a lower low.",
+   "03:12: the equal lows at 27,200 were taken (low 27,195.9) and price bounced back to 27,218 within the same 5m candle. The teaching sell never filled: after the block, price only retraced to 27,248.9, short of the 27,257 edge, and went straight to the lows. The idea was right; the entry at the block's 50% did not get reached.",
+   "OTE of the range in play now (27,288.1 at 03:00 \u2192 27,191.1 at 03:10): 62% 27,251.3, 70.5% 27,259.5, 79% 27,267.8; the 50% is 27,239.6. It overlaps the clean 5m order block (27,257.0\u201327,277.9).",
+   "Rule (Sharif): if the trading range is broken (here its low, 27,143) and the entry at 27,267.5 still has not been hit, the trade is missed. No chasing.",
+   "03:23: two 5m lows at 27,191\u201327,192 (03:15 and 03:20), then a 41-point bounce to 27,237. Liquidity is building under price again, above the range low 27,143.",
+   "03:25, possible SMT (Sharif): since 03:00 US30 has made a higher high (51,439.6 over 51,435.6) and US500 is back at its high (7,410.4 vs 7,410.9), while US100 is far under its own (27,247.6 vs 27,288.1). At the lows it is the reverse: US100 made lower lows (27,191), US500 and US30 did not. The three are not confirming each other.",
+   "03:29, on 1m: since 03:09 price has stopped four times at 27,245.6\u201327,248.9 (03:09, 03:15, 03:23, 03:27): equal highs stacking just under the 5m order block (27,257) and the OTE (27,251\u201327,268). Under price the lows sit at 27,191\u201327,196. Buyside is being built right below the entry area.",
+   "Just above the equal highs: the 5m FVG from the 03:00 drop (27,248.9\u201327,253.7), then the OTE and the clean 5m order block. Equal highs \u2192 gap \u2192 block, all under the 00:25 high. Interesting, not a trade (Sharif).",
+   "03:32: price went down, not up: the 03:30 candle fell 43 points and took the small lows at 27,191 (low 27,185). The stacked equal highs at 27,249 and the gap above them are left untouched. The range low 27,143 is still intact; the entry still not reached.",
+   "03:48: new small lows created at 27,168\u201327,170, 25 points above the range low. Lows keep being built and then taken, one step down at a time.",
+   "About 03:55: paper idea 1 is dead (Sharif). Not filled; full write-up with the chart as drawn is in research/hunt-log/2026-11-17.md. Its entry, stop and block are off the chart.",
+   "03:58: the range low 27,143.3 was traded (low 27,143.1), so by the rule idea 1 is officially missed. Pace still slow (the 03:55 candle fell 31 points). Swept below: every small pool down to 27,143. Created above: the equal highs at 27,246\u201327,249, untouched. Still resting below: 27,098.5 and July's low 27,063. What I'd need for a buy: a hard push back up and a clean 5m buy block; the watcher is set to report one.",
+   "04:04: the first aggressive candle down of the session. The 04:00 candle fell 100 points (27,170 \u2192 27,070, low 27,054.5) and took the overnight low 27,098.5 and July's low 27,063 in one move. US500 and US30 made new lows on the same candle, so the SMT is gone: all three confirm. This is the 'break a bit lower first' scenario inside the monthly buy area. Monthly sellside has now been swept inside that area; what follows (a hard push back, or continuation toward last week's low 26,649) is the thing to read.",
+   "04:11: correction: I drew the drop's gap before its third candle had closed. With the 04:05 candle closed (high 27,106.6), the 5m gap is 27,106.6\u201327,143.1. Low so far 27,046; price bounced about 60 points off it.",
+   "04:44: new low 27,001.8 at 04:20, then a 90-point bounce in three candles (the 04:35 candle +44, the sharpest up candle since 02:55). Price 27,086, coming up toward the gap the 04:00 drop left (27,106.6\u201327,143.1) from below. That gap is the area to read: respected (bodies stay under, a 1m break of structure down inside it) or closed through. US500 and US30 turned at the same time."
+  ],
+  "watch_ob": {
+   "side": "buy",
+   "above": 27090.0,
+   "min_body": 50,
+   "clean_only": true
+  }
+ },
+ "US500": {
+  "marks": [
+   {
+    "kind": "PDL swept",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794837600,
+    "t1": 1794877200,
+    "price": 7399.85,
+    "watch": false
+   },
+   {
+    "kind": "sellside",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794877200,
+    "t1": null,
+    "price": 7394.13
+   },
+   {
+    "kind": "Asia high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794859200,
+    "t1": null,
+    "price": 7436.13
+   },
+   {
+    "kind": "FVG",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794834000,
+    "t1": null,
+    "top": 7445.3,
+    "bottom": 7436.76
+   },
+   {
+    "kind": "PWL",
+    "tf": "1D",
+    "side": "sellside",
+    "t0": 1794182400,
+    "t1": null,
+    "price": 7343.35,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794880800,
+    "t1": null,
+    "price": 7401.49
+   },
+   {
+    "kind": "1D IFVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 7470.07,
+    "bottom": 7443.93
+   },
+   {
+    "kind": "July low",
+    "tf": "1M",
+    "side": "sellside",
+    "t0": 1782864000,
+    "t1": null,
+    "price": 7295.0,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794882600,
+    "t1": null,
+    "price": 7397.62
+   }
+  ],
+  "read": [
+   "Bias: weekly and daily down, the same picture as US100.",
+   "Overnight: a tight range (7,394\u20137,436). Yesterday's three lows (7,399.9) were only swept at 01:00 (low 7,394.1), and price closed back above.",
+   "The cleanest sell area of the three: the Asia high 7,436.1 sits right under yesterday's unfilled 1h gap (7,436.8\u20137,445.3). A London raid of the Asia high lands in that gap.",
+   "Idea (sell): raid of 7,436 into 7,437\u20137,445, then a turn. Target 7,394, then last week's low 7,343.",
+   "If instead 7,394 goes first and holds below: continuation toward 7,343; I would not chase it without a retrace.",
+   "02:30: three 15m lows at 7,401\u20137,402 since the open, just above the swept low. A small pool; if it goes, 7,394 is next.",
+   "Daily: the gap left by 9 Nov's rally (7,444\u20137,470) was closed through yesterday; now resistance. The overnight high 7,436 stopped 8 points under it.",
+   "4h (Sharif): US500 went straight through its old 5 Nov gap (7,444\u20137,462) and has not come back to retest it; US100 has retested its own from below. Good to know: it makes US100 the interesting chart.",
+   "03:23: three 15m lows at 7,397.6\u20137,398.9 since 02:30, just above the overnight low 7,394.1. Price 7,408.",
+   "03:25, possible SMT (Sharif): since 03:00 US30 has made a higher high (51,439.6 over 51,435.6) and US500 is back at its high (7,410.4 vs 7,410.9), while US100 is far under its own (27,247.6 vs 27,288.1). At the lows it is the reverse: US100 made lower lows (27,191), US500 and US30 did not. The three are not confirming each other.",
+   "03:58: the overnight low 7,394.1 was taken (low 7,392.9): a new low for the move, on a slow grind.",
+   "04:04: new low 7,381.6 on the same aggressive candle; all three confirm."
+  ]
+ },
+ "US30": {
+  "marks": [
+   {
+    "kind": "PDL swept",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794837600,
+    "t1": 1794862800,
+    "price": 51505.33,
+    "watch": false
+   },
+   {
+    "kind": "sellside",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794877200,
+    "t1": null,
+    "price": 51371.6
+   },
+   {
+    "kind": "FVG",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794862800,
+    "t1": null,
+    "top": 51514.13,
+    "bottom": 51489.7
+   },
+   {
+    "kind": "Asia high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794859200,
+    "t1": null,
+    "price": 51605.61
+   },
+   {
+    "kind": "PWL",
+    "tf": "1D",
+    "side": "sellside",
+    "t0": 1794182400,
+    "t1": null,
+    "price": 51153.35,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794880800,
+    "t1": null,
+    "price": 51397.1
+   },
+   {
+    "kind": "1D IFVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 51963.15,
+    "bottom": 51664.1
+   },
+   {
+    "kind": "1M FVG (Jun)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1780272000,
+    "t1": null,
+    "top": 51459.5,
+    "bottom": 51125.96,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794884700,
+    "t1": null,
+    "price": 51358.63,
+    "watch": false
+   }
+  ],
+  "read": [
+   "Overnight the weakest of the three (it was the strongest all last week): yesterday's low went at 21:00 and it kept making new lows to 51,371.6 at 01:00.",
+   "So for a sell with the bias this is now the chart to favour; for a buy, leave it.",
+   "Sell area on a retrace: the 1h gap 51,490\u201351,514 (already touched once), then the Asia high 51,606. Target 51,371.6, then last week's low 51,153.",
+   "02:30: equal 15m lows at 51,397, with lower highs above them: leaning down toward 51,371.6.",
+   "02:36: the overnight low 51,371.6 was traded through (low 51,363) on a slow grind, no hard push and no push back yet. US100 and US500 have not taken theirs: US30 is the weakest. Next below is last week's low 51,153.",
+   "Daily: the gap left by 9 Nov's rally (51,664\u201351,963) was closed through yesterday; now resistance. The overnight high 51,659 stopped 5 points under it.",
+   "03:25, possible SMT (Sharif): since 03:00 US30 has made a higher high (51,439.6 over 51,435.6) and US500 is back at its high (7,410.4 vs 7,410.9), while US100 is far under its own (27,247.6 vs 27,288.1). At the lows it is the reverse: US100 made lower lows (27,191), US500 and US30 did not. The three are not confirming each other.",
+   "03:58: a new low for the move, 51,351.6.",
+   "04:04: new low 51,331.6 on the same aggressive candle; all three confirm."
+  ]
+ }
+}
