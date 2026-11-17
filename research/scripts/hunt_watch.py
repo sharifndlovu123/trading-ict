@@ -83,6 +83,8 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
                 fired.append(key)
                 pct = round(100 * body / rng)
                 grade = "clean" if pct >= wob.get("min_body", 50) else "dim"
+                if grade == "dim" and wob.get("clean_only"):
+                    continue
                 out.append(f"{asset}: 5m {'sell' if sell else 'buy'} order block formed ({grade}, body {pct}%): "
                            f"{min(blk['open'], blk['close'])}–{max(blk['open'], blk['close'])}, engulfed to {eng['close']}; last {last}")
         adr = item.get("adr")
