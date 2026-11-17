@@ -53,7 +53,7 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
     out, fired = [], state["fired"]
     for asset, item in doc.get("assets", {}).items():
         last, c5 = item.get("last"), (item.get("candles", {}).get("5m") or [])
-        if last is None or not c5:
+        if last is None or not c5 or overlay.get(asset, {}).get("watch") is False:      # e.g. gold and silver: on the page for looking only
             continue
         bar = c5[-1]
         hi, lo = max(bar["high"], last), min(bar["low"], last)
