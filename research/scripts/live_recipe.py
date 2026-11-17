@@ -437,6 +437,11 @@ def main():
             base[x] = merge(base[x], fetch_recent(x, day))
         doc = build(base, day, now, "live")
         write(doc)
+        try:                                                     # the brain's eyes: what the scan sees, for the page's own layer
+            import hunt_scan
+            hunt_scan.write_layer(json.loads(json.dumps(doc, default=str)), OUT)
+        except Exception as e:
+            print(f"scan layer failed: {type(e).__name__}: {e}", flush=True)
         n = sum(1 for v in doc["assets"].values() for s in v["setups"] if s["ok"])
         print(f"{now:%H:%M:%S} refreshed · last bars {[v['last_bar'] for v in doc['assets'].values()]} · plans {n}", flush=True)
         if a.once or now.time() >= time(16, 5) or now.date() != day:

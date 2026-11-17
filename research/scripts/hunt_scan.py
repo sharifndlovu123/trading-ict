@@ -168,7 +168,7 @@ def displacements(c: list[dict], tf: str, liq: list[dict], gps: list[dict]) -> l
         ref = closed[max(0, i - 7):i]
         bos = x["close"] < min(k["low"] for k in ref) if down else x["close"] > max(k["high"] for k in ref)
         age = len(closed) - 1 - i
-        base = {"tf": tf, "side": "down" if down else "up", "t0": x["time"], "p0": x["open"], "p1": x["close"], "bos": bos,
+        base = {"tf": tf, "side": "down" if down else "up", "t0": x["time"], "t1": x["time"] + step, "p0": x["open"], "p1": x["close"], "bos": bos,
                 "weight": round((1 + RANK[tf]) * (1.4 if bos else 1.0) * max(0.3, 1 - age / RECENT) * 1.5, 2)}
         out.append({**base, "type": "displacement", "times_usual": round(abs(body) / usual, 1),
                     "text": f"{tf} displacement {'down' if down else 'up'} at {hm(x['time'], tf)}: {x['open']} → {x['close']}, "
@@ -309,33 +309,93 @@ def scan(doc: dict, asset: str) -> list[dict]:
     return sorted(out, key=lambda o: -o.get("weight", 0))
 
 
-def judgements(obs: list[dict], last: float) -> dict[str, list[str]]:
-    """The five things Sharif wants judged from the chart itself, each as a few plain lines taken from the scan.
-    This only arranges what was seen; deciding what it means is the reader's job."""
+def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
+    """The observations that answer the five judgements (and liquidity), a few each. This only arranges what was
+    seen; deciding what it means is the reader's job."""
     by = lambda *pre: [o for o in obs if o["type"].startswith(pre)]          # noqa: E731
     tfo = lambda xs: sorted(xs, key=lambda o: RANK.get(o["tf"], 0))          # noqa: E731
-    lab = lambda xs: ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in tfo(xs)) or "nothing to go on"   # noqa: E731
+    lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in tfo(xs)) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
-    out = {"choppy": [lab(cond)] + [o["text"] for o in by("cond.displacement_out_of_chop")[:2]],
-           "bias": [lab(by("bias."))] + [o["text"] for o in by("candle.counter_in_gap")[:2]],
-           "volatile": [lab([o for o in by("vol.") if o["type"] != "vol.day_used"])] + [o["text"] for o in by("vol.day_used")]}
+    out = {"choppy": [lab(cond)] + by("cond.displacement_out_of_chop")[:2],
+           "bias": [lab(by("bias."))] + by("candle.counter_in_gap")[:2]}
     areas = [o for o in by("gap.", "block.") if "bottom" in o]
-    pick = []
+    pick = sorted((o for o in areas if o["bottom"] <= last <= o["top"]), key=lambda o: -RANK[o["tf"]])[:3]
     for above in (True, False):                                               # the nearest standing areas each side of price, small and large
         side = [o for o in areas if (o["bottom"] > last if above else o["top"] < last)]
         for big in (False, True):
-            k = sorted((o for o in side if (RANK[o["tf"]] >= 3) == big), key=lambda o: abs((o["bottom"] if above else o["top"]) - last))[:2]
-            pick += [("above: " if above else "below: ") + o["text"] for o in k]
-    inside = sorted((o for o in areas if o["bottom"] <= last <= o["top"]), key=lambda o: -RANK[o["tf"]])[:3]
-    out["areas"] = ["price is inside: " + o["text"] for o in inside] + pick + [o["text"] for o in by("liq.created_against_area", "liq.swept_into_area")[:4]]
-    disp = sorted(by("displacement"), key=lambda o: (-o.get("t0", 0), o["type"]))
-    seen, lines = set(), []
+            pick += sorted((o for o in side if (RANK[o["tf"]] >= 3) == big), key=lambda o: abs((o["bottom"] if above else o["top"]) - last))[:2]
+    out["areas"] = pick + by("liq.created_against_area", "liq.swept_into_area")[:4]
+    disp, lines = by("displacement"), []
     for o in sorted((o for o in disp if o["type"] == "displacement"), key=lambda o: -o["weight"])[:3]:
-        lines += [x["text"] for x in disp if x.get("t0") == o["t0"] and x["tf"] == o["tf"] and (x["type"], x["t0"]) not in seen and not seen.add((x["type"], x["t0"]))]
-    out["displacement"] = lines or ["none recently on any timeframe"]
-    out["liquidity"] = [o["text"] for o in sorted(by("liq.created"), key=lambda o: abs(o["price"] - last)) if o["type"] == "liq.created"][:4] + \
-                       [o["text"] for o in sorted(by("liq.eaten"), key=lambda o: -o.get("t1", 0))[:3]]
+        lines += sorted((x for x in disp if x.get("t0") == o["t0"] and x["tf"] == o["tf"]), key=lambda x: len(x["type"]))
+    out["displacement"] = lines or [{"type": "summary", "tf": "", "text": "none recently on any timeframe"}]
+    out["volatile"] = [lab([o for o in by("vol.") if o["type"] != "vol.day_used"])] + by("vol.day_used")
+    out["liquidity"] = sorted((o for o in by("liq.created") if o["type"] == "liq.created"), key=lambda o: abs(o["price"] - last))[:4] + \
+        sorted((o for o in by("liq.eaten") if o["type"] == "liq.eaten"), key=lambda o: -o.get("t1", 0))[:3]
     return out
+
+
+def judgements(obs: list[dict], last: float) -> dict[str, list[str]]:
+    """The five things Sharif wants judged from the chart itself, each as a few plain lines taken from the scan."""
+    def line(k, o):
+        if k == "areas" and "bottom" in o and o["type"].startswith(("gap.", "block.")):
+            return ("price is inside: " if o["bottom"] <= last <= o["top"] else "above: " if o["bottom"] > last else "below: ") + o["text"]
+        return o["text"]
+    return {k: [line(k, o) for o in v] for k, v in select(obs, last).items()}
+
+
+GAP_WORD = {"untouched": "gap", "wicked": "gap · respected", "body_inside": "gap · bodies in", "flipped": "gap · flipped", "flipped_retest": "gap · flipped, retested"}
+
+
+def to_mark(o: dict) -> dict | None:
+    """One observation as a mark the page can draw (a zone, a level or an arrow), with a short name. No sentences on the chart."""
+    t, tf = o["type"], o["tf"]
+    base = {"by": "B", "tf": tf, "t0": o.get("t0"), "t1": None, "watch": False}
+    hl = "EQH" if o.get("side") == "highs" else "EQL"
+    lside = "buyside" if o.get("side") == "highs" else "sellside"
+    if t.startswith("gap."):
+        return {**base, "kind": f"{tf} {GAP_WORD[t[4:]]}", "side": "area", "top": o["top"], "bottom": o["bottom"]}
+    if t.startswith("block."):
+        return {**base, "kind": f"{tf} {o['side']} block" + (" (dim)" if o["grade"] == "dim" else "") + (" · weaker" if t.endswith("weakened") else ""),
+                "side": "area", "top": o["top"], "bottom": o["bottom"]}
+    if t == "liq.created":
+        return {**base, "kind": f"{hl} x{o['count']}", "side": lside, "price": o["price"]}
+    if t == "liq.created_against_area":
+        return {**base, "kind": f"{hl} x{o['count']} against {o['area_tf']} gap", "side": lside, "price": o["price"]}
+    if t in ("liq.eaten", "liq.swept_into_area"):
+        how = "wick" if o["closed_back"] else "body"
+        return {**base, "kind": f"{hl} eaten ({how})" + (f" into {o['area_tf']} gap" if t.endswith("area") else ""), "side": lside, "price": o["price"], "t1": o["t1"]}
+    if t == "displacement":
+        return {**base, "kind": "displacement", "side": "", "p0": o["p0"], "p1": o["p1"], "t1": o.get("t1", o["t0"])}
+    if t == "displacement.left_gap":
+        return {**base, "kind": f"{tf} gap left by displacement", "side": "area", "top": o["top"], "bottom": o["bottom"]}
+    return None
+
+
+def layer(doc: dict) -> dict:
+    """What the scan sees, per instrument, for the page: the five judgements as text and the picked observations as marks."""
+    out = {"at": doc.get("now")}
+    for asset, it in doc.get("assets", {}).items():
+        try:
+            obs = scan(doc, asset)
+            sel = select(obs, it["last"])
+            marks, seen = [], set()
+            for o in [x for v in sel.values() for x in v]:
+                m = to_mark(o)
+                key = m and (m["kind"], m.get("price"), m.get("top"), m.get("p1"))
+                if m and key not in seen:
+                    seen.add(key)
+                    marks.append(m)
+            out[asset] = {"judgements": judgements(obs, it["last"]), "marks": marks, "count": len(obs)}
+        except Exception as e:                                   # one instrument failing must not blank the others
+            out[asset] = {"error": f"{type(e).__name__}: {e}", "marks": [], "judgements": {}}
+    return out
+
+
+def write_layer(doc: dict, folder: Path) -> None:
+    tmp = folder / "brain.json.tmp"
+    tmp.write_text(json.dumps(layer(doc)))
+    tmp.replace(folder / "brain.json")
 
 
 def main():
@@ -344,11 +404,15 @@ def main():
     ap.add_argument("--at", help="New York time today, HH:MM: read the day as it stood then")
     ap.add_argument("--src", type=Path, default=Path("out/live/today.json"))
     ap.add_argument("--top", type=int, default=40)
+    ap.add_argument("--write", type=Path, help="write brain.json (every instrument) into this folder for the page to draw, e.g. out/live")
     ap.add_argument("--raw", action="store_true", help="the weighted observations themselves, not the five judgements")
     a = ap.parse_args()
     doc = json.loads(a.src.read_text())
     if a.at:
         doc = ls.cut(doc, ls.at_epoch(doc, a.at))
+    if a.write:
+        write_layer(doc, a.write)
+        print(f"what the scan sees at {doc['now']} → {a.write / 'brain.json'}")
     obs = scan(doc, a.asset)
     if a.raw:
         for o in obs[:a.top]:

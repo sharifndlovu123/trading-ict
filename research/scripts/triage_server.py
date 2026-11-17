@@ -98,6 +98,11 @@ class Handler(SimpleHTTPRequestHandler):
             if not snap["assets"]:
                 return self._json({"error": "no candles before that time"}, 400)
             ls.write(snap, DATA)
+            try:
+                import hunt_scan
+                hunt_scan.write_layer(snap, DATA)
+            except Exception:
+                pass
             self._json({"now": snap["now"], "live": doc["now"], "end": want >= end})
         elif self.path == "/api/answers":
             self._json(answers())

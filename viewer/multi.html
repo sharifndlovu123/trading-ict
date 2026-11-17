@@ -53,6 +53,7 @@ a { color:var(--accent); }
   <span class="tabs"><span class="dim">all to</span><span id="tfs" class="tabs"></span></span>
   <label title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> linked</label>
   <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
+  <label id="brwrap" style="display:none" title="everything the scan sees (amber, &quot;B ·&quot;): for checking Claude's eyes"><input type="checkbox" id="brainon" autocomplete="off"> what the scan sees</label>
   <button id="allline" title="every chart as a line of the closes, or back to candles (L); each chart also has its own switch in its header">╱ line</button>
   <button id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">% compare</button>
   <button id="refresh" title="newest candles and re-centre (Alt+R)">↻ refresh</button>
@@ -159,8 +160,10 @@ function build() {
     el.querySelector(".ty").onclick = () => { c.line = !c.line; save(); fillPane(p, false); };
     const shows = tf => TFS.indexOf(tf) >= TFS.indexOf(c.tf);
     p.layer = marksLayer(chart, series, el.lastChild, { list: () => myMarks(c.asset), times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: marksChanged,
-      under: () => !(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
-        nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })) });
+      under: () => [...(!(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
+        nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))),
+        ...(!(st.brain && $("brainon").checked && st.brain[c.asset]) ? [] : (st.brain[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
+          nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 2, color: "#f5b942", label: "B · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })))] });
     const act = () => { if (st.active !== p) { st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p)); } };
     for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, act, { passive: true });
     el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
@@ -290,6 +293,8 @@ async function poll(first) {
     st.doc = d;
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
     $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
+    try { const r = await fetch("brain.json?t=" + Date.now()); st.brain = r.ok ? await r.json() : null; } catch (e) { st.brain = null; }
+    $("brwrap").style.display = st.brain ? "" : "none";
     $("when").textContent = `New York ${d.now} · checked ${new Date().toLocaleTimeString()}`;
     if (first) loadMarks();
     if (first) { const q = new URLSearchParams(location.search), as = (q.get("assets") || "").split(",").filter(n => d.assets[n]);      // a link can set the charts: /multi?assets=US100,US500&tf=5m
@@ -320,6 +325,7 @@ $("rpplay").onclick = () => { if (rpTimer) { clearInterval(rpTimer); rpTimer = n
 async function refresh() { $("refresh").textContent = "↻ …"; await poll(false); if (st.doc) fill(true); $("refresh").textContent = "↻ refresh"; }
 $("refresh").onclick = refresh;
 $("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
+$("brainon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
 $("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = new Set(); for (const p of st.active ? [st.active, ...st.panes] : st.panes) if (!seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); } } };
 document.addEventListener("keydown", e => { if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); refresh(); } });
 poll(true); setInterval(() => poll(false), 20000);

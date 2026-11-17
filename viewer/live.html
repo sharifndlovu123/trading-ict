@@ -92,6 +92,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
           <label title="the 1h entry areas near price: breaker, order block, FVG, OTE"><input type="checkbox" id="areason" autocomplete="off"> entry areas</label>
           <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked> Claude's marks</label>
+          <label id="brwrap" style="display:none" title="everything the scan sees on this chart (amber, &quot;B ·&quot;): for checking Claude's eyes, not a read"><input type="checkbox" id="brainon" autocomplete="off"> what the scan sees</label>
           <span id="marksn" class="dim"></span>
           <span id="fsinfo" class="dim num"></span>
           <span class="dim" id="legend">Prices are the CFD's (not the futures'). Dotted = session levels · purple = the higher-timeframe area · blue / red / green = entry / stop / TP1 of the selected plan. Pick a type below, then click or drag on the chart.</span>
@@ -105,6 +106,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
       <div id="plans"></div>
       <div class="card" id="blocked"></div>
       <div class="card" id="cread" style="display:none"></div>
+      <div class="card" id="brain" style="display:none"></div>
       <div class="card" id="areas"></div>
       <div class="card" id="breaks"></div>
     </div>
@@ -165,7 +167,10 @@ const layer = marksLayer(chart, series, $("chart"), {
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
     ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).filter(m => tfShows(m.tf || "1h")).map(m => ({ ...m, bold: true,
       nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(st.tf) >= 3,      // e.g. a daily or monthly zone on the 1m / 5m chart would wash the whole chart
-      color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
+      color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))),
+    // what the scan sees (hunt_scan.py → brain.json): its own layer, amber, off until asked for
+    ...(!(st.brain && $("brainon").checked && st.brain[st.asset]) ? [] : (st.brain[st.asset].marks || []).filter(m => tfShows(m.tf || "1h")).map(m => ({ ...m, bold: true,
+      nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(st.tf) >= 2, color: "#f5b942", label: "B · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
 const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
 const tfShows = tf => TFS.indexOf(st.tf) <= TFS.indexOf(tf);      // a mark shows on its own timeframe and every lower one
 const weak = a => (a.kind === "breaker" || a.kind === "order block") && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
@@ -346,6 +351,16 @@ function renderClaude() {                                   // Claude's read in 
   if (L.length) $("cread").innerHTML = `<h2>Claude's read · ${esc(st.asset)}${st.overlay.at ? ` <span class="dim">· ${esc(st.overlay.at)}</span>` : ""}</h2>
     <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div>${nowRows}${ideaRows}<ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
 }
+function renderBrain() {                                    // the five judgements as the scan arranged them; shown with its layer
+  const b = st.brain && st.brain[st.asset], on = b && $("brainon").checked;
+  $("brain").style.display = on ? "" : "none";
+  if (!on) return;
+  const names = { choppy: "1 · Choppy?", bias: "2 · Bias", areas: "3 · Areas of interest", displacement: "4 · Recent displacement", volatile: "5 · Volatile?", liquidity: "Liquidity: created, eaten" };
+  $("brain").innerHTML = `<h2>What the scan sees · ${esc(st.asset)} <span class="dim" style="font-weight:400">· ${esc(st.brain.at || "")} · ${b.count ?? ""} observations</span></h2>
+    <div class="dim">Arranged, not judged: this is for checking Claude's eyes. Amber marks "B ·" on the chart are the same things.</div>` +
+    (b.error ? `<div class="gate f">${esc(b.error)}</div>` : Object.entries(b.judgements || {}).map(([k, L]) => `<div style="margin-top:6px"><b>${names[k] || k}</b>
+      <ul style="margin:2px 0 0 18px;padding:0">${L.map(x => `<li style="margin:2px 0;font-size:13px">${esc(x)}</li>`).join("")}</ul></div>`).join(""));
+}
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
 
@@ -417,7 +432,7 @@ async function save(id, body) {
 function render(fit) {
   const d = st.doc;
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
-  renderTabs(); renderCond(); renderCompare(); renderAreas(); renderClaude(); replayUI();
+  renderTabs(); renderCond(); renderCompare(); renderAreas(); renderClaude(); renderBrain(); replayUI();
   const a = d.assets[st.asset];
   const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
@@ -447,6 +462,8 @@ async function poll(first) {
     if (first) loadMarks();
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
     $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
+    try { const r = await fetch("brain.json?t=" + Date.now()); st.brain = r.ok ? await r.json() : null; } catch (e) { st.brain = null; }
+    $("brwrap").style.display = st.brain ? "" : "none";
     $("fresh").textContent = `page checked ${new Date().toLocaleTimeString()}`;
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
@@ -477,6 +494,7 @@ async function refreshChart() { $("refresh").textContent = "↻ …"; await poll
 const toggleType = () => { lineOn = !lineOn; try { localStorage.setItem("live-line", lineOn ? "1" : "0"); } catch (e) {} if (st.doc) drawChart(false); };
 $("ctype").onclick = toggleType;
 document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.metaKey && !e.altKey && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) toggleType(); });
+$("brainon").onchange = () => { renderBrain(); drawChart(false); };
 $("areason").onchange = () => drawChart(false); $("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
 (async () => {
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }
