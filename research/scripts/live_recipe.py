@@ -385,7 +385,8 @@ def build(bars_by_asset: dict[str, pd.DataFrame], day: date, now: pd.Timestamp, 
             item["error"] = f"{type(e).__name__}: {e}"
             item.setdefault("setups", [])
         midnight = pd.Timestamp(day, tz=NY)
-        item["candles"] = {"5m": candles(bars, "5min", midnight - pd.Timedelta(days=1)),
+        item["candles"] = {"1m": candles(bars, "1min", midnight - pd.Timedelta(hours=6)),      # since the 18:00 open
+                           "5m": candles(bars, "5min", midnight - pd.Timedelta(days=1)),
                            "15m": candles(bars, "15min", midnight - pd.Timedelta(days=6)),
                            "1h": candles(bars, "1h", midnight - pd.Timedelta(days=25))}
         try:                                                     # higher timeframes for the bias: cache history + the live bars
