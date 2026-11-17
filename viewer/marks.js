@@ -102,7 +102,9 @@ function marksLayer(chart, series, el, o) {
     for (const u of (o.under ? o.under() : [])) {       // read-only zones under my marks (the page's own areas): no handles, never picked up
       const x0 = u.t0 == null ? 0 : xOf(u.t0);
       if (u.bold) {                                     // someone else's marks, drawn as strongly as my own: solid, filled, a readable tag
-        const x1 = u.t1 == null ? W : xOf(u.t1); if (x0 == null || x1 == null) continue;
+        // an open mark stops just past the last candle (Sharif 2026-11-17: not all the way to the right edge); a finished one stops at its t1
+        const tl = T(), xl = tl.length ? xOf(tl[tl.length - 1]) : null;
+        const x1 = u.t1 == null ? (xl == null ? W : Math.min(W, xl + STUB)) : xOf(u.t1); if (x0 == null || x1 == null) continue;
         g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 2; g.setLineDash([]);
         let tx = Math.max(x0, 0) + 4, ty;
         if (u.p0 != null) {
