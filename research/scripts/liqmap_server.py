@@ -17,6 +17,7 @@ import triage_server as ts  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8766)
+    ap.add_argument("--host", default="127.0.0.1", help="0.0.0.0 = reachable from other devices on the network (anyone there can view and save)")
     ap.add_argument("--answers", type=Path, default=ts.ROOT / "reports" / "reviews" / "liqmap.jsonl")
     ap.add_argument("--data", type=Path, default=ts.ROOT / "out" / "liqmap")
     ap.add_argument("--page", type=Path, default=ts.ROOT / "viewer" / "liqmap.html")
@@ -24,8 +25,8 @@ def main():
     ts.DATA, ts.PAGE, ts.ANSWERS = a.data.resolve(), a.page.resolve(), a.answers.resolve()
     if not (ts.DATA / "index.json").exists():
         raise SystemExit("build the set first: uv run python research/scripts/liqmap_build.py")
-    print(f"liquidity map: http://127.0.0.1:{a.port}  (marks → {ts.ANSWERS})")
-    ThreadingHTTPServer(("127.0.0.1", a.port), ts.Handler).serve_forever()
+    print(f"liquidity map: http://{a.host}:{a.port}  (marks → {ts.ANSWERS})")
+    ThreadingHTTPServer((a.host, a.port), ts.Handler).serve_forever()
 
 
 if __name__ == "__main__":
