@@ -66,6 +66,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
 <main>
   <div class="top">
     <h1>Recipe live sheet</h1>
+    <span id="hunt" class="chip"></span>
     <span id="when" class="dim"></span>
     <span id="fresh" class="dim"></span>
     <a href="/multi" style="color:var(--accent)" title="correlated charts side by side, linked">charts together →</a>
@@ -405,6 +406,18 @@ function render(fit) {
   drawChart(fit);
 }
 
+// is the hunt on? overlay.hunt = {on, session, next} is set by Claude at the prep and at the close; the watcher stamps a
+// heartbeat in watch_state.json every minute. On + fresh beat = watched; on + old beat = Claude is looking at an event, or the watcher stopped.
+async function huntBadge(overlay) {
+  const el = document.getElementById("hunt"); if (!el) return;
+  const h = (overlay && overlay.hunt) || {}; let beat = 0;
+  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) beat = (await r.json()).beat || 0; } catch (e) {}
+  const age = beat ? (Date.now() / 1000 - beat) / 60 : Infinity, at = beat ? new Date(beat * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  const set = (color, text, tip) => { el.style.borderColor = el.style.color = color; el.textContent = text; el.title = tip; };
+  if (h.on && age <= 3) set("var(--pos)", `● Hunt ON · ${h.session || ""} · watcher checked ${at}`, "The script reads the chart every minute and the checker every 5 minutes.");
+  else if (h.on) set("var(--warn)", `◐ Hunt ON · ${h.session || ""} · watcher not running${at ? " since " + at : ""}`, "Claude is looking at something the watcher reported, or the watcher has stopped.");
+  else set("var(--ink2)", `○ Hunt OFF${h.next ? " · next: " + h.next : ""}`, "Nothing is being watched or marked between sessions.");
+}
 async function poll(first) {
   try {
     const d = await (await fetch("today.json?t=" + Date.now())).json();
@@ -413,7 +426,7 @@ async function poll(first) {
     if (!st.asset || !d.assets[st.asset]) st.asset = Object.keys(d.assets)[0];
     if (first) loadMarks();
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
-    $("ovwrap").style.display = st.overlay ? "" : "none";
+    $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
     $("fresh").textContent = `page checked ${new Date().toLocaleTimeString()}`;
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }

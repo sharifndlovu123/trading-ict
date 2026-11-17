@@ -26,6 +26,7 @@ a { color:var(--accent); }
 .pane .head .info { display:flex; gap:10px; align-items:baseline; overflow:hidden; } .pane .head .sp { flex:1; }
 .pane .head button { padding:0 7px; } .up { color:var(--pos); } .dn { color:var(--neg); }
 .pane .c { flex:1; min-height:0; position:relative; }
+.chip { border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:13px; white-space:nowrap; }
 .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
 </style>
 <script src="linedrag.js"></script>
@@ -36,6 +37,7 @@ a { color:var(--accent); }
 <div class="bar">
   <h1>Charts together</h1>
   <a href="/">← single chart</a>
+  <span id="hunt" class="chip"></span>
   <span class="tabs"><span class="dim">start from</span><span id="sets" class="tabs"></span></span>
   <button id="add" title="one more chart; pick its instrument and timeframe in its own header">+ chart</button>
   <span class="tabs"><span class="dim">columns</span><span id="cols" class="tabs"></span></span>
@@ -227,13 +229,25 @@ const allLine = () => { const on = !st.cfg.every(c => c.line); st.cfg.forEach(c 
 $("allline").onclick = allLine;
 document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.metaKey && !e.altKey && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) allLine(); });
 $("pct").onclick = () => { st.pct = !st.pct; controls(); build(); };
+// is the hunt on? overlay.hunt = {on, session, next} is set by Claude at the prep and at the close; the watcher stamps a
+// heartbeat in watch_state.json every minute. On + fresh beat = watched; on + old beat = Claude is looking at an event, or the watcher stopped.
+async function huntBadge(overlay) {
+  const el = document.getElementById("hunt"); if (!el) return;
+  const h = (overlay && overlay.hunt) || {}; let beat = 0;
+  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) beat = (await r.json()).beat || 0; } catch (e) {}
+  const age = beat ? (Date.now() / 1000 - beat) / 60 : Infinity, at = beat ? new Date(beat * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  const set = (color, text, tip) => { el.style.borderColor = el.style.color = color; el.textContent = text; el.title = tip; };
+  if (h.on && age <= 3) set("var(--pos)", `● Hunt ON · ${h.session || ""} · watcher checked ${at}`, "The script reads the chart every minute and the checker every 5 minutes.");
+  else if (h.on) set("var(--warn)", `◐ Hunt ON · ${h.session || ""} · watcher not running${at ? " since " + at : ""}`, "Claude is looking at something the watcher reported, or the watcher has stopped.");
+  else set("var(--ink2)", `○ Hunt OFF${h.next ? " · next: " + h.next : ""}`, "Nothing is being watched or marked between sessions.");
+}
 async function poll(first) {
   try {
     const d = await (await fetch("today.json?t=" + Date.now())).json();
     const fresh = !st.doc || d.now !== st.doc.now, sig = Object.keys(d.assets).join();
     st.doc = d;
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
-    $("ovwrap").style.display = st.overlay ? "" : "none";
+    $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
     $("when").textContent = `New York ${d.now} · checked ${new Date().toLocaleTimeString()}`;
     const ok = (st.cfg || []).filter(c => d.assets[c.asset] && TFS.includes(c.tf));      // an instrument that left the feed leaves the layout
     st.cfg = ok.length ? ok : (SETS.Indices.filter(n => d.assets[n]).length ? SETS.Indices.filter(n => d.assets[n]) : Object.keys(d.assets)).map(asset => ({ asset, tf: "15m" }));

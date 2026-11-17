@@ -12,7 +12,8 @@ important moments. It reads `out/live/today.json` (written by live_recipe.py) ag
   - the live feed goes stale (no new bar for ``STALE_MIN`` minutes)
 Each event fires once per prep (the state resets when the overlay's `at` changes); state is kept in
 `out/live/watch_state.json` so a restart does not repeat events. It only sees what was marked: anything unforeseen
-needs the slower full check.
+needs the slower full check. Every reading also stamps `beat` in the state file; the pages read it with the overlay's
+`hunt` entry to show whether the hunt is on and being watched.
 
     uv run python research/scripts/hunt_watch.py            # runs until 16:05 New York
     uv run python research/scripts/hunt_watch.py --once
@@ -162,6 +163,7 @@ def main():
                     lines += [f"checker ({a.checker_model}) {x}" for x in ask_checker(summary(doc, overlay), a.checker_model)]
                 except Exception as e:
                     lines.append(f"checker failed: {type(e).__name__}: {e}")
+            state["beat"] = int(_time.time())                     # the pages show the hunt as watched while this is fresh
             for ln in lines:
                 print(f"[{doc['now'][-5:]} NY] {ln}", flush=True)
             sp.write_text(json.dumps(state))
