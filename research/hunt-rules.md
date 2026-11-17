@@ -20,6 +20,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - Judge a pool or an area on its own timeframe: a 4h area holds while 4h candles only wick into it and none closes with its body inside. Lower-timeframe closes inside a higher-timeframe area do not mean it is broken.
 - A candle of the block's own timeframe closing inside the block weakens it (an hourly close inside an hourly order block); it is not broken, but expect less from it. Closes inside it on a lower timeframe are normal.
 - Every move either eats liquidity (takes a pool) or creates it (leaves a pool). Both can come before the same move: price can eat the highs and then sell, or leave the highs and sell anyway. Untaken liquidity is not a promise that price returns to it.
+- Conditions come first: is price moving cleanly (follow-through one way, shallow pullbacks, the three indices together) or is it choppy (large candles both ways in one range, pushes taken back, the indices split)? Chop is not a market to trade; say which it is.
 - An order block has its own middle entry: enter at the 50% of the block's body, stop at the block's far edge (the top, for a sell).
 - A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
