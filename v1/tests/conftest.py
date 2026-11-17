@@ -1,5 +1,8 @@
 """Shared test setup."""
 
+import os
+from pathlib import Path
+
 import pytest
 
 from ict_engine.data.instruments import COST_BPS
@@ -15,3 +18,9 @@ def _synthetic_prices_have_no_costs(request, monkeypatch):
         monkeypatch.setenv("ICT_COST_BASIS", "cfd")                                  # CFD basis (zeroed), never futures
         from ict_engine.data import spreads
         monkeypatch.setattr(spreads, "book", lambda: spreads.SpreadBook({}))      # no measured spreads either
+
+
+def pytest_sessionstart(session):
+    """v1 was written to run from its own folder (paths like "tests/cases/..." and "out/..."). Since the move under
+    v1/ (18 Nov 2026) the test run makes v1/ the working directory, whatever folder pytest was started from."""
+    os.chdir(Path(__file__).resolve().parents[1])

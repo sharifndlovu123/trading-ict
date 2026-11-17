@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 V2 = ROOT / "v2"
 PLAIN = {0, 1, 2, 3, -1}                                   # counting numbers a three-candle rule needs
-V1 = ("ict_engine", "research", "hunt_scan", "hunt_watch", "live_recipe", "live_snapshot", "read_build")
+V1 = ("ict_engine", "v1", "research", "hunt_scan", "hunt_watch", "live_recipe", "live_snapshot", "read_build")
 REAL = ("today.json", "out/live", "dukascopy", ".parquet", "reports/", "data/bars", "overlay.json")
 TF = re.compile(r"""["'](1m|5m|15m|30m|1h|4h|1D|1W|1M|daily|weekly|monthly)["']""")
 ASSET = re.compile(r"\b(US100|US500|US30|NQ|ES|YM|XAUUSD|XAGUSD|DXY|EURUSD|UK100|DE40|US2000|FTSE|DAX|gold|silver)\b")

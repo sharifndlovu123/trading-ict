@@ -1,7 +1,8 @@
 # v2: the clean rebuild
 
-Everything outside this folder is **v1 and deprecated** (Sharif, 17 Nov 2026: the earlier research was damaged by rules
-fitted to examples and lessons locked to specific values). Everything the brain and the eyes need lives here.
+Everything outside this folder is **v1 and deprecated**, and since 18 Nov 2026 it sits under `../v1/` (Sharif,
+17 Nov 2026: the earlier research was damaged by rules fitted to examples and lessons locked to specific values).
+Everything the brain and the eyes need lives here.
 
 ## The folders
 

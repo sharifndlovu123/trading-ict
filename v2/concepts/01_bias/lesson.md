@@ -26,9 +26,14 @@ whose high is above the highs either side). That is my way of putting his "highe
 importance" into code. He has not confirmed it, and on the FTSE daily it placed the level behind differently from
 his own mark.
 
+**Confirmed by him, 18 Nov 2026:** a break and a change are judged on a close beyond the level, never a wick.
+"Correct, and a body close; some form of body needs to do it, not wick."
+
+He read the rest of what is listed as mine on 18 Nov 2026 ("I read your mine content, it's fine"); it stays named
+as mine because the words are mine.
+
 Also mine, not his sentences (he said "perfect, now you've got it" to DAX marks drawn this way, which is a check of
 the result, not of each rule):
-- a break and a change are judged on a **close** beyond the level, never a wick;
 - the level behind is the lowest low (highest high) between the level that was broken and the candle that broke it;
 - after a break, only the highest significant high since then continues the trend; a lower high closed through is a
   smaller piece;

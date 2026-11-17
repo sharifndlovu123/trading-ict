@@ -2,7 +2,8 @@
 read it"). It describes; it never opens a trade. v2: the tool for concept 01, bias. The why is in lesson.md beside this file.
 
 Three things per timeframe:
-  * the break that put the bias where it is: a candle CLOSES through a significant high or low;
+  * the break that put the bias where it is: a candle CLOSES through a significant high or low (he: "a body close;
+    some form of body needs to do it, not wick");
   * the level below it (above, for a bear): the extreme of the pullback that break was built on. A close through it is
     the change. Nothing else is: not a wick, not a broken minor swing, not a failure at the level ahead;
   * the level ahead: breaking it continues the trend and moves the level below up to the newest pullback's extreme.

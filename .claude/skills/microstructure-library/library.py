@@ -26,7 +26,7 @@ import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-ROOT = REPO / "references" / "microstructure"
+ROOT = REPO / "v1" / "references" / "microstructure"      # v1 folders moved under v1/ on 18 Nov 2026
 INDEX = ROOT / ".index"
 SKIP = ("bookey-summary",)          # superseded or non-source files
 

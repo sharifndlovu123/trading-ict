@@ -65,7 +65,7 @@ does not list them, because it only counts a low that is a turn (lower than the 
 lows rose one after another. Whether a plain previous daily low counts as liquidity beyond "the previous day" is
 his to say.
 
-Choices that are mine, not his (named in the code): what makes an "old high" (a turn); a wick beyond a level is
+Choices that are mine, not his (named in the code; he read them on 18 Nov 2026: "it's fine"): what makes an "old high" (a turn); a wick beyond a level is
 enough to eat it; "very close by" is a distance the caller passes in, with no built-in number; equal highs are
 joined neighbour to neighbour.
 

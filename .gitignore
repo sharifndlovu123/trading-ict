@@ -13,6 +13,7 @@ build/
 
 # --- Market data (re-downloadable: `python -m ict_engine.data.dukascopy fetch ...`) ---
 /data/
+/v1/data
 .dukascopy-cache/
 download/
 *.parquet
@@ -26,14 +27,14 @@ viewer/dist/
 
 # --- Not for a public repo ----------------------------------------------------
 # Third-party copyrighted ICT study material (PDFs) — keep locally only.
-references/*.pdf
-references/**/*.pdf
-references/**/*.epub
-references/microstructure/books/
-references/microstructure/papers/
-references/microstructure/.index/
+v1/references/*.pdf
+v1/references/**/*.pdf
+v1/references/**/*.epub
+v1/references/microstructure/books/
+v1/references/microstructure/papers/
+v1/references/microstructure/.index/
 # Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
-references/personal/
+v1/references/personal/
 
 # --- Secrets / local config -----------------------------------------------------
 .env
@@ -50,7 +51,7 @@ references/personal/
 Thumbs.db
 
 # Economic calendar (public release dates, small; needed by tests)
-!ict_engine/news/us_calendar.csv
+!v1/ict_engine/news/us_calendar.csv
 
 # v2 copies of the private notes (same reason as references/personal/).
 v2/references/personal/

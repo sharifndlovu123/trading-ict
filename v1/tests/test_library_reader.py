@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("library", ROOT / ".claude/skills/microstructure-library/library.py")
+spec = importlib.util.spec_from_file_location("library", ROOT.parent / ".claude/skills/microstructure-library/library.py")
 lib = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(lib)
 

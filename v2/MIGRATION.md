@@ -51,7 +51,9 @@ time and sessions.
 | References cleaned into `v2/references/` (engine notes stripped; v1 summaries left out) | [x] waiting for his check |
 | A v2 page, feed, watcher and prep instructions | [ ] |
 | v1 hunt switched off (preps cancelled, no watcher, no paper trades) | [x] 18 Nov 2026 |
-| v1 folders moved under `v1/` | [ ] |
+| v1 folders moved under `v1/` (`ict_engine`, `tests`, `research`, `reports`, `references`, `out`); v1 still runs from there, all tests pass | [x] 18 Nov 2026 |
+| Project notes (`CLAUDE.md`) rewritten around v2; the v1 description moved to `v1/README.md` | [x] 18 Nov 2026 |
+| Memory notes sorted into current and v1 | [x] 18 Nov 2026 |
 | Hunting again, on v2's eyes and brain | [ ] |
 
 ## Waiting on Sharif
@@ -64,6 +66,7 @@ time and sessions.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | v1 folders moved under `v1/`; hunts off; `CLAUDE.md` rewritten; memory notes sorted. Bias: he confirmed a break needs a body close, not a wick |
 | 18 Nov 2026 | Concept 02: his answers on picking liquidity out; tools (`liquidity.py`, `alt_liquidity.py`) and 34 tests. Eyes and brain set for later, as the process that uses the concepts |
 | 17 Nov 2026 | Concept 02, liquidity: lesson and alt-liquidity (NDOG, NWOG, volume imbalance, FVG as BISI / SIBI, IFVG) written from his teaching; opening range gap dropped |
 | 17 Nov 2026 | Source notes cleaned into `v2/references/personal/` (11 files); framework, models, patterns, pipeline, order flow left out |
