@@ -27,6 +27,10 @@ a { color:var(--accent); }
 .pane .head button { padding:0 7px; } .up { color:var(--pos); } .dn { color:var(--neg); }
 .pane .c { flex:1; min-height:0; position:relative; }
 .chip { border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:13px; white-space:nowrap; }
+#palette { display:flex; flex-wrap:wrap; gap:3px; align-items:center; padding:0 12px 6px; }
+.mtool { padding:0 6px; font-size:12px; border-radius:5px; border:1px solid var(--line); cursor:pointer; user-select:none; }
+.mtool.bs { border-color:var(--bs); } .mtool.ss { border-color:var(--ss); } .mtool.ar { border-color:var(--area); border-style:dashed; }
+.mtool.on { background:var(--mine); color:#fff; border-color:var(--mine); font-weight:600; } .muted { color:var(--ink2); font-size:12px; }
 .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
 </style>
 <script src="linedrag.js"></script>
@@ -54,6 +58,7 @@ a { color:var(--accent); }
   <button id="refresh" title="newest candles and re-centre (Alt+R)">↻ refresh</button>
   <span id="when" class="dim"></span>
 </div>
+<div id="palette"></div>
 <div id="grid"></div>
 <script>
 const $ = id => document.getElementById(id);
@@ -68,6 +73,37 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem("live-multi-v
 const st = { doc: null, overlay: null, cfg: keep.cfg || null, cols: keep.cols || 0, pct: false, solo: null, panes: [], active: null, sig: "" };
 const save = () => { try { localStorage.setItem("live-multi-v2", JSON.stringify({ cfg: st.cfg, cols: st.cols })); } catch (e) {} };
 const names = () => Object.keys(st.doc.assets);
+// my own marks: the same draft as the single chart keeps (same browser key), so what is drawn here shows there and the other way round
+const sessionOf = d => { const m = /(\d\d):(\d\d)$/.exec(d.now || ""), h = m ? +m[1] + m[2] / 60 : 0; return h < 8.5 ? "london" : h < 16 ? "newyork" : "after"; };
+const mkKey = () => "live-marks-v2-" + (st.doc ? st.doc.day + "-" + (st.doc.mode === "replay" ? "review" : sessionOf(st.doc)) : "");
+const myMarks = a => ((st.marks ||= {})[a] ||= []);
+function loadMarks() { try { st.marks = JSON.parse(localStorage.getItem(mkKey()) || "{}"); } catch (e) { st.marks = {}; } }
+function marksChanged() {
+  try { localStorage.setItem(mkKey(), JSON.stringify(st.marks)); } catch (e) {}
+  st.place = null; st.panes.forEach(p => p.layer && p.layer.setPlace(null)); palette();          // one placement per pick
+  st.panes.forEach(p => p.layer && p.layer.redraw());                                            // the same instrument may be on two charts
+  const n = Object.values(st.marks).reduce((s, v) => s + v.length, 0); $("marksn").textContent = n ? `${n} marks · not saved yet` : "";
+}
+function palette() {                                    // one palette for all the charts: pick a type, then click or drag on any chart
+  $("palette").innerHTML = st.pct ? "" : '<span class="muted">place:</span>' + MARK_PALETTE.map(([side, shape, kinds]) => kinds.map(k =>
+    `<span class="mtool ${{ buyside: "bs", sellside: "ss", area: "ar" }[side] || ""} ${st.place && st.place.kind === k && st.place.side === side ? "on" : ""}" data-side="${side}" data-shape="${shape}" data-kind="${k}">${shape === "zone" ? "▭ " : shape === "trend" ? (k === "trendline" ? "╱ " : "⇢ ") : side === "buyside" ? "↑ " : side === "sellside" ? "↓ " : "— "}${k}</span>`).join("")).join('<span style="width:6px"></span>') +
+    '<span style="width:10px"></span><button id="resetmarks" title="remove everything I drew on the charts shown here (Claude\'s marks stay)">Reset my marks</button><button id="savemarks" title="send my marks for every chart shown here">Save marks</button><span id="marksn" class="muted"></span>' +
+    '<span class="muted" style="margin-left:auto">pick a type, then click (a level) or drag (a block, a line) on any chart · click a mark to select, drag to move · Del / right-click removes</span>';
+  $("palette").querySelectorAll(".mtool").forEach(b => b.onclick = () => {
+    const same = st.place && st.place.kind === b.dataset.kind && st.place.side === b.dataset.side;
+    st.place = same ? null : { side: b.dataset.side, shape: b.dataset.shape, kind: b.dataset.kind };
+    st.panes.forEach(p => p.layer && p.layer.setPlace(st.place)); palette();
+  });
+  if ($("resetmarks")) $("resetmarks").onclick = () => { const as = [...new Set(st.cfg.map(c => c.asset))], n = as.reduce((s, a) => s + myMarks(a).length, 0);
+    if (n && confirm(`Remove your ${n} marks from ${as.join(", ")}? Claude's marks stay, and what you already saved stays on file.`)) { as.forEach(a => st.marks[a] = []); marksChanged(); } };
+  if ($("savemarks")) $("savemarks").onclick = async () => { let n = 0;
+    for (const a of [...new Set(st.cfg.map(c => c.asset))]) { if (!myMarks(a).length) continue;
+      let notes = []; try { notes = (JSON.parse(localStorage.getItem(mkKey() + "-notes") || "{}")[a]) || []; } catch (e) {}
+      const r = await fetch("api/answer", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: `${st.doc.day}-${a}-notes`, kind: "notes", asset: a, day: st.doc.day, marked_at: st.doc.now, marks: myMarks(a), notes }) });
+      if (!r.ok) { alert("save failed for " + a); return; } n++; }
+    $("marksn").textContent = n ? `saved ✓ (${n} chart${n === 1 ? "" : "s"})` : "nothing to save"; };
+}
 const cands = (asset, tf) => (st.doc.assets[asset] || { candles: {} }).candles[tf] || [];
 const dp = v => Math.abs(v) < 500 ? 3 : 2;
 
@@ -106,6 +142,7 @@ function build() {
   for (const p of st.panes) p.chart.remove();
   st.panes = []; st.active = null; if (st.solo != null && st.solo >= st.cfg.length) st.solo = null;
   const g = $("grid"); g.innerHTML = "";
+  palette();
   if (st.pct) return buildPct(g);
   const all = names();
   st.cfg.forEach((c, i) => {
@@ -121,7 +158,7 @@ function build() {
     const p = { c, el, infoEl: el.querySelector(".info"), chart, series, lineS, times: [], data: [] };
     el.querySelector(".ty").onclick = () => { c.line = !c.line; save(); fillPane(p, false); };
     const shows = tf => TFS.indexOf(tf) >= TFS.indexOf(c.tf);
-    p.layer = marksLayer(chart, series, el.lastChild, { list: () => [], times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: () => {},
+    p.layer = marksLayer(chart, series, el.lastChild, { list: () => myMarks(c.asset), times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: marksChanged,
       under: () => !(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
         nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })) });
     const act = () => { if (st.active !== p) { st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p)); } };
@@ -254,6 +291,7 @@ async function poll(first) {
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
     $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
     $("when").textContent = `New York ${d.now} · checked ${new Date().toLocaleTimeString()}`;
+    if (first) loadMarks();
     if (first) { const q = new URLSearchParams(location.search), as = (q.get("assets") || "").split(",").filter(n => d.assets[n]);      // a link can set the charts: /multi?assets=US100,US500&tf=5m
       if (as.length) st.cfg = as.map(asset => ({ asset, tf: TFS.includes(q.get("tf")) ? q.get("tf") : "5m" })); }
     const on = d.mode === "replay"; $("replay").style.display = on ? "" : "none";
