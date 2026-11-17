@@ -39,4 +39,6 @@ Conditions (choppy / clean), volatility, liquidity eaten and created (per sub-gr
 states, order blocks and breakers, displacement, areas top-down, the range and premium / discount, entries, managing a
 trade, the trade card, session and time rules, the watcher and the page.
 
+**Progress is tracked in `MIGRATION.md`** (one row per concept, eight steps each; update it whenever a box changes).
+
 Run the v2 tests: `uv run pytest -q v2/tests`.
