@@ -6,6 +6,8 @@ important moments. It reads `out/live/today.json` (written by live_recipe.py) ag
   - price trades through a marked level (a sweep of marked liquidity)
   - price enters a marked zone (an area of interest)
   - a 5m candle is a hard push (body ≥ ``PUSH_ADR`` of the average day's range)
+  - a 5m order block forms where the overlay asks for one (`watch_ob` per index: side, below / above, min_body);
+    it is graded clean or dim by the body's share of the candle
   - Sharif saves new marks or notes (`reports/reviews/live.jsonl` grows; the file is only read)
   - the live feed goes stale (no new bar for ``STALE_MIN`` minutes)
 Each event fires once per prep (the state resets when the overlay's `at` changes); state is kept in
@@ -69,6 +71,20 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
             elif m.get("top") is not None and lo <= m["top"] and hi >= m["bottom"]:
                 fired.append(key)
                 out.append(f"{asset}: price entered {m.get('tf', '')} {m['kind']} {m['bottom']}–{m['top']}; last {last}")
+        wob = overlay.get(asset, {}).get("watch_ob")             # e.g. {"side": "sell", "below": 27303.3, "min_body": 50}
+        if wob and len(c5) > 2:                                  # a 5m order block: a closed candle engulfed by the next closed one
+            blk, eng = c5[-3], c5[-2]
+            sell = wob.get("side", "sell") == "sell"
+            body, rng = abs(blk["close"] - blk["open"]), blk["high"] - blk["low"]
+            is_blk = (blk["close"] > blk["open"] and eng["close"] < blk["open"]) if sell else (blk["close"] < blk["open"] and eng["close"] > blk["open"])
+            inside = blk["high"] < wob.get("below", float("inf")) and blk["low"] > wob.get("above", float("-inf"))
+            key = f"{asset}|ob@{blk['time']}"
+            if is_blk and inside and rng > 0 and key not in fired:
+                fired.append(key)
+                pct = round(100 * body / rng)
+                grade = "clean" if pct >= wob.get("min_body", 50) else "dim"
+                out.append(f"{asset}: 5m {'sell' if sell else 'buy'} order block formed ({grade}, body {pct}%): "
+                           f"{min(blk['open'], blk['close'])}–{max(blk['open'], blk['close'])}, engulfed to {eng['close']}; last {last}")
         adr = item.get("adr")
         done = c5[-2] if len(c5) > 1 else None                   # the last closed 5m candle
         if adr and done and state["push"].get(asset) != done["time"]:

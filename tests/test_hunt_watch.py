@@ -53,3 +53,17 @@ def test_the_checker_summary_and_its_reply():
     assert "displacement" not in text and "Sell on a raid" in text and "00:05 o104" in text
     assert hw.parse_checker("OK") == [] and hw.parse_checker("ok\n") == []
     assert hw.parse_checker("ESCALATE: US500: two lows at 7,394\nOK") == ["ESCALATE: US500: two lows at 7,394"]
+
+
+def test_a_requested_5m_order_block_is_reported_once_with_its_grade():
+    ov = {"at": "p", "US100": {"marks": [], "watch_ob": {"side": "sell", "below": 110.0, "min_body": 50}}}
+    # an up candle 100 → 102 (range 99.8–102.2: body 83%), engulfed by the next closed candle (close 99.5 < 100), then a forming bar
+    bars = [(100, 102.2, 99.8, 102), (102, 102.1, 99.4, 99.5), (99.5, 99.7, 99.3, 99.6)]
+    st = {}
+    e = hw.events(doc(99.6, bars, adr=1000.0), ov, st)
+    assert len(e) == 1 and "5m sell order block formed (clean, body 83%): 100–102" in e[0]
+    assert hw.events(doc(99.6, bars, adr=1000.0), ov, st) == []
+    wick = [(100, 104, 96, 100.5), (100.5, 100.6, 99, 99.5), (99.5, 99.7, 99.3, 99.6)]            # body 6%: dim
+    assert "(dim, body 6%)" in hw.events(doc(99.6, wick, adr=1000.0), ov, {})[0]
+    high = [(111, 113.2, 110.8, 113), (113, 113.1, 110.4, 110.5), (110.5, 110.7, 110.3, 110.6)]  # above the limit: not asked for
+    assert hw.events(doc(110.6, high, adr=1000.0), ov, {}) == []

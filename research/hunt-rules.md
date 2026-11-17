@@ -19,6 +19,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 3. **The indices disagree:** one makes a new session high or low and at least one of the others clearly does not.
 4. **Price is about to reach a marked area:** within about 0.05 ADR of a marked zone or level and moving toward it.
 5. **A run:** three or more 5m candles in a row in one direction with bodies that add up to more than 0.10 ADR.
+7. **Something the Read lines say to watch for has happened** (for example a level they name was taken, or a block they ask for has formed).
 6. **The prep's idea no longer fits:** price is doing something the "read" lines did not anticipate.
 
 ## Otherwise
