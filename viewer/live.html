@@ -119,7 +119,8 @@ const st = { doc: null, asset: null, tf: "15m", answers: {}, sel: null, sig: "",
 // my marks: per index, kept as a draft in this browser for the current session only (London / New York / after hours), and
 // sent with every save. A new session starts with a clean chart; saved marks stay on file and are never drawn back.
 const sessionOf = d => { const m = /(\d\d):(\d\d)$/.exec(d.now || ""), h = m ? +m[1] + m[2] / 60 : 0; return h < 8.5 ? "london" : h < 16 ? "newyork" : "after"; };
-const mkKey = () => "live-marks-v2-" + (st.doc ? st.doc.day + "-" + sessionOf(st.doc) : "");
+// a review page keeps one set of marks whatever time it is moved to
+const mkKey = () => "live-marks-v2-" + (st.doc ? st.doc.day + "-" + (st.doc.mode === "replay" ? "review" : sessionOf(st.doc)) : "");
 const myMarks = () => (st.marks[st.asset] ||= []);
 function loadMarks() { try { st.marks = JSON.parse(localStorage.getItem(mkKey()) || "{}"); } catch (e) { st.marks = {}; }
   try { st.notes = JSON.parse(localStorage.getItem(mkKey() + "-notes") || "{}"); } catch (e) { st.notes = {}; }
