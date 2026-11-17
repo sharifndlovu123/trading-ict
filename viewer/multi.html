@@ -42,6 +42,7 @@ a { color:var(--accent); }
   <span class="tabs"><span class="dim">all to</span><span id="tfs" class="tabs"></span></span>
   <label title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> linked</label>
   <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
+  <button id="allline" title="every chart as a line of the closes, or back to candles (L); each chart also has its own switch in its header">╱ line</button>
   <button id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">% compare</button>
   <button id="refresh" title="newest candles and re-centre (Alt+R)">↻ refresh</button>
   <span id="when" class="dim"></span>
@@ -155,7 +156,8 @@ function fillPane(p, fit, alone) {
   // line chart: the candles stay underneath, invisible, so the marks keep their place
   p.series.applyOptions(p.c.line ? { upColor: CLEAR, downColor: CLEAR, wickUpColor: CLEAR, wickDownColor: CLEAR } : { upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down") });
   p.lineS.setData(p.c.line ? p.data.map(x => ({ time: x.time, value: x.close })) : []);
-  p.el.querySelector(".ty").textContent = p.c.line ? "▮" : "╱";
+  p.el.querySelector(".ty").textContent = p.c.line ? "▮ candles" : "╱ line";
+  const every = st.cfg.every(c => c.line); $("allline").textContent = every ? "▮ candles" : "╱ line"; $("allline").title = "every chart as " + (every ? "candles" : "a line of the closes") + " (L)";
   head(p); p.layer.redraw();
   if (fit && p.times.length) {
     p.chart.applyOptions({ rightPriceScale: { autoScale: true } });
@@ -220,6 +222,9 @@ function controls() {
   $("pct").className = st.pct ? "on" : "";
 }
 $("add").onclick = () => { const c = (st.active && st.active.c) || st.cfg[st.cfg.length - 1]; st.cfg.push({ asset: c.asset, tf: c.tf, line: c.line }); st.solo = null; st.pct = false; save(); controls(); build(); };
+const allLine = () => { const on = !st.cfg.every(c => c.line); st.cfg.forEach(c => c.line = on); save(); if (!st.pct) st.panes.forEach(p => fillPane(p, false)); };
+$("allline").onclick = allLine;
+document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.metaKey && !e.altKey && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) allLine(); });
 $("pct").onclick = () => { st.pct = !st.pct; controls(); build(); };
 async function poll(first) {
   try {
