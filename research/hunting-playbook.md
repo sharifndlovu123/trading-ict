@@ -24,6 +24,15 @@ The working order for a hunt. Related: [[hunting-process]] (routine, watch times
 1. Does price look choppy? 2. What is the bias? 3. Where are the areas of interest? 4. Is there any recent displacement? 5. Is price volatile or not?
 Everything below serves these five.
 
+## Bias: how to read it (re-taught and confirmed 17 Nov 2026 on three charts I had not seen; see [[bias-reading]])
+"Key areas are the bigger picture." Read by hand from the candles, the highest timeframe first, and state it per timeframe (monthly, weekly, daily, 4h, 1h: bull / bear / range) **before** anything else. For each timeframe name three things:
+1. **The break** that put the bias where it is (a close through a significant high or low).
+2. **The level below it** (above, for a bear): the swing that break was built on. **A close through it is the change. Nothing else is.** ("The tricky part.")
+3. **The level ahead.** Breaking it continues the trend and moves the level below up to the newest swing. Failing at it changes nothing: "it's still in the first BOS level."
+- **A new swing is not a change.** "Just because you made a new swing upward doesn't mean you're bullish; what about the HTF higher low, which is significant." Swings between the levels are the smaller pieces: pullbacks, ranges, one side building.
+- A lower timeframe against a higher one is a move inside it; say so (with / against).
+- No fitted rule and no exact values carried from one chart to the next.
+
 ## The key (his words, 17 Nov 2026)
 **"Context is important, and where that context is, and time is key."** Every observation gets three tags before it counts: **what** happened (liquidity eaten or created, a displacement, a body closing in a gap), **where** (inside or against which higher-timeframe area), **when** (which session and window; before or after the first strong displacement). The same event somewhere else, or in a dead hour, means less.
 

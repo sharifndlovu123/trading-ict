@@ -19,3 +19,5 @@ HUNT PREP, <SESSION> session (<OPEN>). This is HUNTING MODE: I decide what is in
 (7) At the close: marks cleared, reads replaced with the present state, `hunt.on` false with the next prep's time, watcher stopped, overlay archived.
 
 Never save a reading Sharif has not confirmed. Never paper trade or hunt gold and silver. Do not look at the forward recipe's trade results. Remind him of anything in the memory index marked REMIND. Report to Sharif briefly.
+
+**Bias at every prep (Sharif, 17 Nov 2026):** read it by hand from the candles, highest timeframe first, and write it in the read per timeframe (monthly, weekly, daily, 4h, 1h: bull / bear / range) with the break that set it, the level below (a close through it = the change) and the level ahead. Playbook section "Bias: how to read it". Do not take it from the scan.

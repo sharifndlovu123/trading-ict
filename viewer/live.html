@@ -340,7 +340,7 @@ function renderClaude() {                                   // Claude's read in 
   const n = ov && ov.now, ws = st.watch && st.watch.conditions && st.watch.conditions[st.asset];
   const nowRows = !n ? "" : `<div class="kv" style="margin:6px 0;padding:6px 8px;border:1px solid var(--line);border-radius:6px">
     <b>Conditions</b><span>${esc(n.conditions || "–")}${ws && ws.score != null ? ` <span class="dim">· last hour measured: ${esc(ws.label)} (${ws.score})</span>` : ""}</span>
-    <b>Eaten</b><span>${esc(n.eaten || "–")}</span><b>Created</b><span>${esc(n.created || "–")}</span>${n.at ? `<span class="dim">as of</span><span class="dim">${esc(n.at)} New York</span>` : ""}</div>`;
+    ${n.bias ? `<b>Bias</b><span>${esc(n.bias)}</span>` : ""}<b>Eaten</b><span>${esc(n.eaten || "–")}</span><b>Created</b><span>${esc(n.created || "–")}</span>${n.at ? `<span class="dim">as of</span><span class="dim">${esc(n.at)} New York</span>` : ""}</div>`;
   // the trade card (Sharif 2026-11-17: name the trade and its goal, and where and when the context is): one per index while an idea is in view
   const I = ov && ov.idea, irow = (k, v) => v == null || v === "" ? "" : `<b>${k}</b><span>${esc(Array.isArray(v) ? v.join(" – ") : v)}</span>`;
   const ideaRows = !I ? "" : `<div class="kv" style="margin:6px 0;padding:6px 8px;border:1px solid var(--accent);border-radius:6px">

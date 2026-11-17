@@ -119,3 +119,5 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ Breaker detector: `merge` and `block="body"` options, off by default (`research/decisions/2026-11-16-breaker-merge.md`)
 - ☑ Live sheet: entry areas, Claude's marks + "Claude's read", 1M–5m charts, Alt+R, reset, full-width layout, hunting window, clean chart per session
 - ☑ README screenshot; CLAUDE.md updated; full suite 618 passed
+
+- **Bias (17 Nov 2026, confirmed):** read by hand (break / level below / level ahead), in the playbook, checker rules, prep prompt and a fixed Bias line on the page. The scan's fitted rule is no longer shown. Not changed: the backtest engine's bias rules (`prev_day_dol` default, `weekly_structure`) and the page's "backdrop" chip (20-day regime label); both are tested / frozen and need Sharif's decision and the change gate before any change.

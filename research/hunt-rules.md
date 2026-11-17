@@ -62,3 +62,5 @@ Never repeat something that is already in Marked or Read, even in other words. S
 
 ## Otherwise
 After the STATE lines answer exactly `OK`. Quiet, sideways trading inside the range is `OK`. Do not explain.
+
+- **Bias (17 Nov 2026):** a new swing is not a change. The bias holds until a candle of that timeframe closes through the level below it (the swing the last break was built on). Failing at the level ahead changes nothing. Never call a change of bias from a broken minor swing.

@@ -374,15 +374,8 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     tfo = lambda xs: sorted(xs, key=lambda o: RANK.get(o["tf"], 0))          # noqa: E731
     lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in (xs if xs and xs[0]["type"].startswith("bias.") else tfo(xs))) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
-    bs = sorted(by("bias."), key=lambda o: -RANK[o["tf"]])                  # the higher timeframe first: its highs and lows matter more
-    note = {"type": "summary", "tf": "", "text": "The structure rule from 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. Checked 17 Nov against Sharif's own 20 labelled charts: weekly 10 of 14, daily 8 of 15, 4h 5 of 14, 1h 5 of 12. It cannot say \"range\", which he uses often. Trust the weekly most; treat daily and below as a first guess."}
-    rel = []
-    for hi_, lo_ in zip(bs, bs[1:]):                                          # a lower timeframe going the other way is a shift inside the higher one
-        if hi_["side"] in ("bear", "bull") and lo_["side"] in ("bear", "bull") and hi_["side"] != lo_["side"]:
-            rel.append({"type": "bias.shift_inside_higher", "tf": lo_["tf"], "text": f"{lo_['tf']} is {lo_['side']} inside a {hi_['tf']} {hi_['side']} trend: "
-                        f"a shift, not a change, until the {hi_['tf']} protected level {hi_['guard']:.5g} is closed through"})
     out = {"choppy": [lab(cond)] + by("cond.displacement_out_of_chop")[:2],
-           "bias": [note, lab(bs)] + bs + rel[:3] + by("candle.counter_in_gap")[:2]}
+           "bias": [{"type": "summary", "tf": "", "text": "Not read by the scan. Bias is read by hand at every prep, the way Sharif re-taught it on 17 Nov 2026: per timeframe, the break that set it, the level below (a close through it is the change) and the level ahead. See Claude's read. The fitted rule that was here got it wrong and is no longer shown."}]}
     areas = [o for o in by("gap.", "block.") if "bottom" in o]
     pick = []
     for tier in (("1M", "1W"), ("1D",), ("4h", "1h"), ("15m", "5m", "1m")):       # top-down (Sharif 16 Nov 2026: weekly first, then daily, ...; both sides, no forced draw)
