@@ -4,6 +4,8 @@ Kept by Claude. Each point gets Sharif's answer written under it when we have di
 
 Material: `2026-11-17.md` (running log), `2026-11-17-case-us100-ny-open.md` (worked example), images `2026-11-17-us100-ny1-sell-not-filled.png` and `2026-11-17-us100-ny1-targets-and-run.png`.
 
+**The New York (NY-1) discussion was closed by Sharif on 17 Nov at about 12:57 New York.** Points 1–7 and 9 are answered. Carried forward: 8 (targets and split: to be discussed properly), 10 (where the entry is when liquidity is only created), 11 (the London sell: next).
+
 ## Points
 
 - [x] **1. The cancel that was not needed.** Ruled already: only wicks below the range, no closed candle, not strong. To confirm: is the test a candle closing beyond the range on the timeframe the idea was built on (the 1-minute here), or on a higher one?
