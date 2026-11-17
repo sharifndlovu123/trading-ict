@@ -29,7 +29,7 @@ Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: 
 - Judge a pool or an area on its own timeframe: a 4h area holds while 4h candles only wick into it and none closes with its body inside. Lower-timeframe closes inside a higher-timeframe area do not mean it is broken.
 - A candle of the block's own timeframe closing inside the block weakens it (an hourly close inside an hourly order block); it is not broken, but expect less from it. Closes inside it on a lower timeframe are normal.
 - An order block has its own middle entry: enter at the 50% of the block's body, stop at the block's far edge (the top, for a sell).
-- A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing.
+- A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing. A wick through the range low or high is not a break: it takes a candle closing beyond it, with force. Only wicks and a weak move = the range is intact and the order stays.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
 - An order block: the next candle closes beyond the block candle's open (one move engulfs it); the block is the candle's body. A strong body that was still engulfed makes a better block; a body smaller than its wicks is a weak one (same for a breaker).
 - A sweep of a small pool matters most when it happens inside a higher-timeframe area of interest; say where it happened.
