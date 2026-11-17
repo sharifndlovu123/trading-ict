@@ -18,8 +18,11 @@ The working order for a hunt. Related: [[hunting-process]] (routine, watch times
 ## The key (his words, 17 Nov 2026)
 **"Context is important, and where that context is, and time is key."** Every observation gets three tags before it counts: **what** happened (liquidity eaten or created, a displacement, a body closing in a gap), **where** (inside or against which higher-timeframe area), **when** (which session and window; before or after the first strong displacement). The same event somewhere else, or in a dead hour, means less.
 
+## Examples are snowflakes (his words, 17 Nov 2026; see [[examples-are-snowflakes]])
+"Don't ever try to lock down time and timeframes to what I mention when you're hunting or working on your own... you're looking at what's happening, to understand; you're not looking to replicate and copy... today's range, from today's open to tomorrow's open, it's a different snowflake." Every price, time and timeframe on this page that comes from a day's chart is an **illustration of the idea, not the rule**. When hunting, ask whether that kind of thing is happening here, on whatever timeframe it shows up; never look for the same gap at the same hour.
+
 ## Every look, in this order
-1. **Conditions.** Is the market moving cleanly and fast enough to even consider a trade? Clean = follow-through one way, shallow pullbacks, the three indices together. Choppy = large candles both ways in one range, pushes taken back, the indices split. **Big candles are not good conditions** if they go nowhere. Chop can still lean one way. A truly consolidative day: the arrays do not hold, they are broken through both ways (silver, 17 Nov). In chop: read and learn, say "not a market to trade". **What ends the chop is the first strong displacement**, and it is often the one that opens the entry (17 Nov: chop 07:00–09:20, displacement 09:30). Prefer the index that made it.
+1. **Conditions.** Is the market moving cleanly and fast enough to even consider a trade? Clean = follow-through one way, shallow pullbacks, the three indices together. Choppy = large candles both ways in one range, pushes taken back, the indices split. **Big candles are not good conditions** if they go nowhere. Chop can still lean one way. A truly consolidative day: the arrays do not hold, they are broken through both ways (silver, 17 Nov). In chop: read and learn, say "not a market to trade". **What ends the chop is the first strong displacement**, and it is often the one that opens the entry (one day's illustration: on 17 Nov the chop ran about two hours and the displacement came at the cash open). Prefer the index that made it.
 2. **Eaten or created.** What liquidity did the market just take, and what did it leave? "Market will either create liq or eat liq." **Both can come before the same move:** it can eat the highs and sell, or leave the highs and sell. The sweep is never a condition. **When it is creating, look for displacement on the opposite side:** liquidity left → a displacement away from it that breaks structure → the return to the array that displacement leaves is the entry (US100 03:30).
 3. **The trade and its goal.** Name them and keep them in view: **the trade** (which side, and which higher-timeframe array said so), **the goal** (the level the higher timeframe names, e.g. the London low), **what is still missing** (usually a clean entry: then wait, be patient). His first thing for me to fix: understand the higher timeframe against the lower, and do not lose the trade for a small range inside it. A later, smaller entry to the same goal is the same trade.
 4. **Where is price right now.** "Never try to force price to do what you want; you always check where it is now." Which arrays is it respecting?
@@ -53,13 +56,13 @@ The working order for a hunt. Related: [[hunting-process]] (routine, watch times
 | Missed if | the goal itself is closed through, with more candles beyond, before the fill |
 | Money | 80% at the goal; nearer targets are small partials; 20% or less runs |
 
-## Entries he has shown (each needs its context first)
+## Entries he has shown (each needs its context first; the timeframes in the examples are that day's, the idea works on whichever timeframes the chart offers)
 1. **Candle closes → look back → 1m break of structure → return to the gap it left.** Stop beyond the extreme made in the zone.
 2. **A flipped gap retested** from the other side (bodies do not close back through).
 3. **The middle of an order block,** stop at the block's far edge (body).
-4. **From the 5m when the 15m and 1h give no array:** the candle that closes beyond the 50% of the 1h gap and leaves its own 5m gap; enter in that 5m gap, stop at the 1h gap's far edge (NY-1, his own entry; could be placed 09:42).
-5. **Created liquidity → displacement the other way → return to its array** (US100 03:30, the first "S" trade).
-6. **Inside a missed trade:** equal highs created → an equal low broken → a 5m body closes inside the gap below (a wick would not count) → 1m displacement and break → limit in the 1m gap, stop above the 5m gap. Price may tip the range low first, creating more sellside, then come back and fill (03:58, the second "S" trade).
+4. **From a lower timeframe when the timeframes above give no array:** a lower-timeframe candle closes beyond the middle of a higher-timeframe gap and leaves its own gap; enter in that smaller gap, stop at the far edge of the larger one. (Illustration: NY-1, his own entry.)
+5. **Created liquidity → displacement the other way → return to its array.** (Illustration: the first "S" trade in London.)
+6. **Inside a missed trade:** equal highs created → an equal low broken → a body closes inside the gap below (a wick would not count) → one timeframe lower, the displacement and the break → limit in the gap it leaves, stop above the larger gap. Price may tip the range low first, creating more sellside, then come back and fill. (Illustration: the second "S" trade in London.)
 - Close to the liquidity price is reaching for, the retrace is shallow.
 - In a fast market the order goes on at the first return; the write-up comes after.
 

@@ -8,12 +8,13 @@ For each index, before anything else:
 2. **Eaten.** What liquidity has price just taken: equal highs or lows, a session or previous-day extreme, a marked level?
 3. **Created.** What liquidity has price just left behind: new equal highs or lows, a high or low it stopped short of?
 4. **The trade in view and its goal.** The summary gives it ("The trade in view"). Everything is read against that goal, not against a small range inside the move. If none is named, say so in the STATE line.
-5. **Context has a what, a where and a when.** What happened (a sweep, a displacement, a body closing in a gap), where it happened (inside or against which higher-timeframe area), and when (the summary says which of his key windows the time is in; 17 Nov: chop 07:00–09:20, the first strong displacement at 09:30 opened the entry, the clean move ran 10:30–11:00). The same event outside an area, or in a dead hour, means less.
+5. **Context has a what, a where and a when.** What happened (a sweep, a displacement, a body closing in a gap), where it happened (inside or against which higher-timeframe area), and when (the summary says which of his key windows the time is in). The same event outside an area, or in a dead hour, means less.
 Liquidity is either created or eaten, and both can come before the same move: price can eat the highs and then sell, or leave the highs and sell anyway. Untaken liquidity is not a promise that price returns to it.
 
 Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index (short; these lines go on the page and never wake Fable), then `OK` or the `ESCALATE` lines.
 
 ## Context
+- **Examples are snowflakes.** These rules describe kinds of things; the prices, times and timeframes they were first seen at are not part of the rule. Look for the same kind of thing on whatever timeframe and at whatever time it shows up today. Never report that something is missing because it is not where it was on another day.
 - Every idea has a named trade and a named goal (for example: sell, goal the London low). A small range inside the move is not the trade. Once the goal has been swept and pushed through, what follows is a chase, not a new trade. The first strong displacement out of chop is what opens an entry; prefer the index that made it.
 - Three indices: US100, US500, US30. Prices are CFD prices. All times New York.
 - Hunting happens only from an hour before London (01:00) through New York. Never the Asian session.
@@ -36,7 +37,7 @@ Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: 
 - An unfilled order stays on until a major pool of liquidity is hit and the retrace clearly will not come; a near target being touched and price coming back is not that. Small equal highs forming under a sell entry (or equal lows over a buy entry) mean liquidity is being created, not eaten: the fill may not come.
 - When price is creating liquidity on one side (leaving equal highs or lows untaken), look for a displacement the other way: a strong candle that breaks structure and leaves a gap. The return to that gap is the entry.
 - Chasing means entering after the higher-timeframe goal has already been swept. A later, smaller entry while that goal is still ahead is the same trade, not a chase.
-- When the 15m and 1h give no clean block or gap after the higher-timeframe area, the entry can come from the 5m: a candle that closes beyond the 50% of the 1h gap and leaves its own 5m gap; enter in that gap, stop at the 1h gap's far edge.
+- When the timeframes just above give no clean block or gap after the higher-timeframe area, the entry can come from a lower one: a candle that closes beyond the middle of the larger gap and leaves its own smaller gap; enter in the smaller gap, stop at the larger gap's far edge.
 - Bodies tell the story more than wicks. Prefer the index that is moving cleanly over one that has eaten both the top and the bottom of its range.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
 - An order block: the next candle closes beyond the block candle's open (one move engulfs it); the block is the candle's body. A strong body that was still engulfed makes a better block; a body smaller than its wicks is a weak one (same for a breaker).
