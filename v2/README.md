@@ -11,18 +11,24 @@ v2/
   MIGRATION.md     the checklist: where each concept stands
   concepts/        one numbered folder per concept, in the order Sharif teaches them
     01_bias/
-      lesson.md        the brain's part: his words, the why, what it was confirmed on
-      bias_eyes.py     the eyes' part: code that sees it on a chart
+      lesson.md        the lesson: his words, the why, what it was confirmed on
+      bias.py          the tool: code that finds it on a chart
       test_bias.py     the tests that validate it
     02_liquidity/
       lesson.md        liquidity: what it is, how to read it (relative to now, from the weekly down)
       alt-liquidity.md its sub-part: imbalances price is drawn to
+      liquidity.py, alt_liquidity.py     the tools
+      test_liquidity.py, test_alt_liquidity.py
   brain/           how lessons are pulled together while price moves (empty until Sharif sets the design)
   references/      fixed sources v2 may cite (empty until each is re-checked with him)
 ```
 
-**One concept = one folder.** Its lesson, its eyes and its tests sit together, so nothing about a concept is read from
-anywhere else. The number is the order it was built in. A new concept is a new folder with the same three files.
+**One concept = one folder.** Its lesson, its tools and its tests sit together, so nothing about a concept is read from
+anywhere else. The number is the order it was built in. A new concept is a new folder with the same three kinds of file.
+
+**The eyes and the brain come later** (Sharif, 18 Nov 2026): the eyes are the top-down process that uses a range of
+concepts together, and the brain is how lessons are pulled while price moves. Neither is built until the concepts
+they need are in. What is built now, concept by concept, is the lesson, its tools and their tests.
 
 ## Rules
 1. v2 never reads v1: no imports from `ict_engine` or `research/scripts`, no v1 notes as a source. (Raw candles are data and may be used.)

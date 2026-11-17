@@ -31,3 +31,12 @@ as a draw; trading from them is a later concept.
 - "Moving in their direction" = price is already heading toward the gap; an unfilled gap that price is moving away
   from is not a draw right now.
 - Marking on the 1-minute applies to the NDOG too, since it is also two exact prices.
+
+## The tools and their tests (18 Nov 2026)
+`alt_liquidity.py`: `fvgs` (BISI / SIBI, untouched / partly / filled, and whether it was traded through = IFVG),
+`volume_imbalances`, `is_draw` (unfilled and price already moving toward it), `opening_gaps` (NDOG / NWOG from the
+1-minute) and `in_use` (how long each is used). Tests: `test_alt_liquidity.py`.
+
+Choices that are mine, named in the code: "filled" = price has traded across the whole gap, "partly" = into it;
+"traded through" for an IFVG = a later candle closed beyond the far edge; with no 4:59 p.m. print, the last print
+before 5 p.m. is the close.

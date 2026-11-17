@@ -19,7 +19,7 @@ State it per timeframe first (bull / bear / range), highest timeframe first. For
 Everything between the levels is the smaller pieces: pullbacks, ranges, one side building.
 
 ## The code and the test of it
-`bias_eyes.py`, tests `test_bias.py`, both beside this file (hand-built candles). It takes "significant" to mean a swing of the
+`bias.py`, tests `test_bias.py`, both beside this file (hand-built candles). It takes "significant" to mean a swing of the
 timeframe above. That is my way of putting his "higher TF highs and lows have higher importance" into code; he has not
 confirmed that wording.
 

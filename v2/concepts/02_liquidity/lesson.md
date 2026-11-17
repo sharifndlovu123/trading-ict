@@ -52,8 +52,24 @@ Sharif ("my references should be accounted for, they are clear and concise as we
   that were left uneaten."
 - **Trendline liquidity: skipped.** "The alt-liquidity tends to eat trendline liq either way."
 
+## The tools and their tests (18 Nov 2026)
+`liquidity.py` (old highs and lows and whether each was eaten; what is resting; what the present move ate; equal
+highs / lows; the previous day's and week's high and low) and `alt_liquidity.py` (see `alt-liquidity.md`). Tests:
+`test_liquidity.py`, `test_alt_liquidity.py`, hand-built candles only.
+
+Run once on the FTSE, the chart he confirmed (a check; nothing was tuned to it): the same weekly and daily picture
+as the hand read (buyside 10,964 / 10,980 / 10,991 as one group; sellside 10,511 / 10,526 then 10,364; last week's
+low resting; yesterday's low eaten; the hourly BISI under last week's low as the draw; the 9 November daily BISI
+traded through). **One difference:** by hand I called the daily lows of 10 to 13 November "eaten today"; the tool
+does not list them, because it only counts a low that is a turn (lower than the candle before and after), and those
+lows rose one after another. Whether a plain previous daily low counts as liquidity beyond "the previous day" is
+his to say.
+
+Choices that are mine, not his (named in the code): what makes an "old high" (a turn); and "very close by" is a
+distance the caller passes in, with no built-in number.
+
 ## Open
 - Taught live earlier in the week but only in v1 notes, to be re-confirmed before they enter: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the
   candles that judge it.
-- For code only: "very close by" has to become a measure. Any measure is my choice until he has seen what it picks.
+- "Very close by" as a measure: left to the caller for now; to be settled when the eyes are built and he can see what it picks.

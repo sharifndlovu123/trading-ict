@@ -1,0 +1,78 @@
+"""Liquidity as Sharif taught it (lesson.md). Hand-built candles with known answers; no real chart's values."""
+import pytest
+
+from liquidity import eaten_since, equal, highs_lows, previous_period, resting
+
+
+def mk(rows, step=3600, k=1.0):
+    """(open, high, low, close) rows into candles."""
+    return [{"time": i * step, "open": o * k, "high": h * k, "low": lo * k, "close": c * k} for i, (o, h, lo, c) in enumerate(rows)]
+
+
+#        0 up        1 HIGH 110   2 down       3 LOW 95     4 up        5 HIGH 108   6 down      7 last
+BASE = [(100, 104, 99, 103), (103, 110, 102, 106), (106, 107, 98, 99), (99, 100, 95, 97), (97, 105, 96, 104),
+        (104, 108, 103, 105), (105, 106, 101, 102), (102, 103, 100, 101)]
+
+
+def test_old_highs_and_lows_are_found_and_each_says_whether_it_was_eaten():
+    got = {(x["side"], x["price"]): x["eaten_at"] for x in highs_lows(mk(BASE))}
+    assert got == {("high", 110): None, ("low", 95): None, ("high", 108): None}
+
+
+def test_a_high_is_eaten_when_a_later_candle_trades_above_it_a_wick_is_enough():
+    c = mk(BASE + [(101, 109, 100, 102)])                              # trades above 108, closes back under: eaten all the same
+    got = {(x["side"], x["price"]): x["eaten_at"] for x in highs_lows(c)}
+    assert got[("high", 108)] == c[-1]["time"] and got[("high", 110)] is None
+
+
+def test_what_is_resting_is_only_what_was_not_eaten_however_far_it_is():
+    far = mk([(500, 520, 495, 500), (500, 600, 499, 510), (510, 515, 400, 405)] + [(405, 410, 100 + i, 104 + i) for i in range(3)] + BASE)
+    r = resting(far)
+    assert 600 in [x["price"] for x in r["buyside"]]                    # far above and old, but never eaten: it stays
+    c = mk(BASE + [(101, 109, 100, 102)])
+    assert [x["price"] for x in resting(c)["buyside"]] == [110]          # 108 was eaten: gone, though it is the nearer one
+    assert [x["price"] for x in resting(mk(BASE))["buyside"]] == [108, 110]   # nearest first
+    assert [x["price"] for x in resting(mk(BASE))["sellside"]] == [95]
+
+
+def test_what_the_present_move_has_eaten():
+    c = mk(BASE + [(101, 109, 100, 102), (102, 103, 94, 95)])
+    got = eaten_since(c, since=c[-2]["time"])
+    assert [(x["side"], x["price"]) for x in got] == [("low", 95), ("high", 108)]      # newest first
+    assert eaten_since(c, since=c[-1]["time"] + 1) == []
+
+
+def test_equal_highs_are_highs_very_close_by_and_how_close_is_the_callers_call():
+    lv = [{"side": "high", "price": p, "t": i} for i, p in enumerate([110.0, 110.4, 113.0, 118.0, 118.2, 118.5])]
+    lv += [{"side": "low", "price": p, "t": 9} for p in (90.0, 90.3)]
+    g = equal(lv, near=0.5)
+    assert [(x["side"], x["bottom"], x["top"], x["count"]) for x in g] == [("high", 110.0, 110.4, 2), ("high", 118.0, 118.5, 3), ("low", 90.0, 90.3, 2)]
+    assert equal(lv, near=0.1) == []                                     # a stricter eye sees none
+    assert [x["count"] for x in equal(lv, near=3.0) if x["side"] == "high"] == [3, 3]   # a looser eye joins 113 to the lower pair
+
+
+def test_highs_and_lows_are_never_grouped_together():
+    lv = [{"side": "high", "price": 100.0, "t": 0}, {"side": "low", "price": 100.1, "t": 1}]
+    assert equal(lv, near=1.0) == []
+
+
+def test_previous_day_or_week_high_and_low_left_uneaten_or_not():
+    days = mk([(100, 110, 95, 105), (105, 120, 101, 118)], step=86400)
+    today = mk([(118, 119, 112, 113), (113, 121, 111, 115)], step=3600)
+    p = previous_period(days, today)
+    assert p["high"]["price"] == 120 and p["high"]["eaten_at"] == today[1]["time"]
+    assert p["low"]["price"] == 101 and p["low"]["eaten_at"] is None
+    assert previous_period(days, [])["high"]["eaten_at"] is None         # nothing traded yet: both rest
+
+
+@pytest.mark.parametrize("k", [0.0001, 1.0, 300.0])
+@pytest.mark.parametrize("step", [60, 3600, 604800])
+def test_the_same_shape_reads_the_same_at_any_price_scale_and_on_any_timeframe(k, step):
+    r = resting(mk(BASE, step=step, k=k))
+    assert [x["price"] for x in r["buyside"]] == pytest.approx([108 * k, 110 * k]) and [x["price"] for x in r["sellside"]] == pytest.approx([95 * k])
+
+
+def test_nothing_is_known_before_it_happened():
+    c = mk(BASE + [(101, 109, 100, 102)])
+    assert all(x["eaten_at"] is None or x["eaten_at"] > x["t"] for x in highs_lows(c))
+    assert ("high", 108) not in {(x["side"], x["price"]) for x in highs_lows(c[:6])}    # the high is not a high until the next candle is in
