@@ -1,5 +1,5 @@
 {
- "at": "Tue 17 Nov, 06:19 NY \u00b7 practice read on the metals, top-down (not a hunt)",
+ "at": "Tue 17 Nov, 07:20 NY \u00b7 practice read on the metals, top-down (not a hunt)",
  "US100": {
   "marks": [],
   "read": [
@@ -28,7 +28,7 @@
     "tf": "1M",
     "side": "buyside",
     "t0": 1767225600,
-    "t1": null,
+    "t1": 1772323200,
     "price": 5596.81,
     "watch": false
    },
@@ -37,12 +37,12 @@
     "tf": "1M",
     "side": "buyside",
     "t0": 1785542400,
-    "t1": null,
+    "t1": 1790812800,
     "price": 4696.64,
     "watch": false
    },
    {
-    "kind": "1M FVG (Oct 25) closed through",
+    "kind": "1M FVG (Oct 25)",
     "tf": "1M",
     "side": "area",
     "t0": 1759276800,
@@ -66,7 +66,7 @@
     "tf": "1M",
     "side": "area",
     "t0": 1780272000,
-    "t1": null,
+    "t1": 1788220800,
     "top": 4366.05,
     "bottom": 4202.9,
     "watch": false
@@ -76,7 +76,7 @@
     "tf": "1M",
     "side": "sellside",
     "t0": 1780272000,
-    "t1": null,
+    "t1": 1790812800,
     "price": 3941.53,
     "watch": false
    },
@@ -126,18 +126,52 @@
     "t1": null,
     "price": 3832.14,
     "watch": false
+   },
+   {
+    "kind": "1W FVG (Sep 25)",
+    "tf": "1W",
+    "side": "area",
+    "t0": 1759104000,
+    "t1": null,
+    "top": 3883.25,
+    "bottom": 3790.86,
+    "watch": false
+   },
+   {
+    "kind": "1h order block",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794891600,
+    "t1": null,
+    "top": 3865.39,
+    "bottom": 3853.84,
+    "watch": false
+   },
+   {
+    "kind": "1h order block (dim)",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794873600,
+    "t1": 1794891600,
+    "top": 3880.97,
+    "bottom": 3874.91,
+    "watch": false
    }
   ],
   "read": [
    "Practice read, top-down. Not part of the hunt.",
    "Monthly: down since March; price 13 points above the untouched September 2025 gap (3,453.6\u20133,819.1). Its top is the first target, then the question.",
+   "Weekly, missed at first: price is already inside an old weekly gap from the 29 Sep 2025 week (3,790.9\u20133,883.3), above the monthly one. Never closed through. Last week closed at 3,883.2, on its top; Monday's low 3,832.1 is 5 points under its middle (3,837.1). More untouched weekly gaps are stacked below it.",
    "Weekly: last week took the prior week's high by 1.8 (4,148.6 over 4,146.8) and reversed the whole rally, through that week's low (3,869.1).",
    "Daily: where the move began: Mon 9 Nov up candle (4,064.9\u20134,140.1, 80% body) engulfed the next day = a clean sell block at the swept high. Untouched bearish gap above: 3,923.0\u20133,982.4.",
    "Short term: three small daily candles in a row (10%, 11%, 3% body). Monday swept last week's low (3,852.4 \u2192 3,832.1) and closed back above it. Range 3,832\u20133,901, price in its middle.",
    "Liquidity created: highs 3,888.8 / 3,886.6 above; lows 3,841.0 / 3,843.3 below, then 3,832.1, then the monthly gap's top 3,819.1.",
    "Against silver: on Monday silver made a lower low while gold made a higher low; overnight silver took Monday's high and gold did not. Divergence at both ends.",
    "Pace: slow (5m bodies about 1.5 points against a day's range of 80).",
-   "Sell = with the monthly, weekly and daily. Buy at the monthly gap = against, until it shows. Open: lows first into 3,819, or highs first into 3,923\u20133,982 and then lower."
+   "Sell = with the monthly, weekly and daily. Buy at the monthly gap = against, until it shows. Open: lows first into 3,819, or highs first into 3,923\u20133,982 and then lower.",
+   "Hourly (07:20): Monday 00:00 swept last week's low (3,852.4 \u2192 3,832.1) inside the weekly gap. Since then higher lows (3,841.0, 3,843.3, 3,852.7) under falling highs (3,901.1, 3,888.8, 3,886.6): a squeeze, with equal highs above and equal lows below.",
+   "Latest: the 05:00 down candle (3,853.8\u20133,865.4, 91% body) was engulfed by 06:00 = a clean 1h buy block; the 07:00 candle is back in it (low 3,861.9; middle 3,859.6).",
+   "Short term up from a swept low at a weekly gap = against the monthly, weekly and daily. First liquidity above: 3,886.6\u20133,888.8, then 3,901\u20133,906, 3,923, then the daily gap 3,923\u20133,982."
   ]
  },
  "XAGUSD": {
@@ -147,7 +181,7 @@
     "tf": "1M",
     "side": "buyside",
     "t0": 1767225600,
-    "t1": null,
+    "t1": 1772323200,
     "price": 121.65,
     "watch": false
    },
@@ -156,7 +190,7 @@
     "tf": "1M",
     "side": "buyside",
     "t0": 1785542400,
-    "t1": null,
+    "t1": 1790812800,
     "price": 71.16,
     "watch": false
    },
@@ -185,7 +219,7 @@
     "tf": "1M",
     "side": "area",
     "t0": 1780272000,
-    "t1": null,
+    "t1": 1790812800,
     "top": 71.78,
     "bottom": 63.25,
     "watch": false
@@ -195,7 +229,7 @@
     "tf": "1M",
     "side": "sellside",
     "t0": 1780272000,
-    "t1": null,
+    "t1": 1782864000,
     "price": 55.45,
     "watch": false
    },
@@ -237,18 +271,66 @@
     "t1": null,
     "price": 46.53,
     "watch": false
+   },
+   {
+    "kind": "1W FVG (Sep 25)",
+    "tf": "1W",
+    "side": "area",
+    "t0": 1759104000,
+    "t1": null,
+    "top": 47.31,
+    "bottom": 46.62,
+    "watch": false
+   },
+   {
+    "kind": "high 00:35",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794873600,
+    "t1": null,
+    "price": 47.99,
+    "watch": false
+   },
+   {
+    "kind": "1h order block (dim)",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794873600,
+    "t1": 1794891600,
+    "top": 47.7,
+    "bottom": 47.56,
+    "watch": false
+   },
+   {
+    "kind": "EQH swept",
+    "tf": "4h",
+    "side": "buyside",
+    "t0": 1794780000,
+    "t1": 1794873600,
+    "price": 47.84,
+    "watch": false
    }
   ],
   "read": [
    "Practice read, top-down. Not part of the hunt.",
    "Monthly: down since March, weaker than gold; about 1.0 above the untouched September 2025 gap (39.96\u201345.51). A bearish monthly gap is forming above (53.71\u201360.02).",
+   "Weekly, missed at first: the old weekly gap from the same 29 Sep 2025 week (46.62\u201347.31). Monday's wick went through it to 46.53 and price is back above; no weekly body has ever been inside it. Respected so far.",
    "Weekly: last week took the prior week's high (53.71 over 53.46) and reversed, through that week's low (48.60).",
    "Daily: where the move began: Mon 9 Nov up candle (51.53\u201353.41, 92% body), engulfed the next day by 0.01. Untouched bearish gaps stacked above: 49.04\u201349.69 and 50.78\u201351.42.",
    "Short term: Monday was a strong down day (75% body) to a new low, 46.53; gold's Monday was a small candle. Silver is leading down.",
    "4h: the gap from Sunday's open (47.84\u201348.46) was tested overnight: high 47.99, a wick in, bodies out. Respected so far.",
    "Against gold: lower low on Monday where gold held; took Monday's high overnight where gold did not.",
    "Pace: slow (5m bodies about 0.025 against a day's range of 1.9).",
-   "Sell = with every higher timeframe. Open: 46.53 and the monthly gap's top 45.51 first, or a deeper retrace into 49.04\u201349.69."
+   "Sell = with every higher timeframe. Open: 46.53 and the monthly gap's top 45.51 first, or a deeper retrace into 49.04\u201349.69.",
+   "Hourly (07:20): Sunday's 20:00 candle (95% body) left the gap 47.88\u201348.55. Monday 10:00 swept to 46.53 through the weekly gap while gold made a higher low. Since then higher lows (46.70, 46.80, 47.26) and higher highs (47.35, 47.59, 47.99).",
+   "The overnight high 47.99 was a wick into Sunday's gap, body out: respected from below. Price is on its second approach now (06:00 up candle, 81% body).",
+   "Short term up into a bearish gap = against the higher timeframes. Above 47.99: the rest of the gap to 48.55, then 49.04\u201349.69.",
+   "The chain on silver (confirmed by Sharif): the 4h gap 47.84\u201348.46 was the area; equal highs were built just under it (47.84, 47.81, 47.83); they were swept into the gap (47.99 at 00:35, closed back out); then a 1h order block (dim) formed and its middle, 47.63, was hit at 02:01. Each step adds information to the same area."
   ]
+ },
+ "hunt": {
+  "on": false,
+  "session": "",
+  "next": "New York prep 07:45 New York (14:45 SAST)"
  }
 }
