@@ -1,0 +1,245 @@
+{
+ "at": "Review of the London sell limit",
+ "hunt": {
+  "on": false,
+  "session": "",
+  "next": "this is a review page, not the live chart"
+ },
+ "US100": {
+  "marks": [
+   {
+    "kind": "EQL swept",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794834000,
+    "t1": 1794852000,
+    "price": 27148.71,
+    "watch": false
+   },
+   {
+    "kind": "sellside \u00b7 runner",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794852000,
+    "t1": null,
+    "price": 27098.54,
+    "watch": false
+   },
+   {
+    "kind": "higher low \u00b7 TP2",
+    "tf": "1h",
+    "side": "",
+    "t0": 1794877200,
+    "t1": null,
+    "price": 27143.31,
+    "watch": false
+   },
+   {
+    "kind": "Asia high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794866400,
+    "t1": null,
+    "price": 27414.15,
+    "watch": false
+   },
+   {
+    "kind": "lower high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794826800,
+    "t1": null,
+    "price": 27533.54,
+    "watch": false
+   },
+   {
+    "kind": "1D IFVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 27420.02,
+    "bottom": 27318.65,
+    "watch": false
+   },
+   {
+    "kind": "old 1D FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1793836800,
+    "t1": null,
+    "top": 27494.71,
+    "bottom": 27318.65,
+    "watch": false
+   },
+   {
+    "kind": "4h order block (dim)",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794852000,
+    "t1": null,
+    "top": 27307.7,
+    "bottom": 27224.73,
+    "watch": false
+   },
+   {
+    "kind": "EQL \u00b7 TP1",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794883200,
+    "t1": null,
+    "price": 27200.31,
+    "watch": false
+   },
+   {
+    "kind": "EQH",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794884100,
+    "t1": null,
+    "price": 27288.12,
+    "watch": false
+   },
+   {
+    "kind": "high 00:25",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794875100,
+    "t1": null,
+    "price": 27303.3,
+    "watch": false
+   },
+   {
+    "kind": "5m order block",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794884100,
+    "t1": null,
+    "top": 27277.92,
+    "bottom": 27257.0,
+    "watch": false
+   },
+   {
+    "kind": "sell entry (50%)",
+    "tf": "5m",
+    "side": "",
+    "t0": 1794884100,
+    "t1": null,
+    "price": 27267.46,
+    "watch": false
+   },
+   {
+    "kind": "stop",
+    "tf": "5m",
+    "side": "",
+    "t0": 1794875100,
+    "t1": null,
+    "price": 27304.0,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (May)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1777593600,
+    "t1": null,
+    "top": 28233.64,
+    "bottom": 27489.61,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Apr)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1775001600,
+    "t1": null,
+    "top": 27408.46,
+    "bottom": 25207.97,
+    "watch": false
+   },
+   {
+    "kind": "July low",
+    "tf": "1M",
+    "side": "sellside",
+    "t0": 1782864000,
+    "t1": null,
+    "price": 27063.33,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794885300,
+    "t1": null,
+    "price": 27191.11,
+    "watch": false
+   },
+   {
+    "kind": "EQH",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794884940,
+    "t1": null,
+    "price": 27248.93,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794886800,
+    "t1": null,
+    "price": 27168.03,
+    "watch": false
+   },
+   {
+    "by": "S",
+    "kind": "FVG",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794879300,
+    "t1": 1794889500,
+    "top": 27182.3,
+    "bottom": 27177.41,
+    "watch": false
+   },
+   {
+    "by": "S",
+    "kind": "BOS",
+    "tf": "1m",
+    "side": "",
+    "t0": 1794887280,
+    "t1": 1794887640,
+    "price": 27160.95,
+    "watch": false
+   },
+   {
+    "by": "S",
+    "kind": "FVG",
+    "tf": "1m",
+    "side": "area",
+    "t0": 1794887640,
+    "t1": 1794888180,
+    "top": 27169.46,
+    "bottom": 27167.24,
+    "watch": false
+   }
+  ],
+  "now": {
+   "at": "03:50",
+   "conditions": "Slow: one aggressive candle all session (02:54\u201302:55), otherwise a grind.",
+   "eaten": "Small equal highs 27,250 inside the 4h block (02:55); then the equal lows 27,200 (03:12), 27,191 (03:32) and 27,168 (03:49).",
+   "created": "Equal highs 27,246\u201327,249 under the 5m block. Never taken afterwards."
+  },
+  "read": [
+   "This page is the London sell with time taken back to 03:50, about when it was closed as dead. Nothing after 03:50 is on the chart.",
+   "The marks are the ones that were on the chart at 03:52 this morning (from the archive), plus Sharif's three saved marks, labelled \"S \u00b7\": his 5m gap, his BOS level and his 1m gap for the re-entry. He saved those at 04:33, so step forward to see them play out.",
+   "The order (planned 03:07): sell limit 27,267.5 (the 5m block's middle), stop 27,304 (over the 00:25 high), TP1 27,200 (50%), TP2 27,143 (30%), runner 27,098.5 (20%).",
+   "Not filled: the highest price after 03:07 was 27,248.9 (03:09), 19 points under the entry and 8 under the block's edge.",
+   "By 03:50 TP1's level had traded; TP2, the range low 27,143, had not. It went at 04:01, and the runner at 04:03.",
+   "For point 1: was closing this one right? Price had left without the entry, but the range low had not broken when we closed it.",
+   "Tell me a time and I move the page forward or back."
+  ]
+ }
+}

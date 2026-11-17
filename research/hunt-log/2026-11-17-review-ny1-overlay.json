@@ -1,0 +1,243 @@
+{
+ "at": "Review of paper idea NY-1",
+ "hunt": {
+  "on": false,
+  "session": "",
+  "next": "this is a review page, not the live chart"
+ },
+ "US100": {
+  "marks": [
+   {
+    "kind": "1M FVG (Apr)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1775001600,
+    "t1": null,
+    "top": 27408.46,
+    "bottom": 25207.97,
+    "watch": false
+   },
+   {
+    "kind": "old 1D FVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1793836800,
+    "t1": null,
+    "top": 27494.71,
+    "bottom": 27318.65,
+    "watch": false
+   },
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794808800,
+    "t1": null,
+    "top": 27630.61,
+    "bottom": 27533.54,
+    "watch": false
+   },
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794823200,
+    "t1": null,
+    "top": 27400.6,
+    "bottom": 27316.64,
+    "watch": false
+   },
+   {
+    "kind": "Asia high",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794866400,
+    "t1": null,
+    "price": 27414.15,
+    "watch": false
+   },
+   {
+    "kind": "London low",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794888000,
+    "t1": null,
+    "price": 27001.78,
+    "watch": false
+   },
+   {
+    "kind": "EQH swept",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794859200,
+    "t1": 1794897600,
+    "price": 27355.78,
+    "watch": false
+   },
+   {
+    "kind": "EQH",
+    "tf": "15m",
+    "side": "buyside",
+    "t0": 1794897000,
+    "t1": null,
+    "price": 27382.44,
+    "watch": false
+   },
+   {
+    "kind": "5m FVG",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794907800,
+    "t1": null,
+    "top": 27254.03,
+    "bottom": 27212.52,
+    "watch": false
+   },
+   {
+    "kind": "1m FVG",
+    "tf": "1m",
+    "side": "area",
+    "t0": 1794908580,
+    "t1": null,
+    "top": 27227.25,
+    "bottom": 27188.63,
+    "watch": false
+   },
+   {
+    "kind": "entry",
+    "tf": "5m",
+    "side": "",
+    "t0": 1794909120,
+    "t1": null,
+    "price": 27205.0,
+    "watch": false
+   },
+   {
+    "kind": "stop",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794908520,
+    "t1": null,
+    "price": 27270.0,
+    "watch": false
+   },
+   {
+    "kind": "TP1 EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794908160,
+    "t1": null,
+    "price": 27122.0,
+    "watch": false
+   },
+   {
+    "kind": "TP2 London low",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794909120,
+    "t1": null,
+    "price": 27005.0,
+    "watch": false
+   },
+   {
+    "kind": "runner",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794909120,
+    "t1": null,
+    "price": 26876.0,
+    "watch": false
+   }
+  ],
+  "now": {
+   "at": "09:54",
+   "conditions": "Choppy: large candles both ways between 27,115 and 27,267 since the open.",
+   "eaten": "The two equal lows 27,120.1 / 27,125.0, by a wick to 27,114.5 (09:52). No candle closed below them.",
+   "created": "Three highs at 27,212\u201327,213.5 just above the entry."
+  },
+  "read": [
+   "This page is paper idea NY-1 with time taken back to 09:54, the minute I cancelled it. Nothing after 09:54 is on the chart.",
+   "The marks are the ones on the live chart when I placed the order at 09:52, rebuilt from the log (no copy of the chart was archived at that minute): the higher-timeframe areas, the swept and the resting highs, the two gaps and the order.",
+   "The order: sell limit 27,205, stop 27,270, TP1 27,122 (50%), TP2 27,005 (30%), runner 26,876 (20%).",
+   "1 \u00b7 09:42: a wick through the opening drop's 5m gap (27,212.5\u201327,254.0) to 27,267.2; the candle closed at 27,144.6.",
+   "2 \u00b7 09:43\u201309:44: the 1-minute broke down and left a gap, 27,188.6\u201327,227.3.",
+   "3 \u00b7 09:45\u201309:49: four returns into that gap. These were the entry.",
+   "4 \u00b7 09:52: order placed. The same minute price wicked under the equal lows (27,114.5). Highest price since: 27,194.9.",
+   "5 \u00b7 09:54: I cancelled it as a missed trade. Sharif: not needed; only wicks below the range, no closed candle, not strong.",
+   "The nine points to discuss are in research/hunt-log/2026-11-17-ny1-discussion.md. Tell me a time and I move the page forward or back.",
+   "The earlier London sell is on its own page (port 8778), time taken back to 03:50."
+  ],
+  "idea": {
+   "side": "sell",
+   "trade": "the 4h bearish gap was not broken: wicks in, no body closing up into it (as Sharif would have taken it)",
+   "goal_name": "the London low",
+   "goal": 27001.8,
+   "context": "the 09:30 5m candle closed beyond the 50% of the 06:00 hourly gap and left its own 5m gap; US500 left its equal highs and was messy",
+   "where": "inside the 06:00 hourly gap (27,137.8\u201327,288.7), under Monday's 4h gap",
+   "when": "09:30\u201309:42 New York, the first strong displacement after the 07:00\u201309:20 chop; inside the 09:20\u201310:00 window",
+   "missing": "nothing: the entry could be placed at 09:42",
+   "entry": [
+    27212.5,
+    27254.0
+   ],
+   "stop": 27288.7,
+   "cancel": 27075.0,
+   "cancel_name": "the next sellside under the first target",
+   "state": "review example"
+  }
+ },
+ "US500": {
+  "marks": [
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794823200,
+    "t1": null,
+    "top": 7483.91,
+    "bottom": 7436.76,
+    "watch": false
+   },
+   {
+    "kind": "EQH left",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794837600,
+    "t1": null,
+    "price": 7436.76,
+    "watch": false
+   },
+   {
+    "kind": "London low",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794888000,
+    "t1": null,
+    "price": 7374.66,
+    "watch": false
+   },
+   {
+    "kind": "PWL",
+    "tf": "1D",
+    "side": "sellside",
+    "t0": 1794182400,
+    "t1": null,
+    "price": 7343.35,
+    "watch": false
+   }
+  ],
+  "now": {
+   "at": "09:54",
+   "conditions": "Choppy: 7,393\u20137,416 since the open, the tightest of the three.",
+   "eaten": "Its three lows at 7,401\u20137,403 (09:30) and the 09:36 low. Nothing above.",
+   "created": "Three equal highs at 7,435.4 / 7,436.1 / 7,436.8 (Mon 14:00, Mon 20:00, Tue 07:00), right under Monday's 4h bearish gap. Left untouched."
+  },
+  "read": [
+   "US500, time taken back to 09:54. This was a read and a lesson, not an order: I never set a sell limit on US500, so there is no entry or stop to show.",
+   "What was there: Monday's untouched 4h bearish gap (7,436.8\u20137,483.9), and three equal highs built right against its lower edge. The 06:00\u201307:00 rally stopped at 7,435.4, under them.",
+   "Sharif at 08:45\u201308:50: US100 ate its highs and sold; US500 created liquidity (left its highs). \"If price wanted to sell from here it could\": it can eat liquidity and then sell, or create it and sell.",
+   "What it did: it never went back for those highs. From 7,435 it reached the London low (10:31), last week's low (10:40) and November's low (10:54), low 7,288.2.",
+   "At the prep I had written \"sell = with the weekly and daily\" and was waiting for the highs to be swept into the gap. That wait was the mistake: the sweep is never a condition."
+  ]
+ }
+}
