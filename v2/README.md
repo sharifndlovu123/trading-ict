@@ -14,6 +14,9 @@ v2/
       lesson.md        the brain's part: his words, the why, what it was confirmed on
       bias_eyes.py     the eyes' part: code that sees it on a chart
       test_bias.py     the tests that validate it
+    02_liquidity/
+      lesson.md        liquidity: what it is, how to read it (relative to now, from the weekly down)
+      alt-liquidity.md its sub-part: imbalances price is drawn to
   brain/           how lessons are pulled together while price moves (empty until Sharif sets the design)
   references/      fixed sources v2 may cite (empty until each is re-checked with him)
 ```
