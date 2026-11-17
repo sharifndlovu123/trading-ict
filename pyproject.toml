@@ -25,4 +25,4 @@ build-backend = "hatchling.build"
 packages = ["ict_engine"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "v2/tests"]

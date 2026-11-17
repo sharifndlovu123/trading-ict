@@ -121,3 +121,5 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ README screenshot; CLAUDE.md updated; full suite 618 passed
 
 - **Bias (17 Nov 2026, confirmed):** read by hand (break / level below / level ahead), in the playbook, checker rules, prep prompt and a fixed Bias line on the page. The scan's fitted rule is no longer shown. Not changed: the backtest engine's bias rules (`prev_day_dol` default, `weekly_structure`) and the page's "backdrop" chip (20-day regime label); both are tested / frozen and need Sharif's decision and the change gate before any change.
+
+- **v1 / v2 split (17 Nov 2026):** `v2/` created; bias moved in with its lesson and 20 tests. Everything else is v1, deprecated, not yet moved. Next: rebuild the other concepts in v2 one at a time with Sharif (list in `v2/README.md`); later move the v1 folders under `v1/` in one block and re-point the page, feed, watcher, prep prompts and tests.

@@ -27,6 +27,12 @@ def _step(c: list[dict]) -> float:
     return median(d) if d else 0.0
 
 
+def completed(c: list[dict], now: float) -> list[dict]:
+    """Only the candles that have closed by ``now`` (epoch seconds): the one still forming is never read."""
+    step = _step(c)
+    return [x for x in c if x["time"] + step <= now]
+
+
 def swings(c: list[dict]) -> tuple[list[dict], list[dict]]:
     """Swing highs and lows of a candle list: ``{"t": time of the swing candle, "price", "known": time it became known}``.
     A swing is known when the candle after it has closed (no look-ahead)."""

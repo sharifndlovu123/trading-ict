@@ -1,8 +1,18 @@
 """Bias the way Sharif re-taught it on 17 Nov 2026: the break, the level behind it (a close through it is the change),
-the level ahead. Hand-built candles only, with known answers; no prices or dates from any real chart."""
+the level ahead. Hand-built candles only, with known answers; no prices or dates from any real chart.
+
+These replace v1's bias tests (tests/test_weekly_structure.py), case by case:
+  v1: bear after breaking the low, with the protected high      -> test_the_mirror_for_a_fall, test_the_break_sets_the_bias...
+  v1: a higher high below the protected high is not a change    -> test_a_new_swing_the_other_way_is_not_a_change (both ways)
+  v1: a wick through the guard changes nothing                  -> test_a_close_through_the_level_behind_is_the_change_and_a_wick_is_not
+  v1: a displacement close through the range top turns it bull  -> test_a_close_through_the_level_behind... (the change back)
+  v1: swings and when they are known / neutral without history  -> test_nothing_is_known_before_it_happened, test_a_high_of_this_timeframe_alone...
+  v1: the unfinished week is dropped                            -> test_the_candle_still_forming_is_never_read
+  v1: a weak close through the guard is a range (fitted margin) -> DROPPED. He taught "level below: break = change"; a close
+      through it is the change, with no margin. "Range" stays a hand judgement until he teaches how he decides it."""
 import pytest
 
-from ict_engine.concepts.bias_levels import bias_levels, swings
+from engine.bias import bias_levels, swings
 
 N = 5                                    # candles of the timeframe read per candle of the timeframe above
 
@@ -107,3 +117,19 @@ def test_a_wick_past_the_level_ahead_is_not_the_break_but_the_later_close_is():
     more = poke + path([(166, 0), (160, 4), (176, 6)])[0:0] + [{"time": t + 3600 * (i + 2), "open": 166 + 2 * i, "high": 169 + 2 * i, "low": 165 + 2 * i, "close": 168 + 2 * i} for i in range(4)]
     r = bias_levels(more, above(more))
     assert [e["kind"] for e in r["events"]] == ["first", "continue"] and r["change"]["price"] == pytest.approx(149.5)
+
+
+def test_a_new_swing_up_in_a_fall_is_not_a_change_either():
+    """v1's 'higher high below the protected high': highs of this timeframe are broken on the way up, the level behind holds."""
+    r = read([(200, 0), (200, 3), (160, 20), (180, 15), (130, 25), (150, 15), (140, 6), (160, 10), (150, 5), (172, 10)])
+    assert r["side"] == "bear" and [e["kind"] for e in r["events"]] == ["first"]
+
+
+def test_the_candle_still_forming_is_never_read():
+    """The caller passes completed candles; `completed` drops one that has not closed yet."""
+    from engine.bias import completed
+    c = path(RISE)
+    forming = c + [{"time": c[-1]["time"] + 3600, "open": 170, "high": 171, "low": 100, "close": 101}]     # mid-candle, far under the level behind
+    now = forming[-1]["time"] + 1800
+    assert completed(forming, now) == c and bias_levels(completed(forming, now), above(c))["side"] == "bull"
+    assert completed(forming, forming[-1]["time"] + 3600) == forming
