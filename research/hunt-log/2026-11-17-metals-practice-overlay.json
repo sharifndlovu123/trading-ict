@@ -1,0 +1,254 @@
+{
+ "at": "Tue 17 Nov, 06:19 NY \u00b7 practice read on the metals, top-down (not a hunt)",
+ "US100": {
+  "marks": [],
+  "read": [
+   "The London hunt is closed (04:50 New York). Nothing is marked between sessions.",
+   "Next: the New York prep at 07:45 New York (14:45 your time), from a clean chart."
+  ]
+ },
+ "US500": {
+  "marks": [],
+  "read": [
+   "The London hunt is closed (04:50 New York). Nothing is marked between sessions.",
+   "Next: the New York prep at 07:45 New York (14:45 your time), from a clean chart."
+  ]
+ },
+ "US30": {
+  "marks": [],
+  "read": [
+   "The London hunt is closed (04:50 New York). Nothing is marked between sessions.",
+   "Next: the New York prep at 07:45 New York (14:45 your time), from a clean chart."
+  ]
+ },
+ "XAUUSD": {
+  "marks": [
+   {
+    "kind": "high",
+    "tf": "1M",
+    "side": "buyside",
+    "t0": 1767225600,
+    "t1": null,
+    "price": 5596.81,
+    "watch": false
+   },
+   {
+    "kind": "lower high",
+    "tf": "1M",
+    "side": "buyside",
+    "t0": 1785542400,
+    "t1": null,
+    "price": 4696.64,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Oct 25) closed through",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1759276800,
+    "t1": null,
+    "top": 3928.47,
+    "bottom": 3871.51,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Sep 25)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1756684800,
+    "t1": null,
+    "top": 3819.09,
+    "bottom": 3453.57,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Jun 26)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1780272000,
+    "t1": null,
+    "top": 4366.05,
+    "bottom": 4202.9,
+    "watch": false
+   },
+   {
+    "kind": "Jun low (held in Jul)",
+    "tf": "1M",
+    "side": "sellside",
+    "t0": 1780272000,
+    "t1": null,
+    "price": 3941.53,
+    "watch": false
+   },
+   {
+    "kind": "1D order block",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 4140.07,
+    "bottom": 4064.93,
+    "watch": false
+   },
+   {
+    "kind": "1D FVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1762905600,
+    "t1": null,
+    "top": 3982.41,
+    "bottom": 3922.99,
+    "watch": false
+   },
+   {
+    "kind": "EQH",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794819600,
+    "t1": null,
+    "price": 3888.84,
+    "watch": false
+   },
+   {
+    "kind": "EQL",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794834000,
+    "t1": null,
+    "price": 3841.0,
+    "watch": false
+   },
+   {
+    "kind": "week low",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794787200,
+    "t1": null,
+    "price": 3832.14,
+    "watch": false
+   }
+  ],
+  "read": [
+   "Practice read, top-down. Not part of the hunt.",
+   "Monthly: down since March; price 13 points above the untouched September 2025 gap (3,453.6\u20133,819.1). Its top is the first target, then the question.",
+   "Weekly: last week took the prior week's high by 1.8 (4,148.6 over 4,146.8) and reversed the whole rally, through that week's low (3,869.1).",
+   "Daily: where the move began: Mon 9 Nov up candle (4,064.9\u20134,140.1, 80% body) engulfed the next day = a clean sell block at the swept high. Untouched bearish gap above: 3,923.0\u20133,982.4.",
+   "Short term: three small daily candles in a row (10%, 11%, 3% body). Monday swept last week's low (3,852.4 \u2192 3,832.1) and closed back above it. Range 3,832\u20133,901, price in its middle.",
+   "Liquidity created: highs 3,888.8 / 3,886.6 above; lows 3,841.0 / 3,843.3 below, then 3,832.1, then the monthly gap's top 3,819.1.",
+   "Against silver: on Monday silver made a lower low while gold made a higher low; overnight silver took Monday's high and gold did not. Divergence at both ends.",
+   "Pace: slow (5m bodies about 1.5 points against a day's range of 80).",
+   "Sell = with the monthly, weekly and daily. Buy at the monthly gap = against, until it shows. Open: lows first into 3,819, or highs first into 3,923\u20133,982 and then lower."
+  ]
+ },
+ "XAGUSD": {
+  "marks": [
+   {
+    "kind": "high",
+    "tf": "1M",
+    "side": "buyside",
+    "t0": 1767225600,
+    "t1": null,
+    "price": 121.65,
+    "watch": false
+   },
+   {
+    "kind": "lower high",
+    "tf": "1M",
+    "side": "buyside",
+    "t0": 1785542400,
+    "t1": null,
+    "price": 71.16,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (forming)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1790812800,
+    "t1": null,
+    "top": 60.02,
+    "bottom": 53.71,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Sep 25)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1756684800,
+    "t1": null,
+    "top": 45.51,
+    "bottom": 39.96,
+    "watch": false
+   },
+   {
+    "kind": "1M FVG (Jun 26)",
+    "tf": "1M",
+    "side": "area",
+    "t0": 1780272000,
+    "t1": null,
+    "top": 71.78,
+    "bottom": 63.25,
+    "watch": false
+   },
+   {
+    "kind": "Jun low (swept in Jul)",
+    "tf": "1M",
+    "side": "sellside",
+    "t0": 1780272000,
+    "t1": null,
+    "price": 55.45,
+    "watch": false
+   },
+   {
+    "kind": "1D order block",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1794182400,
+    "t1": null,
+    "top": 53.41,
+    "bottom": 51.53,
+    "watch": false
+   },
+   {
+    "kind": "1D FVG",
+    "tf": "1D",
+    "side": "area",
+    "t0": 1762992000,
+    "t1": null,
+    "top": 49.69,
+    "bottom": 49.04,
+    "watch": false
+   },
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794765600,
+    "t1": null,
+    "top": 48.46,
+    "bottom": 47.84,
+    "watch": false
+   },
+   {
+    "kind": "week low",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794823200,
+    "t1": null,
+    "price": 46.53,
+    "watch": false
+   }
+  ],
+  "read": [
+   "Practice read, top-down. Not part of the hunt.",
+   "Monthly: down since March, weaker than gold; about 1.0 above the untouched September 2025 gap (39.96\u201345.51). A bearish monthly gap is forming above (53.71\u201360.02).",
+   "Weekly: last week took the prior week's high (53.71 over 53.46) and reversed, through that week's low (48.60).",
+   "Daily: where the move began: Mon 9 Nov up candle (51.53\u201353.41, 92% body), engulfed the next day by 0.01. Untouched bearish gaps stacked above: 49.04\u201349.69 and 50.78\u201351.42.",
+   "Short term: Monday was a strong down day (75% body) to a new low, 46.53; gold's Monday was a small candle. Silver is leading down.",
+   "4h: the gap from Sunday's open (47.84\u201348.46) was tested overnight: high 47.99, a wick in, bodies out. Respected so far.",
+   "Against gold: lower low on Monday where gold held; took Monday's high overnight where gold did not.",
+   "Pace: slow (5m bodies about 0.025 against a day's range of 1.9).",
+   "Sell = with every higher timeframe. Open: 46.53 and the monthly gap's top 45.51 first, or a deeper retrace into 49.04\u201349.69."
+  ]
+ }
+}
