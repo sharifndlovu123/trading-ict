@@ -38,6 +38,11 @@ a { color:var(--accent); }
   <h1>Charts together</h1>
   <a href="/">← single chart</a>
   <span id="hunt" class="chip"></span>
+  <span id="replay" class="tabs" style="display:none" title="this is a review page: move its time forward or back">
+    <button data-d="-5">◀ 5m</button><button data-d="-1">◀ 1m</button>
+    <input id="rpat" style="width:74px;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:3px 6px" placeholder="HH:MM" title="type a New York time and press Enter">
+    <button data-d="1">1m ▶</button><button data-d="5">5m ▶</button><button data-d="15">15m ▶</button>
+    <button id="rpplay" title="one minute every second and a half">▶ play</button><span id="rpmsg" class="dim"></span></span>
   <span class="tabs"><span class="dim">start from</span><span id="sets" class="tabs"></span></span>
   <button id="add" title="one more chart; pick its instrument and timeframe in its own header">+ chart</button>
   <span class="tabs"><span class="dim">columns</span><span id="cols" class="tabs"></span></span>
@@ -249,11 +254,30 @@ async function poll(first) {
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
     $("ovwrap").style.display = st.overlay ? "" : "none"; huntBadge(st.overlay);
     $("when").textContent = `New York ${d.now} · checked ${new Date().toLocaleTimeString()}`;
+    if (first) { const q = new URLSearchParams(location.search), as = (q.get("assets") || "").split(",").filter(n => d.assets[n]);      // a link can set the charts: /multi?assets=US100,US500&tf=5m
+      if (as.length) st.cfg = as.map(asset => ({ asset, tf: TFS.includes(q.get("tf")) ? q.get("tf") : "5m" })); }
+    const on = d.mode === "replay"; $("replay").style.display = on ? "" : "none";
+    if (on && document.activeElement !== $("rpat")) $("rpat").value = d.now.slice(-5);
     const ok = (st.cfg || []).filter(c => d.assets[c.asset] && TFS.includes(c.tf));      // an instrument that left the feed leaves the layout
     st.cfg = ok.length ? ok : (SETS.Indices.filter(n => d.assets[n]).length ? SETS.Indices.filter(n => d.assets[n]) : Object.keys(d.assets)).map(asset => ({ asset, tf: "15m" }));
     if (first || sig !== st.sig) { st.sig = sig; controls(); build(); } else if (fresh) fill(false);
   } catch (e) { $("when").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
+// review pages only (mode "replay"): move the snapshot's time (temporary, Sharif 2026-11-17)
+let rpTimer = null;
+async function replayTo(hhmm) {
+  try { const r = await (await fetch("api/replay?at=" + encodeURIComponent(hhmm))).json();
+    $("rpmsg").textContent = r.error ? r.error : ""; if (!r.error) await poll(false); return !r.error; } catch (e) { $("rpmsg").textContent = "this page cannot be moved"; return false; }
+}
+function replayStep(dm) {
+  const m = /(\d\d):(\d\d)$/.exec(st.doc.now); if (!m) return false;
+  const t = Math.max(0, Math.min(1439, +m[1] * 60 + +m[2] + dm));
+  return replayTo(String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"));
+}
+$("replay").querySelectorAll("button[data-d]").forEach(b => b.onclick = () => replayStep(+b.dataset.d));
+$("rpat").addEventListener("keydown", e => { if (e.key === "Enter") { replayTo($("rpat").value.trim()); $("rpat").blur(); } e.stopPropagation(); });
+$("rpplay").onclick = () => { if (rpTimer) { clearInterval(rpTimer); rpTimer = null; $("rpplay").textContent = "▶ play"; return; }
+  $("rpplay").textContent = "❚❚ pause"; rpTimer = setInterval(async () => { if (!(await replayStep(1))) $("rpplay").click(); }, 1500); };
 async function refresh() { $("refresh").textContent = "↻ …"; await poll(false); if (st.doc) fill(true); $("refresh").textContent = "↻ refresh"; }
 $("refresh").onclick = refresh;
 $("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
