@@ -428,6 +428,8 @@ async function poll(first) {
     const d = await (await fetch("today.json?t=" + Date.now())).json();
     const fresh = !st.doc || d.now !== st.doc.now;
     st.doc = d;
+    if (first) { const q = new URLSearchParams(location.search);      // a link can open a chart directly: /?asset=US100&tf=5m
+      if (q.get("asset") && d.assets[q.get("asset")]) st.asset = q.get("asset"); if (TFS.includes(q.get("tf"))) st.tf = q.get("tf"); }
     if (!st.asset || !d.assets[st.asset]) st.asset = Object.keys(d.assets)[0];
     if (first) loadMarks();
     try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }

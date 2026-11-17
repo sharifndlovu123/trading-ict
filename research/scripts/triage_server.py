@@ -63,7 +63,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if not self._allowed():
             return
-        if self.path in ("/", "/index.html"):
+        if self.path.split("?")[0] in ("/", "/index.html"):          # a link may carry ?asset=…&tf=…
             body = PAGE.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
