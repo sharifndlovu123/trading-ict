@@ -12,6 +12,7 @@ Liquidity is either created or eaten, and both can come before the same move: pr
 Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index (short; these lines go on the page and never wake Fable), then `OK` or the `ESCALATE` lines.
 
 ## Context
+- Every idea has a named trade and a named goal (for example: sell, goal the London low). A small range inside the move is not the trade. Once the goal has been swept and pushed through, what follows is a chase, not a new trade. The first strong displacement out of chop is what opens an entry; prefer the index that made it.
 - Three indices: US100, US500, US30. Prices are CFD prices. All times New York.
 - Hunting happens only from an hour before London (01:00) through New York. Never the Asian session.
 - Long term and short term are read separately (monthly first, then weekly / daily, then intraday); every idea is labelled with or against the higher timeframe. A higher-timeframe buy area can still be broken a little lower before the buying comes, or bought at once: both stay open.
