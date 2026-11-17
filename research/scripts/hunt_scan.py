@@ -28,8 +28,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
 
-import hunt_watch as hw
-import live_snapshot as ls
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))    # the engine's structure rule lives in ict_engine
+
+import hunt_watch as hw  # noqa: E402
+import live_snapshot as ls  # noqa: E402
 
 TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"]
 RANK = {t: i for i, t in enumerate(TFS)}
@@ -237,15 +241,24 @@ def blocks(c: list[dict], tf: str, last: float, reach: float | None = None) -> l
 
 
 def bias(c: list[dict], tf: str) -> dict | None:
-    c = c[-BACK:]
-    hs = [x["high"] for i, x in enumerate(c) if 1 < i < len(c) - 2 and x["high"] == max(k["high"] for k in c[i - 2:i + 3])]
-    lows = [x["low"] for i, x in enumerate(c) if 1 < i < len(c) - 2 and x["low"] == min(k["low"] for k in c[i - 2:i + 3])]
-    if len(hs) < 2 or len(lows) < 2:
+    """Structure on this timeframe, by the rule Sharif taught and checked on 16 Nov 2026 (it is not the last two swings):
+    the trend holds until a candle of this timeframe CLOSES through the protected level, an intermediate-term swing;
+    higher highs under a protected lower high are shifts inside a bear trend, not a change; a wick through it with the
+    close back inside changes nothing; a weak close through it is a range. (`context.weekly_structure_state`, the same
+    code on every timeframe, margins in that timeframe's own ATR.)"""
+    import pandas as pd
+    from ict_engine.concepts.context import weekly_structure_state
+    if len(c) < 30:
         return None
-    d = "bear" if hs[-1] < hs[-2] and lows[-1] < lows[-2] else "bull" if hs[-1] > hs[-2] and lows[-1] > lows[-2] else "unclear"
-    why = {"bear": "lower highs and lower lows", "bull": "higher highs and higher lows", "unclear": "the highs and the lows disagree"}[d]
-    return {"type": f"bias.{d}", "tf": tf, "side": d, "weight": 1 + RANK[tf],
-            "text": f"{tf} structure: {why} (highs {hs[-2]} → {hs[-1]}, lows {lows[-2]} → {lows[-1]})"}
+    f = pd.DataFrame({k: [x[k] for x in c] for k in ("high", "low", "close")}, index=[x["time"] for x in c])
+    state, guard, flips = weekly_structure_state(f)
+    if state == "neutral" or guard is None:
+        return {"type": "bias.neutral", "tf": tf, "side": "neutral", "weight": 1 + RANK[tf],
+                "text": f"{tf}: no structure break yet in the candles I have ({len(c)})"}
+    since, prot = flips[-1][0], "lower high" if state == "bear" else "higher low"
+    return {"type": f"bias.{state}", "tf": tf, "side": state, "guard": float(guard), "since": int(since), "weight": 1 + RANK[tf],
+            "text": f"{tf}: {state} since {hm(int(since), tf)}; protected {prot} {guard:.5g}. Until a {tf} candle closes "
+                    f"{'above' if state == 'bear' else 'below'} it, moves the other way are shifts inside the {state} trend, not a change"}
 
 
 def conditions(c: list[dict], tf: str, n: int = 24) -> dict | None:
@@ -331,11 +344,17 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     seen; deciding what it means is the reader's job."""
     by = lambda *pre: [o for o in obs if o["type"].startswith(pre)]          # noqa: E731
     tfo = lambda xs: sorted(xs, key=lambda o: RANK.get(o["tf"], 0))          # noqa: E731
-    lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in tfo(xs)) or "nothing to go on"}   # noqa: E731
+    lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in (xs if xs and xs[0]["type"].startswith("bias.") else tfo(xs))) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
-    wrong = {"type": "summary", "tf": "", "text": "NOT TO BE TRUSTED YET: Sharif says this bias reading is very wrong (17 Nov 2026); he will explain. It only compares the last two swing highs and lows."}
+    bs = sorted(by("bias."), key=lambda o: -RANK[o["tf"]])                  # the higher timeframe first: its highs and lows matter more
+    note = {"type": "summary", "tf": "", "text": "For Sharif to check: this now uses the structure rule he taught on 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. His first verdict on the old version was \"very wrong\"."}
+    rel = []
+    for hi_, lo_ in zip(bs, bs[1:]):                                          # a lower timeframe going the other way is a shift inside the higher one
+        if hi_["side"] in ("bear", "bull") and lo_["side"] in ("bear", "bull") and hi_["side"] != lo_["side"]:
+            rel.append({"type": "bias.shift_inside_higher", "tf": lo_["tf"], "text": f"{lo_['tf']} is {lo_['side']} inside a {hi_['tf']} {hi_['side']} trend: "
+                        f"a shift, not a change, until the {hi_['tf']} protected level {hi_['guard']:.5g} is closed through"})
     out = {"choppy": [lab(cond)] + by("cond.displacement_out_of_chop")[:2],
-           "bias": [wrong, lab(by("bias."))] + by("candle.counter_in_gap")[:2]}
+           "bias": [note, lab(bs)] + bs + rel[:3] + by("candle.counter_in_gap")[:2]}
     areas = [o for o in by("gap.", "block.") if "bottom" in o]
     pick = sorted((o for o in areas if o["bottom"] <= last <= o["top"]), key=lambda o: -RANK[o["tf"]])[:3]
     for above in (True, False):                                               # the nearest standing areas each side of price, small and large
@@ -383,6 +402,8 @@ def to_mark(o: dict) -> dict | None:
     if t in ("liq.eaten", "liq.swept_into_area"):
         how = "wick" if o["closed_back"] else "body"
         return {**base, "kind": f"{hl} eaten ({how})" + (f" into {o['area_tf']} gap" if t.endswith("area") else ""), "side": lside, "price": o["price"], "t1": o["t1"]}
+    if t in ("bias.bear", "bias.bull"):
+        return {**base, "kind": f"{tf} protected {'high' if t.endswith('bear') else 'low'}", "side": "buyside" if t.endswith("bear") else "sellside", "price": o["guard"], "t0": o["since"]}
     if t == "displacement":
         return {**base, "kind": "displacement", "side": "", "p0": o["p0"], "p1": o["p1"], "t1": o.get("t1", o["t0"])}
     if t == "displacement.left_gap":

@@ -120,3 +120,26 @@ def test_an_earlier_group_being_swept_says_nothing_about_a_later_group_at_the_sa
     g = [x for x in hs.liquidity(c, "1D", 100.5) if x["side"] == "highs" and x["top"] == 105]
     assert [x["type"] for x in g] == ["liq.created"] and g[0]["count"] == 2          # only the later group is resting; the earlier one is old news
     assert g[0]["t0"] > c[len(QUIET) + 5]["time"]                                    # and it is the later stretch of candles
+
+
+def test_bias_is_the_structure_rule_he_taught_not_the_last_two_swings():
+    """Bias comes from `context.weekly_structure_state` (protected intermediate-term level; a close, not a wick, turns
+    it), read the same way on any timeframe. Here a hand-built fall, a rally that stays under the protected high (a
+    shift, not a change), then a close through it (the change)."""
+    import math
+    rows, px = [], 600.0
+    for i in range(160):                                             # a falling market with pullbacks of uneven size
+        px += -2.0 + 6 * math.sin(i / 3.1) + 3 * math.sin(i / 1.3)
+        rows.append((px + 1, px + 4, px - 4, px - 1))
+    fall = mk(rows, step=3600)
+    b = hs.bias(fall, "1h")
+    assert b["type"] == "bias.bear" and b["guard"] > fall[-1]["close"] and "protected lower high" in b["text"]
+    assert hs.bias(fall, "1D")["type"] == "bias.bear"                 # the same candles under another timeframe's name: the same reading
+    last = fall[-1]["close"]
+    under = fall + mk([(last + k, last + k + 3, last + k - 3, last + k + 1) for k in range(1, 6)], step=3600)   # higher highs, still under the guard
+    assert under[-1]["high"] < b["guard"] and hs.bias(under, "1h")["type"] == "bias.bear"
+    g = b["guard"]
+    broke = fall + mk([(g - 5, g + 60, g - 6, g + 55), (g + 55, g + 70, g + 50, g + 65)], step=3600)             # a strong close above the protected high
+    assert hs.bias(broke, "1h")["type"] == "bias.bull"
+    wick = fall + mk([(g - 30, g + 20, g - 32, g - 28), (g - 28, g - 20, g - 35, g - 30)], step=3600)             # only a wick above it, the close back under
+    assert hs.bias(wick, "1h")["type"] == "bias.bear"
