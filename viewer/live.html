@@ -246,11 +246,11 @@ function renderTabs() {
   $("tabs").innerHTML = Object.entries(st.doc.assets).map(([k, v]) => {
     const live = (v.setups || []).filter(s => s.ok).length;
     return `<button data-a="${k}" class="${k === st.asset ? "on" : ""}">${k}${live ? ` · ${live} plan${live > 1 ? "s" : ""}` : ""}</button>`; }).join("");
-  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; recentre(); render(true); });
   $("fstabs").innerHTML = fsOn() ? Object.keys(st.doc.assets).map(k => `<button data-a="${k}" class="${k === st.asset ? "on" : ""}">${k}</button>`).join("") : "";
-  $("fstabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; render(true); });
+  $("fstabs").querySelectorAll("button").forEach(b => b.onclick = () => { st.asset = b.dataset.a; st.sel = null; st.sig = ""; st.dirty = false; recentre(); render(true); });
   $("tfs").innerHTML = [...TFS].reverse().filter(t => (st.doc.assets[st.asset].candles[t] || []).length).map(t => `<button data-t="${t}" class="${t === st.tf ? "on" : ""}">${t}</button>`).join("");
-  $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.tf = b.dataset.t; renderTabs(); drawChart(true); });
+  $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.tf = b.dataset.t; renderTabs(); recentre(); drawChart(true); });
 }
 
 function renderCond() {
@@ -405,6 +405,7 @@ async function poll(first) {
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
+const recentre = () => chart.applyOptions({ rightPriceScale: { autoScale: true } });      // price axis back to fit; drawChart(true) resets the time axis
 async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false);
   if (st.doc) { chart.applyOptions({ rightPriceScale: { autoScale: true } }); render(true); } $("refresh").textContent = "↻ refresh"; }
 $("areason").onchange = () => drawChart(false); $("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
