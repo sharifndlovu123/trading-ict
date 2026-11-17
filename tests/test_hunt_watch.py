@@ -42,3 +42,14 @@ def test_a_hard_push_is_reported_once_and_a_new_prep_resets_everything():
     assert any("Asia high" in x for x in again) is False and any("FVG" in x for x in again) is False     # new prep, 109 is between them
     back = hw.events(doc(110.4, [(110.5, 110.6, 108.9, 109), (109, 110.5, 108.9, 110.4)]), {**OV, "at": "prep 2"}, st2)
     assert any("traded through Asia high" in x for x in back)                                           # fires again after the reset
+
+
+def test_the_checker_summary_and_its_reply():
+    d = doc(104.0, [(103, 104.5, 103, 104), (104, 104.5, 103.5, 104)])
+    d["now"] = "Tue 2026-11-17 02:30"
+    d["assets"]["US100"]["candles"].update({"15m": d["assets"]["US100"]["candles"]["5m"], "1h": []})
+    text = hw.summary(d, {**OV, "US100": {**OV["US100"], "read": ["Sell on a raid of the Asia high."]}})
+    assert "## US100: last 104.0" in text and "Asia high 110.0" in text and "FVG (106.0, 108.0)" in text
+    assert "displacement" not in text and "Sell on a raid" in text and "00:05 o104" in text
+    assert hw.parse_checker("OK") == [] and hw.parse_checker("ok\n") == []
+    assert hw.parse_checker("ESCALATE: US500: two lows at 7,394\nOK") == ["ESCALATE: US500: two lows at 7,394"]

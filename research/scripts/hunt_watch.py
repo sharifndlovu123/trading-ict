@@ -14,11 +14,18 @@ needs the slower full check.
 
     uv run python research/scripts/hunt_watch.py            # runs until 16:05 New York
     uv run python research/scripts/hunt_watch.py --once
+    uv run python research/scripts/hunt_watch.py --until-event --checker-min 15     # as Claude runs it
+
+``--checker-min N``: every N minutes a cheaper model (Sonnet) reads `research/hunt-rules.md` and a short summary and
+answers OK or ESCALATE; only escalations are printed. ``--until-event``: exit after the first report, so the
+background run wakes Claude exactly once and is then restarted.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import tempfile
 import time as _time
 from datetime import datetime
 from pathlib import Path
@@ -73,10 +80,45 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
     return out
 
 
+def summary(doc: dict, overlay: dict) -> str:
+    """A short text picture of the three indices for the checker: prices, recent candles, Claude's marks and read."""
+    hm = lambda t: datetime.fromtimestamp(t, ZoneInfo("UTC")).strftime("%H:%M")  # noqa: E731  (candle times are NY wall clock)
+    out = [f"Now: {doc.get('now')} New York. Prep: {overlay.get('at')}"]
+    for asset, item in doc.get("assets", {}).items():
+        c = item.get("candles", {})
+        row = lambda xs: " | ".join(f"{hm(x['time'])} o{x['open']} h{x['high']} l{x['low']} c{x['close']}" for x in xs)  # noqa: E731
+        ov = overlay.get(asset, {})
+        out += [f"\n## {asset}: last {item.get('last')}, ADR {item.get('adr')}, levels {item.get('levels')}",
+                "5m (last 12): " + row((c.get("5m") or [])[-12:]), "15m (last 12): " + row((c.get("15m") or [])[-12:]),
+                "1h (last 8): " + row((c.get("1h") or [])[-8:]),
+                "Marked: " + "; ".join(f"{m.get('kind')} {m.get('price', (m.get('bottom'), m.get('top')))}" for m in ov.get("marks", []) if "p0" not in m),
+                "Read: " + " ".join(ov.get("read", []))]
+    return "\n".join(out)
+
+
+def parse_checker(reply: str) -> list[str]:
+    """The checker's escalations (lines starting ESCALATE); anything else, including OK, is nothing."""
+    return [ln.strip() for ln in reply.splitlines() if ln.strip().upper().startswith("ESCALATE")]
+
+
+def ask_checker(text: str, model: str = "sonnet", rules: Path = Path("research/hunt-rules.md")) -> list[str]:
+    """One small call to a cheaper model, from an empty folder so no project context is loaded. It sees only the
+    rules and the summary, and answers OK or ESCALATE lines."""
+    prompt = (rules.read_text() + "\n\n---\nThe current picture:\n\n" + text
+              + "\n\nAnswer now: exactly `OK`, or one `ESCALATE: ...` line per thing Fable should look at.")
+    with tempfile.TemporaryDirectory() as tmp:
+        r = subprocess.run(["claude", "-p", "--model", model, "--max-turns", "1"], input=prompt, capture_output=True, text=True, timeout=120, cwd=tmp)
+    return parse_checker(r.stdout)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
+    ap.add_argument("--until-event", action="store_true", help="exit after the first reading that reports something")
+    ap.add_argument("--checker-min", type=int, default=0, help="ask the cheaper model every N minutes (0 = never)")
+    ap.add_argument("--checker-model", default="sonnet")
     a = ap.parse_args()
+    last_ask = _time.time()
     sp = OUT / "watch_state.json"
     state = json.loads(sp.read_text()) if sp.exists() else {}
     ny = ZoneInfo("America/New_York")
@@ -96,6 +138,12 @@ def main():
                 lines.append(f"FEED STALE: today.json is {age:.0f} minutes old (is live_recipe.py running?)")
             elif age <= STALE_MIN:
                 state["stale"] = False
+            if a.checker_min and _time.time() - last_ask >= a.checker_min * 60:
+                last_ask = _time.time()
+                try:
+                    lines += [f"checker ({a.checker_model}) {x}" for x in ask_checker(summary(doc, overlay), a.checker_model)]
+                except Exception as e:
+                    lines.append(f"checker failed: {type(e).__name__}: {e}")
             for ln in lines:
                 print(f"[{doc['now'][-5:]} NY] {ln}", flush=True)
             sp.write_text(json.dumps(state))
@@ -104,7 +152,7 @@ def main():
             if state.get("err") != msg:                          # say it once, not every minute
                 state["err"] = msg
                 print(msg, flush=True)
-        if a.once or datetime.now(ny).strftime("%H:%M") >= "16:05":
+        if a.once or (a.until_event and lines) or datetime.now(ny).strftime("%H:%M") >= "16:05":
             break
         _time.sleep(60)
 
