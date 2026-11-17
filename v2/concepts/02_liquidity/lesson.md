@@ -47,6 +47,7 @@ Sharif ("my references should be accounted for, they are clear and concise as we
 - **Eaten or not decides what stays, not distance.** "Focus on if it was eaten first; if it wasn't eaten keep it."
   "If it was eaten it's no longer as useful to us, or if it's swept, it might be important for that current price where
   it's nearby, but if it's not and it's far off in the past, it doesn't help us with old data if it's already eaten."
+- **"Eaten" and "swept" are the same thing** (he: "one thing I keep saying, it's 'eaten', 'swept', same thing"). So the sentence above is one rule, not a rule with an exception: liquidity that has been eaten is used up; if that happened near where price is now it can still matter for the present, and if it is far off in the past it does not help.
 - **Intraday:** "relative to where price currently is, we look at previous day and previous week for highs or lows
   that were left uneaten."
 - **Trendline liquidity: skipped.** "The alt-liquidity tends to eat trendline liq either way."
