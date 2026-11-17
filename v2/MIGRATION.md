@@ -1,5 +1,7 @@
 # Migration to v2: checklist
 
+**This week's objective (Sharif, 18 Nov 2026; the week of 16 to 20 November 2026): "cleaning up our mess."** No hunting, no new strategies. The work is moving what is worth keeping into v2, one concept at a time with him, and retiring v1.
+
 Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]` not started.
 
 ## Concepts (one folder each under `concepts/`)
