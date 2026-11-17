@@ -14,6 +14,7 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 | # | Concept | Taught | Brain | Eyes | In use |
 |---|---|---|---|---|---|
 | 01 | Bias | [x] | [x] | [~] | [ ] |
+| 02 | Liquidity | [~] | [~] | [ ] | [ ] |
 
 Note on 01: the eyes agree fully with his confirmed read on the DAX, on direction on the dollar index, and differ on
 the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
