@@ -18,7 +18,9 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 Note on 01: the eyes agree fully with his confirmed read on the DAX, on direction on the dollar index, and differ on
 the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
 
-**Next concepts:** Sharif names each one and says how it is done. Nothing is listed ahead of him.
+**Next:** 02, order block context (Sharif, 17 Nov 2026), starting from the cleaned references.
+
+Sharif names each concept and says how it is done. Nothing is listed ahead of him.
 
 <details><summary>What v1 holds that is not in v2 yet (a reminder, not a plan)</summary>
 
@@ -41,6 +43,7 @@ time and sessions.
 | Item | State |
 |---|---|
 | v2 folder, rules, tests running | [x] |
+| References cleaned into `v2/references/` (engine notes stripped; v1 summaries left out) | [x] waiting for his check |
 | A v2 page, feed, watcher and prep instructions | [ ] |
 | v1 folders moved under `v1/` and the hunt switched to v2 | [ ] |
 
@@ -54,4 +57,5 @@ time and sessions.
 ## Log
 | Date | What changed |
 |---|---|
+| 17 Nov 2026 | Source notes cleaned into `v2/references/personal/` (11 files); framework, models, patterns, pipeline, order flow left out |
 | 17 Nov 2026 | v2 created; bias confirmed on three unseen charts and entered as concept 01; folders simplified to one folder per concept |
