@@ -8,7 +8,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - The idea comes first (where price is, where it is assumed to go), then the target, then the entry area. An area alone is not a trade.
 - Entry areas are all looked for the same way: a breaker (body of the last candle before the leg), an order block (the last opposite candle that one strong move engulfed), an unfilled gap (FVG), the OTE of the range in play now. They matter only when price retraces into an area of interest.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
-- A candle that is more wick than body is a poor block.
+- An order block: the next candle closes beyond the block candle's open (one move engulfs it); the block is the candle's body. A strong body that was still engulfed makes a better block; a body smaller than its wicks is a weak one (same for a breaker).
 - The three indices are compared: the weakest is favoured for a sell, the strongest for a buy, and the cleanest pool of equal highs or lows for a reversal.
 
 ## Wake Fable (answer `ESCALATE: <index>: <what happened, with prices>`) when any of these is true

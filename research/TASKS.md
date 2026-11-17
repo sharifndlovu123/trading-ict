@@ -82,12 +82,12 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 
 ### K. Waiting on Sharif's answer
 - ☐ K1 Order blocks on the page: show only the ones that form when price retraces into an area of interest. Is the right set "a breaker, an unfilled gap, the OTE of a break, a swept pool"?
-- ☐ K2 Order-block details: is "engulf" = the next candle closes beyond the block candle's open? Is the block the candle's body (as with the breaker) or open-to-wick?
-- ☐ K3 Weak blocks (more wick than body): drop them, or only dim them as now?
+- ☑ K2 Order block (answered 2026-11-17): engulf = the next candle closes beyond the block candle's open; the block is the body only. A better block has a strong body that was still engulfed; a body smaller than the wicks is not a strong block
+- ☑ K3 Weak blocks: keep them dimmed for now, for learning (answered 2026-11-17)
 - ☐ K4 His stop on the gap trade (trade 1, US100 Thu 12 Nov 10:03)
 - ☐ K5 The weekend gap (NWOG) on regular-hours charts: which two prices define it
 - ☐ K6 Watching 05:00–09:00 New York (tradable by his rule, no check-ins now); is 15 minutes the right rhythm
-- ☐ K8 The afternoon live window: he wrote "14:20-13:00"; set as 13:20–14:00 New York. Is that right, or 14:20–15:00 as well?
+- ☑ K8 Afternoon window = 13:20–14:00 New York (answered 2026-11-17)
 - ☐ K7 Should his marks carry from London into New York, or stay one session each (as now)
 
 ### L. To do
