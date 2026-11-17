@@ -110,3 +110,13 @@ def test_only_what_is_near_price_now_is_kept():
     assert [x for x in hs.liquidity(c, "5m", 100.5, reach=10) if x["top"] == 105]           # 4.5 away: kept
     assert not [x for x in hs.liquidity(c, "5m", 100.5, reach=2) if x["top"] == 105]         # farther than we are looking: dropped
     assert not [x for x in hs.gaps(mk(QUIET + GAP_UP + [(106.5, 107.5, 105, 107)]), "5m", 140.0, reach=5)]
+
+
+def test_an_earlier_group_being_swept_says_nothing_about_a_later_group_at_the_same_price():
+    """Sharif: "the highs that were EQHs in April were swept: it has nothing to do with July's EQHs"."""
+    peak = [(100, 105, 99.8, 101), (101, 102, 100, 100.5)]
+    sweep = [(100.5, 106.5, 100.2, 101)]                             # takes the first pair of highs, closes back
+    c = mk(QUIET + peak + peak + sweep + QUIET * 2 + peak + peak + QUIET[:4])
+    g = [x for x in hs.liquidity(c, "1D", 100.5) if x["side"] == "highs" and x["top"] == 105]
+    assert [x["type"] for x in g] == ["liq.created"] and g[0]["count"] == 2          # only the later group is resting; the earlier one is old news
+    assert g[0]["t0"] > c[len(QUIET) + 5]["time"]                                    # and it is the later stretch of candles
