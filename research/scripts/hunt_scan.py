@@ -375,7 +375,7 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in (xs if xs and xs[0]["type"].startswith("bias.") else tfo(xs))) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
     bs = sorted(by("bias."), key=lambda o: -RANK[o["tf"]])                  # the higher timeframe first: its highs and lows matter more
-    note = {"type": "summary", "tf": "", "text": "The structure rule he taught on 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. He answered \"perfect\" to this reading on 17 Nov; keep checking it with him."}
+    note = {"type": "summary", "tf": "", "text": "The structure rule from 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. Checked 17 Nov against Sharif's own 20 labelled charts: weekly 10 of 14, daily 8 of 15, 4h 5 of 14, 1h 5 of 12. It cannot say \"range\", which he uses often. Trust the weekly most; treat daily and below as a first guess."}
     rel = []
     for hi_, lo_ in zip(bs, bs[1:]):                                          # a lower timeframe going the other way is a shift inside the higher one
         if hi_["side"] in ("bear", "bull") and lo_["side"] in ("bear", "bull") and hi_["side"] != lo_["side"]:
