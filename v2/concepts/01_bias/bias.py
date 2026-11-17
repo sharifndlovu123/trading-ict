@@ -7,7 +7,7 @@ Three things per timeframe:
     the change. Nothing else is: not a wick, not a broken minor swing, not a failure at the level ahead;
   * the level ahead: breaking it continues the trend and moves the level below up to the newest pullback's extreme.
 
-"Significant" is not a fitted threshold. His words: "higher TF highs and lows have higher importance", so a level is
+"Significant" is not a fitted threshold. This reading of it is mine, not his (it is named as mine in lesson.md): His words: "higher TF highs and lows have higher importance", so a level is
 significant when it is a swing high or low of the timeframe ABOVE (a candle whose high is above both neighbours'; known
 only once the next higher-timeframe candle has closed). Swings of the timeframe being read are the smaller pieces and
 never move the bias. There are no prices, times or favourite timeframes in here, and no margins.

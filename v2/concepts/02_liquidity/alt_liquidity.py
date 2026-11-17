@@ -91,7 +91,7 @@ def opening_gaps(m: list[dict], tz: str = "America/New_York") -> list[dict]:
     when = [datetime.fromtimestamp(x["time"], z) for x in m]
     for i in range(1, len(m)):
         a, b = when[i - 1], when[i]
-        if not (a.hour < 17 and b.hour >= 18 and (b - a).total_seconds() >= 3600 and b.date() >= a.date()):
+        if not (a.hour < 17 and b.hour >= 18 and b.date() >= a.date()):      # his clock: the 5 p.m. close, the 6 p.m. reopen
             continue
         cl, op = m[i - 1]["close"], m[i]["open"]
         if cl == op:
@@ -107,7 +107,7 @@ def _trading_day(t: float, z: ZoneInfo) -> int:
     """The trading day a moment belongs to, as a day number: a trading day runs from 6 p.m. to 5 p.m. the next day,
     so Sunday evening already belongs to Monday."""
     d = datetime.fromtimestamp(t, z)
-    return d.toordinal() + (1 if d.hour >= 18 else 0)
+    return d.toordinal() + (1 if d.hour >= 18 else 0)       # his clock: the 6 p.m. reopen starts the next day
 
 
 def _trading_week(t: float, z: ZoneInfo) -> int:

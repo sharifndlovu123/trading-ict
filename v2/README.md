@@ -37,5 +37,6 @@ they need are in. What is built now, concept by concept, is the lesson, its tool
 4. Every claim has tests on hand-built candles. "Tests are included, because they validate what you claim."
 5. Code is a second opinion beside the hand read; disagreements are written in the lesson as open questions.
 6. Sharif starts each concept and says how it is done.
+7. Before a concept is called done, it goes through the `v2-concept-check` skill (`.claude/skills/v2-concept-check/`): a script for the give-aways and a reading of the code against his words, to make sure the logic was taken in context and is not a replica of an example.
 
 Run the tests: `uv run pytest -q v2`.

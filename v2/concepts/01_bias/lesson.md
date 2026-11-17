@@ -18,10 +18,13 @@ State it per timeframe first (bull / bear / range), highest timeframe first. For
 3. **the level ahead**: breaking it continues the trend and moves the level behind up to the newest pullback; failing at it changes nothing.
 Everything between the levels is the smaller pieces: pullbacks, ranges, one side building.
 
-## The code and the test of it
-`bias.py`, tests `test_bias.py`, both beside this file (hand-built candles). It takes "significant" to mean a swing of the
-timeframe above. That is my way of putting his "higher TF highs and lows have higher importance" into code; he has not
-confirmed that wording.
+## The tool and its tests
+`bias.py`, tests `test_bias.py`, both beside this file (hand-built candles).
+
+**Mine, not his:** the tool takes "significant" to mean a swing of the timeframe above (a candle of that timeframe
+whose high is above the highs either side). That is my way of putting his "higher TF highs and lows have higher
+importance" into code. He has not confirmed it, and on the FTSE daily it placed the level behind differently from
+his own mark.
 
 Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to them):
 | Chart | Code against the confirmed hand read |
