@@ -12,7 +12,7 @@ These replace v1's bias tests (tests/test_weekly_structure.py), case by case:
       through it is the change, with no margin. "Range" stays a hand judgement until he teaches how he decides it."""
 import pytest
 
-from engine.bias import bias_levels, swings
+from eyes.bias import bias_levels, swings
 
 N = 5                                    # candles of the timeframe read per candle of the timeframe above
 
@@ -127,7 +127,7 @@ def test_a_new_swing_up_in_a_fall_is_not_a_change_either():
 
 def test_the_candle_still_forming_is_never_read():
     """The caller passes completed candles; `completed` drops one that has not closed yet."""
-    from engine.bias import completed
+    from eyes.bias import completed
     c = path(RISE)
     forming = c + [{"time": c[-1]["time"] + 3600, "open": 170, "high": 171, "low": 100, "close": 101}]     # mid-candle, far under the level behind
     now = forming[-1]["time"] + 1800

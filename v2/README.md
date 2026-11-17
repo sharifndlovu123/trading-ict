@@ -8,9 +8,9 @@ guiding each piece.
 ## v1 and v2
 | | v1 (deprecated, kept as history) | v2 (this folder) |
 |---|---|---|
-| Engine code | `ict_engine/` | `v2/engine/` |
+| Code that reads the chart | `ict_engine/`, `research/scripts/` | `v2/eyes/` |
 | Tests | `tests/` | `v2/tests/` |
-| Research, lessons | `research/` | `v2/research/` |
+| Lessons, research | `research/`, memory notes | `v2/brain/` (lessons); `v2/research/` for studies, made when first needed |
 | References | `references/` | `v2/references/` |
 | Reports, saves | `reports/` | `v2/reports/` (made when first needed) |
 | Output | `out/` | `v2/out/` (made when first needed) |
@@ -27,12 +27,12 @@ The v1 folders have not been moved yet: the live page, the feed and the hunt sti
 4. **Every claim has tests**: hand-built candles with known answers, more than one price scale and timeframe, and a
    no-look-ahead test. "Tests are included, because they validate what you claim." Nothing is tuned to a real day.
 5. **Code is a second opinion beside the hand read.** Where they disagree it is written down as an open question.
-6. The brain and the eyes point here only.
+6. **The eyes** (`eyes/`) say what is on the chart; **the brain** (`brain/`) holds the lessons, each as its why. How the brain pulls a lesson when the eyes see something is not designed yet: Sharif will discuss it later.
 
 ## What is in v2
 | Piece | Lesson | Code | Tests | Status |
 |---|---|---|---|---|
-| Bias | `research/lessons/bias.md` | `engine/bias.py` | `tests/test_bias.py` | lesson confirmed on three unseen charts; code matches the confirmed reads partly (see the lesson) |
+| Bias | `brain/lessons/bias.md` | `eyes/bias.py` | `tests/test_bias.py` | lesson confirmed on three unseen charts; code matches the confirmed reads partly (see the lesson) |
 
 ## Still v1 (to be rebuilt here one at a time, each with his check)
 Conditions (choppy / clean), volatility, liquidity eaten and created (per sub-group), named levels, gaps and their
