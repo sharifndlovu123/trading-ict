@@ -56,7 +56,7 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
         hi, lo = max(bar["high"], last), min(bar["low"], last)
         for m in overlay.get(asset, {}).get("marks", []):
             key = f"{asset}|{mark_id(m)}"
-            if key in fired or "p0" in m:
+            if key in fired or "p0" in m or m.get("watch") is False:      # arrows and history marks ("… swept") are not watched
                 continue
             if m.get("price") is not None:                       # a level: fires when price trades through it
                 if key not in state["side"]:                     # first sight: note the side, judge from the next reading
