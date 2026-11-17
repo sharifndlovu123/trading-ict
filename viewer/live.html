@@ -80,6 +80,7 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
           <button id="full" title="full screen (F)">⛶ full screen</button>
           <span class="tabs" id="fstabs"></span>
           <button id="notetool" title="write on the chart (N): click where the note belongs">✎ write on chart</button>
+          <button id="ctype" title="switch between candles and a line of the closes (L)">╱ line</button>
           <button id="refresh" title="reload the chart with the newest candles (Alt+R)">↻ refresh</button>
           <button id="resetmarks" title="remove everything I drew or wrote on this index's chart (Claude's marks stay)">Reset my marks</button>
           <button id="savenotes" class="primary" title="send my marks and notes for this index">Save marks + notes</button>
@@ -138,6 +139,16 @@ const chart = LightweightCharts.createChart($("chart"), { autoSize: true,
 const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false,
   wickUpColor: css("--up"), wickDownColor: css("--down") });
 
+// line chart: the closes joined up (cleaner where the wicks are messy). The candles stay underneath, invisible, so levels and marks keep their place.
+const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+const CLEAR = "rgba(0,0,0,0)";
+let lineOn = false; try { lineOn = localStorage.getItem("live-line") === "1"; } catch (e) {}
+function chartType(data) {
+  series.applyOptions(lineOn ? { upColor: CLEAR, downColor: CLEAR, wickUpColor: CLEAR, wickDownColor: CLEAR }
+    : { upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down") });
+  lineS.setData(lineOn ? data.map(c => ({ time: c.time, value: c.close })) : []);
+  $("ctype").textContent = lineOn ? "▮ candles" : "╱ line";
+}
 const layer = marksLayer(chart, series, $("chart"), {
   list: () => st.doc ? myMarks() : [], times: () => st.doc ? (st.doc.assets[st.asset].candles[st.tf] || []).map(c => c.time) : [],
   nowT: () => null, paletteEl: $("palette"), color: css, tfName: () => st.tf, changed: keepMarks,
@@ -222,7 +233,7 @@ function line(price, color, title, style) {
 }
 function drawChart(fit) {
   const a = st.doc.assets[st.asset];
-  series.setData(a.candles[st.tf] || []);
+  series.setData(a.candles[st.tf] || []); chartType(a.candles[st.tf] || []);
   st.lines.forEach(l => series.removePriceLine(l)); st.lines = [];
   for (const [k, v] of Object.entries(a.levels || {})) line(v, css("--ink2"), k.replace(/_/g, " "), 1);
   const s = (a.setups || []).find(x => x.id === st.sel);
@@ -410,6 +421,9 @@ async function poll(first) {
 const recentre = () => chart.applyOptions({ rightPriceScale: { autoScale: true } });      // price axis back to fit; drawChart(true) resets the time axis
 async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false);
   if (st.doc) { chart.applyOptions({ rightPriceScale: { autoScale: true } }); render(true); } $("refresh").textContent = "↻ refresh"; }
+const toggleType = () => { lineOn = !lineOn; try { localStorage.setItem("live-line", lineOn ? "1" : "0"); } catch (e) {} if (st.doc) drawChart(false); };
+$("ctype").onclick = toggleType;
+document.addEventListener("keydown", e => { if (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.metaKey && !e.altKey && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) toggleType(); });
 $("areason").onchange = () => drawChart(false); $("refresh").onclick = refreshChart; $("resetmarks").onclick = resetMarks;
 (async () => {
   try { st.answers = await (await fetch("api/answers")).json(); } catch (e) { st.answers = {}; }

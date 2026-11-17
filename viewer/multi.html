@@ -53,6 +53,7 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
 const SHOW = { "1m": 150, "5m": 150, "15m": 110, "1h": 120, "4h": 120, "1D": 130, "1W": 110, "1M": 90 };
 const SETS = { Indices: ["US100", "US500", "US30"], Metals: ["XAUUSD", "XAGUSD"] };       // charts that move together
+const CLEAR = "rgba(0,0,0,0)";
 const COLORS = ["#2a78d6", "#eb6834", "#138a72", "#d4a017", "#8a63d2", "#c0408a", "#5a6b7a"];
 const keep = (() => { try { return JSON.parse(localStorage.getItem("live-multi-v2") || "{}"); } catch (e) { return {}; } })();
 // cfg = the layout: one entry per chart (its instrument and its timeframe), in reading order; cols 0 = automatic
@@ -104,11 +105,13 @@ function build() {
     el.innerHTML = `<div class="head"><select class="a">${all.map(n => `<option ${n === c.asset ? "selected" : ""}>${n}</option>`).join("")}</select>
       <select class="t">${[...TFS].reverse().map(t => `<option ${t === c.tf ? "selected" : ""}>${t}</option>`).join("")}</select>
       <span class="info"></span><span class="sp"></span>
-      <button class="solo" title="this chart alone; again: all back">⤢</button><button class="x" title="remove this chart">×</button></div><div class="c"></div>`;
+      <button class="ty" title="this chart as candles or as a line of the closes"></button><button class="solo" title="this chart alone; again: all back">⤢</button><button class="x" title="remove this chart">×</button></div><div class="c"></div>`;
     g.appendChild(el);
     const chart = mkChart(el.lastChild);
     const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
-    const p = { c, el, infoEl: el.querySelector(".info"), chart, series, times: [], data: [] };
+    const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const p = { c, el, infoEl: el.querySelector(".info"), chart, series, lineS, times: [], data: [] };
+    el.querySelector(".ty").onclick = () => { c.line = !c.line; save(); fillPane(p, false); };
     const shows = tf => TFS.indexOf(tf) >= TFS.indexOf(c.tf);
     p.layer = marksLayer(chart, series, el.lastChild, { list: () => [], times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: () => {},
       under: () => !(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
@@ -148,7 +151,12 @@ function fillPane(p, fit, alone) {
   p.data = cands(p.c.asset, p.c.tf); p.times = p.data.map(x => x.time);
   const last = (st.doc.assets[p.c.asset] || {}).last || 0;
   p.series.applyOptions({ priceFormat: { type: "price", precision: dp(last), minMove: dp(last) === 3 ? 0.001 : 0.01 } });
-  p.series.setData(p.data); head(p); p.layer.redraw();
+  p.series.setData(p.data);
+  // line chart: the candles stay underneath, invisible, so the marks keep their place
+  p.series.applyOptions(p.c.line ? { upColor: CLEAR, downColor: CLEAR, wickUpColor: CLEAR, wickDownColor: CLEAR } : { upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down") });
+  p.lineS.setData(p.c.line ? p.data.map(x => ({ time: x.time, value: x.close })) : []);
+  p.el.querySelector(".ty").textContent = p.c.line ? "▮" : "╱";
+  head(p); p.layer.redraw();
   if (fit && p.times.length) {
     p.chart.applyOptions({ rightPriceScale: { autoScale: true } });
     const mate = alone ? null : st.panes.find(q => q !== p && q.c.tf === p.c.tf && q.times.length);
@@ -211,7 +219,7 @@ function controls() {
   $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.cfg.forEach(c => c.tf = b.dataset.t); save(); build(); });
   $("pct").className = st.pct ? "on" : "";
 }
-$("add").onclick = () => { const c = (st.active && st.active.c) || st.cfg[st.cfg.length - 1]; st.cfg.push({ asset: c.asset, tf: c.tf }); st.solo = null; st.pct = false; save(); controls(); build(); };
+$("add").onclick = () => { const c = (st.active && st.active.c) || st.cfg[st.cfg.length - 1]; st.cfg.push({ asset: c.asset, tf: c.tf, line: c.line }); st.solo = null; st.pct = false; save(); controls(); build(); };
 $("pct").onclick = () => { st.pct = !st.pct; controls(); build(); };
 async function poll(first) {
   try {

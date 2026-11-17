@@ -104,9 +104,12 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 ### M. Housekeeping
 - ☑ M1 Hunting schedule set for 2026-11-17 (London prep 08:05 SAST, every 5 minutes 09:00–12:00; New York prep 14:45 SAST; live every minute 08:20–09:00, 09:20–10:00, 10:20–11:00 and 13:20–14:00 New York, every 5 minutes everywhere else from 02:00 to 14:00 New York). Session-only: re-create it if the Claude session was closed; expires after 7 days
 - ☐ M2 Push (the remote is behind)
+- ☐ M4 Gold and silver are on the live sheet for now (`live_recipe.py --assets US100 US500 US30 XAUUSD XAGUSD`, Sharif 2026-11-17: "we will remove it later"); restart the feed without them when he says. The watcher and the checker have only been used on the three indices
+- ☐ M5 `/multi` (charts together) is view-only; ask whether he wants his drawing tools there too
 - ☐ M3 Forward test: first look when candidate 2 has 60 trades or on 2027-11-16 (`research/forward-recipe-v1.md`)
 
 ### Done in round 4
+- ☑ 2026-11-17: script + Sonnet watcher (`hunt_watch.py`, `research/hunt-rules.md`); London hunt on US100 logged with a worked example (`research/hunt-log/`); lessons in the hunting playbook (memory), incl. the middle-of-the-block entry with the stop at the block's far edge; 1m chart; `/multi` page (own instrument and timeframe per chart, linked crosshair, % compare); line chart type on both pages (key L on the single chart); Claude's read cleared when a hunt closes
 - ☑ Breaker detector: `merge` and `block="body"` options, off by default (`research/decisions/2026-11-16-breaker-merge.md`)
 - ☑ Live sheet: entry areas, Claude's marks + "Claude's read", 1M–5m charts, Alt+R, reset, full-width layout, hunting window, clean chart per session
 - ☑ README screenshot; CLAUDE.md updated; full suite 618 passed
