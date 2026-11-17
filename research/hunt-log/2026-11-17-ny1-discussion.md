@@ -38,5 +38,9 @@ Review pages (this machine only): NY-1 and US500 at 09:54 → http://127.0.0.1:8
 - The 06:00 1h gap: "we kept talking about possibly going lower inside it, we were watching the centre of it." "Notice price swept the bottom of this FVG we marked; we are now on lower tf."
 - His screenshots: `~/Pictures/Screenshots/Screenshot From 2026-11-17 18-54-39.png` to `19-23-43.png` (nine, in the order of his notes).
 
+## His saved marks on the review charts (19:28 SAST, read-only copy)
+- US100: the 06:00 hourly gap as an FVG, 27,138.7–27,288.5 (05:01 → 14:20); a sellside level at 27,075.0 from the 05:10 low, ending at 10:10 (the 5m low there is 27,073.2; his notes say 27,083.70; the first 1m close below either is 10:10, 27,064.0). That is the cancel level.
+- US500: the 06:00 hourly gap as an FVG, 7,398.2–7,413.9; an EQL at 7,301.2 tagged monthly with odd times (to ask: meant or accidental?).
+
 ## Separate, also waiting
 - [ ] Reteach NDOG, NWOG and the opening range gap (his request; reminder set for after the New York session). The trading range is not the opening range gap.
