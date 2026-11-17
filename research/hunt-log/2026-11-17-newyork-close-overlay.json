@@ -1,0 +1,424 @@
+{
+ "at": "Tue 17 Nov, New York prep (07:45 New York)",
+ "hunt": {
+  "on": false,
+  "session": "",
+  "next": "PM window paused by Sharif (review in progress); London prep 01:05 New York (08:05 SAST)"
+ },
+ "US100": {
+  "marks": [
+   {
+    "kind": "5m order block",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794884100,
+    "t1": 1794888300,
+    "top": 27277.92,
+    "bottom": 27257.03,
+    "watch": false
+   },
+   {
+    "kind": "high 00:25",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794875100,
+    "t1": 1794888300,
+    "price": 27303.3,
+    "watch": false
+   },
+   {
+    "kind": "entry",
+    "tf": "5m",
+    "side": "",
+    "t0": 1794884820,
+    "t1": 1794888300,
+    "price": 27267.5,
+    "watch": false
+   },
+   {
+    "kind": "stop",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794884820,
+    "t1": 1794888300,
+    "price": 27304.0,
+    "watch": false
+   },
+   {
+    "kind": "TP1 EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794884820,
+    "t1": 1794888300,
+    "price": 27200.0,
+    "watch": false
+   },
+   {
+    "kind": "TP2 range low",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794877200,
+    "t1": 1794888300,
+    "price": 27143.0,
+    "watch": false
+   },
+   {
+    "kind": "runner",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794852000,
+    "t1": 1794888300,
+    "price": 27098.5,
+    "watch": false
+   },
+   {
+    "kind": "5m FVG",
+    "tf": "5m",
+    "side": "area",
+    "t0": 1794907800,
+    "t1": 1794909900,
+    "top": 27254.03,
+    "bottom": 27212.52,
+    "watch": false
+   },
+   {
+    "kind": "1m FVG",
+    "tf": "1m",
+    "side": "area",
+    "t0": 1794908580,
+    "t1": 1794909900,
+    "top": 27227.25,
+    "bottom": 27188.63,
+    "watch": false
+   },
+   {
+    "kind": "entry",
+    "tf": "5m",
+    "side": "",
+    "t0": 1794909120,
+    "t1": 1794909900,
+    "price": 27205.0,
+    "watch": false
+   },
+   {
+    "kind": "stop",
+    "tf": "5m",
+    "side": "buyside",
+    "t0": 1794908520,
+    "t1": 1794909900,
+    "price": 27270.0,
+    "watch": false
+   },
+   {
+    "kind": "TP1 EQL",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794908160,
+    "t1": 1794909900,
+    "price": 27122.0,
+    "watch": false
+   },
+   {
+    "kind": "TP2 London low",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794889320,
+    "t1": 1794909900,
+    "price": 27005.0,
+    "watch": false
+   },
+   {
+    "kind": "runner",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794909120,
+    "t1": 1794909900,
+    "price": 26876.0,
+    "watch": false
+   }
+  ],
+  "watch_ob": {
+   "side": "sell",
+   "below": 27500,
+   "above": 27300,
+   "min_body": 50,
+   "clean_only": true
+  },
+  "read": [
+   "Review marks (11:35): the two sell limits that were set and not filled are drawn on this chart, each ending where it finished: London (03:07\u201304:05) and NY-1 (09:52\u201310:05). Go to the 5m or 1m chart and scroll back to them. The hunt marks come back at the PM window.",
+   "11:00: the morning watch time is over. Nothing is watched until the New York PM window, 13:20\u201314:00 New York. No paper trade is open.",
+   "10:48: NY-3 MISSED, never filled: TP1 (26,722) traded one minute after I placed it; the highest price after placing was 26,766.6, 21 points short of the entry. No more limit orders into this run: there are no retraces to fill them.",
+   "10:41: NY-2 MISSED, never filled: TP1 (26,876) traded before the entry (27,000); the highest price after I placed it was 26,959. No retrace came: 27,132 \u2192 26,794 in fifteen minutes.",
+   "10:32: it left the highs and ate the lows: the second of the two instances. A London low is a 1h pool: the 10:00 hour's close (at 11:00) says swept or broken. Below: last week's low 26,649.4, the April weekly gap's top 26,875.8. Not chasing.",
+   "10:31: the 10:15 15m candle closed at 27,065, under the dim 4h buy block; the block's own verdict is the 4h close at 14:00. Price is boxed between fresh equal highs and fresh equal lows. It can eat either side first, or neither; I am not picking one in chop.",
+   "10:01, the closes on their own timeframes. 4h: the 06:00 candle closed at 27,230.8 with only a wick (27,382.4) in Monday's bearish gap (27,316.6\u201327,400.6): the gap held. The same close engulfed the 02:00 down candle: a 4h buy block, 27,114.3\u201327,206.7 (dim, 32% body); price is in it. 1h: the 09:00 hour closed at 27,230.8, its body inside the 06:00 hour's gap but above its middle: weaker, not broken.",
+   "09:54 \u00b7 Eaten: the two equal lows 27,120.1 / 27,125.0 (low 27,114.5 at 09:52), then +80 in one minute. Created: nothing yet. PAPER IDEA NY-1 CANCELLED, not filled: the range low broke before the entry (27,205) was hit; the highest price after I placed it was 27,194.9. A missed trade.",
+   "09:42 \u00b7 Eaten: the 06:00 hour's gap to its bottom and 18 points beyond (low 27,120.1 at 09:36). Created: nothing. Then back up 118 points to 27,238. I called the buy dead at 09:37 from 5m prices; the gap is a 1h gap and its hour closes at 10:00. Too early.",
+   "Now inside the gap the opening drop left (5m, 27,212.5\u201327,254.0). A 5m close above it flips it; a rejection from it keeps the sell. US30 did not make a new low at 09:35 when US100 and US500 did: divergence, with US30 leading up.",
+   "09:35 \u00b7 Eaten: the two lows 27,271.8 / 27,272.2, at the cash open (low 27,195.7). Created: nothing yet. Price 27,205, below the middle of the 06:00 hour's gap (27,213): the buy idea is failing unless the 09:00 hour closes back above it. Below: 27,137.8, then the London low 27,001.8.",
+   "09:03 \u00b7 Eaten: the small equal lows 27,272.6 / 27,273.1 (08:35), low 27,239.1. Created: nothing new. The 08:00 hour closed at 27,314.1 with only a wick into the 06:00 gap: the hourly body stayed above it. Price 27,307.",
+   "Looking back (08:45): the 06:00 rally WAS the retrace into the area. It went into Monday's 4h bearish gap (27,316.6\u201327,400.6), swept Monday evening's equal highs (27,354.0 / 27,355.8) inside it at 06:40 (27,382.4), and the 06:45 candle (95% body) engulfed the 06:40 up candle. US500 only reached the edge of its gap and left its equal highs untouched.",
+   "08:40: lower inside the 06:00 hour's gap, 27,245.6, towards its middle (27,213). The buy idea needs the hourly bodies to stay out of the lower half; the 08:00 hour closes at 09:00. No 1-minute break up. Lower highs 27,350.8 / 27,348.5 / 27,335.7 above.",
+   "08:01: price is at the top of the 06:00 hour's gap (27,288.7) while US30 alone makes a new low. Two things on the same area for the buy idea; not an entry yet. Waiting for a candle to close, then the 1-minute.",
+   "Long term (monthly): up since April; November is a pullback, and price is in the top of April's monthly gap (25,208\u201327,408).",
+   "Short term (weekly, daily): down. This week has given back most of last week's rally; Monday was a strong down day (76% body).",
+   "London: took yesterday's low (27,148.7), three equal lows at 27,143\u201327,149 and the overnight low, down to 27,001.8. Then the 06:00 hour reversed hard (83% body, 27,115 \u2192 27,358) and closed back through the 02:00 sell block.",
+   "Where price is now (27,318): on the underside of the old 5 Nov daily gap (27,319\u201327,495) and the bottom of Monday's 4h bearish gap (27,316.6\u201327,400.6). On 4h candles that gap has only one body inside so far. The 4h candle closing at 10:00 decides: body inside = the gap is weaker.",
+   "Liquidity. Swept: the sellside under Monday's lows. Resting above: 27,382 (06:40), the Asia high 27,414, then the 4h gap 27,533.5\u201327,630.6. Resting below: the 06:00 hour's gap 27,137.8\u201327,288.7, then the London low 27,001.8.",
+   "Sell = with the weekly and daily: highs taken into the old gap and rejected (4h wicks, no 4h body inside), then a block. Targets 27,288.7, 27,137.8, 27,001.8.",
+   "Buy = with the monthly, against the daily: the 06:00 hour's gap holds on a retrace (hourly bodies stay out of its lower half). Targets 27,414, then 27,533.5\u201327,630.6.",
+   "Pace: one aggressive hour (06:00), slow since 07:00. No scheduled US release today."
+  ],
+  "now": {
+   "at": "10:57",
+   "conditions": "Clean down since 10:30 (27,132 \u2192 26,575.8), first bounce now. Morning watch over.",
+   "eaten": "Every low of the day, April's weekly gap, and last week's low 26,649.4 (low 26,575.8).",
+   "created": "Highs left on the way down: 26,720.7, 26,788\u201326,792, 27,132. Nothing below."
+  }
+ },
+ "US500": {
+  "marks": [
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794823200,
+    "t1": null,
+    "top": 7483.91,
+    "bottom": 7436.76
+   },
+   {
+    "kind": "EQH",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794837600,
+    "t1": null,
+    "price": 7436.76
+   },
+   {
+    "kind": "1h FVG",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794895200,
+    "t1": null,
+    "top": 7415.11,
+    "bottom": 7397.98
+   },
+   {
+    "kind": "London low taken",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794888000,
+    "t1": 1794911460,
+    "price": 7374.66,
+    "watch": false
+   }
+  ],
+  "watch_ob": {
+   "side": "sell",
+   "below": 7490,
+   "above": 7425,
+   "min_body": 50,
+   "clean_only": true
+  },
+  "read": [
+   "11:00: the morning watch time is over. Nothing is watched until the New York PM window, 13:20\u201314:00 New York. No paper trade is open.",
+   "10:01, the closes. 4h: closed 7,411.8, never entered Monday's gap (7,436.8\u20137,483.9). It engulfed the 02:00 down candle: a 4h buy block 7,394.2\u20137,404.5 (dim, 28% body); price is on its top.",
+   "09:42 \u00b7 Eaten: a slightly lower low, 7,393.1 (09:36). Created: nothing. Back to 7,411, inside the 06:00 hour's gap again.",
+   "09:35 \u00b7 Eaten: the three lows 7,401\u20137,403 (low 7,395.1), and price is under the 06:00 hour's gap (7,398.0). Created: nothing new; the three equal highs 7,435\u20137,437 were left. This is the second instance: it left the liquidity above and sold.",
+   "09:03 \u00b7 Eaten: nothing. Created: three lows at 7,401.1 / 7,402.3 / 7,402.7 (08:35\u201308:50), on top of the three equal highs at 7,435\u20137,437 still above. Liquidity on both sides. Price 7,411.",
+   "08:40: 7,402.7, in the lower part of the 06:00 hour's gap (7,398.0\u20137,415.1). The equal highs at 7,435\u20137,437 untouched.",
+   "Long term (monthly): up, November pulling back. Short term (weekly, daily): down; Monday a strong down day (75% body).",
+   "London: took yesterday's low (7,399.9) to 7,374.7, then bounced in the 06:00 hour (88% body) to 7,435.4.",
+   "The piece to watch: three equal highs at 7,435.4\u20137,436.8 (Mon 14:00, Mon 20:00, today 07:00) sit right under Monday's untouched 4h bearish gap (7,436.8\u20137,483.9). Liquidity built against an area. A sweep of them into that gap would add context.",
+   "Where price is now (7,415): back at the top of the 06:00 hour's gap (7,398.0\u20137,415.1). Weak place: 10% of yesterday's range.",
+   "Sell = with the weekly and daily. Buy = against them."
+  ],
+  "now": {
+   "at": "10:57",
+   "conditions": "Clean down since 10:30, first bounce now. Morning watch over.",
+   "eaten": "The London low, last week's low and November's low 7,296.5 (low 7,288.2).",
+   "created": "Nothing below; the equal highs 7,433\u20137,437 from this morning were never taken."
+  }
+ },
+ "US30": {
+  "marks": [
+   {
+    "kind": "1h FVG",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794862800,
+    "t1": null,
+    "top": 51514.13,
+    "bottom": 51489.7
+   },
+   {
+    "kind": "London low swept",
+    "tf": "1h",
+    "side": "sellside",
+    "t0": 1794888000,
+    "t1": 1794902400,
+    "price": 51263.64,
+    "watch": false
+   },
+   {
+    "kind": "PWL taken",
+    "tf": "1D",
+    "side": "sellside",
+    "t0": 1794182400,
+    "t1": 1794904800,
+    "price": 51153.35,
+    "watch": false
+   },
+   {
+    "kind": "EQL swept",
+    "tf": "5m",
+    "side": "sellside",
+    "t0": 1794901200,
+    "t1": 1794902400,
+    "price": 51272.7,
+    "watch": false
+   }
+  ],
+  "read": [
+   "11:00: the morning watch time is over. Nothing is watched until the New York PM window, 13:20\u201314:00 New York. No paper trade is open.",
+   "10:01, the closes. 1h: the 09:00 hour closed at 51,380.8, back above the London low: the 08:00 close under it was not continuation after all. 4h: a long lower wick to 51,118.6 through the London low and last week's low, body closed above both: on the 4h they were swept, not broken.",
+   "09:42 \u00b7 Eaten: nothing new below; three 5m candles up in a row from 51,133.6 to 51,327.9 (0.25 of a day), closing back above the London low. It held 51,118.6 while US100 and US500 made lower lows at 09:35. The strongest now.",
+   "09:35 \u00b7 Eaten: a new low at 51,118.6 (09:29), then the 09:30 candle rallied 150 points to 51,283.9, back above the London low (51,263.6). Created: nothing yet. It has switched from the weakest to the strongest in five minutes.",
+   "09:03 \u00b7 Eaten: the London low and last week's low (low 51,137.7). The 08:00 hour closed at 51,203, under the London low: on the hour this is continuation, not a sweep. Created: nothing yet. Price 51,192.",
+   "08:40: last week's low (51,153.4) taken, low 51,150.7. A weekly low is judged on the daily close. Falling in steps since 08:15, the 08:35 candle the largest. Nothing built to sell from; price is at the lows.",
+   "08:01: swept. The equal lows and the London low were taken (low 51,258.2). US100 and US500 are far above their London lows: divergence at the lows. Judged on the hour: does the 08:00 candle close back above 51,263.6 (a sweep) or below it (continuation to last week's low 51,153.4)?",
+   "The weakest of the three: below yesterday's whole range, and the 07:00 hour (90% body down) has taken back all of the 06:00 bounce.",
+   "London: lower lows all night to 51,263.6. The bounce stopped at 51,477, under the midnight open and under the untouched 1h bearish gap 51,489.7\u201351,514.1.",
+   "Where price is now (51,290): 26 points above the London low, with last week's low 51,153.4 under that.",
+   "07:57: liquidity created at the lows: two equal lows at 51,272.7 / 51,273.1 (07:40, 07:45), 9 points above the London low 51,263.6. Three lows stacked within 10 points.",
+   "Watch for divergence: if US30 makes a new low while US100 and US500 hold above their London lows.",
+   "Sell = with the weekly and daily, but price is already at the lows: nothing to sell from here."
+  ],
+  "now": {
+   "at": "10:57",
+   "conditions": "Clean down since 10:30. Morning watch over.",
+   "eaten": "November's low 50,798.4 (low 50,674.8).",
+   "created": "A single high at 51,460.3 from the open."
+  }
+ },
+ "XAUUSD": {
+  "marks": [],
+  "read": [
+   "For looking only: not part of the hunt. This morning's practice read is in the hunt log."
+  ],
+  "watch": false
+ },
+ "XAGUSD": {
+  "marks": [
+   {
+    "kind": "4h FVG",
+    "tf": "4h",
+    "side": "area",
+    "t0": 1794765600,
+    "t1": null,
+    "top": 48.46,
+    "bottom": 47.84
+   },
+   {
+    "kind": "buyside taken",
+    "tf": "15m",
+    "side": "buyside",
+    "t0": 1794901500,
+    "t1": 1794912240,
+    "price": 47.93,
+    "watch": false
+   },
+   {
+    "kind": "1h order block (dim)",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794898800,
+    "t1": null,
+    "top": 47.73,
+    "bottom": 47.68
+   },
+   {
+    "kind": "BOS",
+    "tf": "15m",
+    "side": "",
+    "t0": 1794892500,
+    "t1": null,
+    "price": 47.26
+   },
+   {
+    "kind": "sellside",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794859200,
+    "t1": null,
+    "price": 46.8
+   },
+   {
+    "kind": "sellside",
+    "tf": "15m",
+    "side": "sellside",
+    "t0": 1794825000,
+    "t1": null,
+    "price": 46.53
+   },
+   {
+    "kind": "EQH swept",
+    "tf": "15m",
+    "side": "buyside",
+    "t0": 1794906000,
+    "t1": 1794907980,
+    "price": 47.68,
+    "watch": false
+   },
+   {
+    "kind": "15m order block",
+    "tf": "15m",
+    "side": "area",
+    "t0": 1794906900,
+    "t1": null,
+    "top": 47.61,
+    "bottom": 47.51,
+    "watch": false
+   },
+   {
+    "kind": "buyside",
+    "tf": "1h",
+    "side": "buyside",
+    "t0": 1794873600,
+    "t1": null,
+    "price": 47.99
+   },
+   {
+    "kind": "1h order block",
+    "tf": "1h",
+    "side": "area",
+    "t0": 1794902400,
+    "t1": null,
+    "top": 47.72,
+    "bottom": 47.36,
+    "watch": false
+   }
+  ],
+  "read": [
+   "11:00: the morning watch time is over. Nothing is watched until the New York PM window, 13:20\u201314:00 New York. No paper trade is open.",
+   "Watching only (Sharif asked, 09:24). Not a paper trade.",
+   "10:01, the closes. 1h: the 09:00 hour closed at 47.73, above 47.72: the 08:00 down candle (47.36\u201347.72, 57% body) is now a clean 1h buy block with its top right at this area, as you said. It closed on the dim sell block's top (47.73), not above it. 4h: closed 47.73 with a wick to 47.93 in the gap and the body out: the gap held on its own timeframe.",
+   "09:56 \u00b7 Eaten: the 47.85 / 47.86 highs (09:50, high 47.90). Created: nothing. Buyside still above: 47.93 and 47.99.",
+   "09:56 (Sharif): price broke above the dim 1h block (47.68\u201347.73) and since then only wicks go back into it (5m body lows 47.72, 47.75, 47.75, 47.76; wicks 47.65\u201347.71). If a buy block formed in this area it would be a nice place to go for the buyside.",
+   "Is there one? Not in the area yet. A clean 15m buy block sits lower (the 09:15 candle, 47.51\u201347.61). At 10:00 the hour decides: a close above 47.72 makes the 08:00 down candle a 1h buy block with its top at 47.72, right here, and puts an hourly close above the dim sell block. It would be a buy against the monthly, weekly and daily, into a 4h bearish gap: expect less, the buyside pools only.",
+   "The area: the 4h gap 47.84\u201348.46. Second sweep into it at 07:50, lower than the first (47.93 under 47.99). This 4h candle has a wick in and its body out so far; it closes at 10:00.",
+   "The block: the 07:00 hourly candle (47.68\u201347.73, 12% body: dim), engulfed by the 08:00 hour.",
+   "The BOS level 47.26 (yours, 15m): traded under at 08:35\u201308:40 (47.22) but no 15m candle has closed below it. On its own timeframe it is not broken yet.",
+   "The retrace: 09:10 went up into the 15m gap left by the drop (47.55\u201347.62) and touched the bottom of the dim block at 47.68, to the cent, then turned. Price 47.53.",
+   "Sell = with the monthly, weekly and daily. What confirms: a 15m close under 47.26. Then 46.80 and 46.53. What cancels: a 4h body inside the gap, or the 47.93 high taken.",
+   "Pace: slow, small candles."
+  ],
+  "now": {
+   "at": "10:57",
+   "conditions": "Choppy, slow. Watching only.",
+   "eaten": "The buyside 47.90 / 47.93 (high 47.97).",
+   "created": "47.97 stopped 0.02 under 47.99."
+  }
+ }
+}
