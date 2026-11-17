@@ -15,6 +15,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - When price is already close to the liquidity it is reaching for, do not expect a deep retrace: the re-entry is the shallow pause just before it (a small block, equal highs or lows a few points away), not the original area far behind.
 - Look back to where the last move started and at the gaps its launch candles left. When price closes back through such a gap it flips; a small retrace into it from the other side, with no candle body closing back through, is a retest that respects it and a place to get in.
 - The entry inside a zone is found on the 1-minute: wait for a break of structure there (the last small swing low taken by a real move, for a sell); the gap that break leaves is the entry when price returns to it. Stop beyond the extreme made inside the zone.
+- A retrace will not always reach the premium (the OTE or a block far back); sometimes the middle (50%) of the range in play is enough.
 - A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
 - An order block: the next candle closes beyond the block candle's open (one move engulfs it); the block is the candle's body. A strong body that was still engulfed makes a better block; a body smaller than its wicks is a weak one (same for a breaker).
