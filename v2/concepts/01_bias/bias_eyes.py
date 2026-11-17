@@ -1,5 +1,5 @@
 """Bias on one timeframe, the way Sharif re-taught it on 17 Nov 2026 (memory ``bias-reading``; playbook "Bias: how to
-read it"). Concept layer: it describes, it never opens a trade.
+read it"). It describes; it never opens a trade. v2: the eyes for concept 01, bias. The why is in lesson.md beside this file.
 
 Three things per timeframe:
   * the break that put the bias where it is: a candle CLOSES through a significant high or low;
