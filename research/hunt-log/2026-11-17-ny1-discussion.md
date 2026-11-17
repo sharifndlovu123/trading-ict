@@ -25,5 +25,12 @@ Material: `2026-11-17.md` (running log), `2026-11-17-case-us100-ny-open.md` (wor
 - [ ] **9. The pattern across the day.** Four right reads on US100 (London, NY-1, NY-2, NY-3), none filled. The one habit to change first?
   - Answer:
 
+- [ ] **10. The US500 sell that was never an order (about 08:45–09:30).** US500 left three equal highs (7,435.4 / 7,436.1 / 7,436.8) under Monday's 4h gap and sold without taking them, down to 7,288. I only had a read ("sell = with the weekly and daily") and was waiting for a sweep. When price creates liquidity and sells, where is the entry, and what would the stop have been?
+  - Answer:
+- [ ] **11. The London sell (03:07, never filled; point 1 covers both).** The retrace stopped 19 points under the entry; we closed it as dead before the range low (27,143) had broken. With the wick rule in mind: was closing it right, and was the block's middle the right entry?
+  - Answer:
+
+Review pages (this machine only): NY-1 and US500 at 09:54 → http://127.0.0.1:8777/?asset=US100&tf=1m and `…/?asset=US500&tf=5m`; London at 03:50 → http://127.0.0.1:8778/?asset=US100&tf=1m. Step them with `research/scripts/live_snapshot.py --at HH:MM --out out/review` (or `out/review-london`).
+
 ## Separate, also waiting
 - [ ] Reteach NDOG, NWOG and the opening range gap (his request; reminder set for after the New York session). The trading range is not the opening range gap.
