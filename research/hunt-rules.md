@@ -17,13 +17,15 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - The three indices are compared: the weakest is favoured for a sell, the strongest for a buy, and the cleanest pool of equal highs or lows for a reversal.
 
 ## Wake Fable (answer `ESCALATE: <index>: <what happened, with prices>`) when any of these is true
-1. **New liquidity that is not marked:** two or more highs, or two or more lows, on 15m or 1h within about 0.02 of the average day's range (ADR) of each other, formed since the prep.
-2. **Structure changed against the prep:** a 15m or 1h candle closed beyond a marked lower high or higher low, or beyond the session's high or low.
-3. **The indices disagree:** one makes a new session high or low and at least one of the others clearly does not.
-4. **Price is about to reach a marked area:** within about 0.05 ADR of a marked zone or level and moving toward it.
-5. **A run:** three or more 5m candles in a row in one direction with bodies that add up to more than 0.10 ADR.
-7. **Something the Read lines say to watch for has happened** (for example a level they name was taken, or a block they ask for has formed).
-6. **The prep's idea no longer fits:** price is doing something the "read" lines did not anticipate.
+Fable is expensive: wake it only for something new that it would want to look at. A script already reports every marked level and zone the moment price trades it, so never escalate for price being near or at something that is already in Marked.
+1. **New liquidity that is not marked:** three or more highs, or three or more lows, on 15m or 1h within about 0.02 of the average day's range (ADR) of each other; or two that sit inside a marked higher-timeframe zone.
+2. **Structure changed against the prep:** a 15m or 1h candle closed beyond the session's high or low, or beyond a marked level that the Read treats as holding.
+3. **The indices disagree in a new way:** one makes a new session high or low and another clearly does not, and the Read does not already say so.
+4. **A run:** three or more 5m candles in a row in one direction with bodies that add up to more than 0.10 ADR.
+5. **Something the Read lines say to watch for has happened**, and the Read does not already record it.
+6. **The idea no longer fits:** price is doing something the Read did not anticipate.
+
+Never repeat something that is already in Marked or Read, even in other words. Small back-and-forth inside the range is not news.
 
 ## Otherwise
 Answer exactly `OK`. Quiet, sideways trading inside the range is `OK`. Do not explain.
