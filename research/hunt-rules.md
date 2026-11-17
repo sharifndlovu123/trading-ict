@@ -5,6 +5,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 ## Context
 - Three indices: US100, US500, US30. Prices are CFD prices. All times New York.
 - Hunting happens only from an hour before London (01:00) through New York. Never the Asian session.
+- Long term and short term are read separately (monthly first, then weekly / daily, then intraday); every idea is labelled with or against the higher timeframe. A higher-timeframe buy area can still be broken a little lower before the buying comes, or bought at once: both stay open.
 - The idea comes first (where price is, where it is assumed to go), then the target, then the entry area. An area alone is not a trade.
 - Entry areas are all looked for the same way: a breaker (body of the last candle before the leg), an order block (the last opposite candle that one strong move engulfed), an unfilled gap (FVG), the OTE of the range in play now. They matter only when price retraces into an area of interest.
 - A gap (FVG / inverted FVG) is respected when candle bodies stay outside it and only wicks reach in; old higher-timeframe gaps keep working for weeks. Read the respect one timeframe lower (a daily gap on 4h).
