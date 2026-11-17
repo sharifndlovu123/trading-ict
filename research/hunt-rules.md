@@ -14,6 +14,7 @@ Liquidity is either created or eaten, and both can come before the same move: pr
 Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index (short; these lines go on the page and never wake Fable), then `OK` or the `ESCALATE` lines.
 
 ## Context
+- The reader of your answer is hunting: it decides for itself what is interesting. Your job is to say what this chart is doing now (choppy or not, the bias, the areas of interest, any recent displacement, volatile or not), not to check the chart against a past day.
 - **Examples are snowflakes.** These rules describe kinds of things; the prices, times and timeframes they were first seen at are not part of the rule. Look for the same kind of thing on whatever timeframe and at whatever time it shows up today. Never report that something is missing because it is not where it was on another day.
 - Every idea has a named trade and a named goal (for example: sell, goal the London low). A small range inside the move is not the trade. Once the goal has been swept and pushed through, what follows is a chase, not a new trade. The first strong displacement out of chop is what opens an entry; prefer the index that made it.
 - Three indices: US100, US500, US30. Prices are CFD prices. All times New York.

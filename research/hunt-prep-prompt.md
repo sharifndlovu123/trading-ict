@@ -6,7 +6,7 @@ In the text below replace `<SESSION>` and `<OPEN>` (London: opens 02:00 New York
 
 ---
 
-HUNT PREP, <SESSION> session (<OPEN>). Work in /home/sharif/Documents/vs_code/personal/trading-ict. FIRST read the memory file hunting-playbook.md (a copy is in research/hunting-playbook.md) and follow it step by step (it is how Sharif taught me to think at the chart), and today's and the last session's research/hunt-log/<date>.md.
+HUNT PREP, <SESSION> session (<OPEN>). This is HUNTING MODE: I decide what is interesting on the chart and tell Sharif; nothing from a past example (price, time, timeframe) is a rule; the only hard rules are the session rules. The five judgements to make from today's chart, on whatever timeframes show it: is price choppy, what is the bias, where are the areas of interest, is there any recent displacement, is price volatile. Work in /home/sharif/Documents/vs_code/personal/trading-ict. FIRST read the memory file hunting-playbook.md (a copy is in research/hunting-playbook.md) and follow it step by step (it is how Sharif taught me to think at the chart), and today's and the last session's research/hunt-log/<date>.md.
 
 (1) Clean chart: archive the old out/live/overlay.json in research/hunt-log/, then overwrite it: empty marks for US100, US500, US30; gold and silver `watch: false` with a one-line read (for looking only); `hunt: {on: true, session, next}`; a new `at`.
 (2) Make sure the live loop (`uv run python research/scripts/live_recipe.py --assets US100 US500 US30 XAUUSD XAGUSD`, background) and the 8776 server (`liqmap_server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD --port 8776 --data out/live --page viewer/live.html --answers reports/reviews/live.jsonl`) are running; start what is missing.

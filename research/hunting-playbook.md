@@ -15,6 +15,15 @@ The working order for a hunt. Related: [[hunting-process]] (routine, watch times
 - `research/hunt-log/2026-11-17-case-us100-ny-open.md`: the sell I did not see, the one I saw late and cancelled, how Sharif would have traded it.
 - `research/hunt-log/2026-11-17-ny1-discussion.md`: his answers, in his words, point by point.
 
+## Two modes: know which one we are in (VERY IMPORTANT, his words; see [[two-modes]])
+- **Teaching:** he goes into deep detail on a chart. Be exact about that chart, and come away with the **why** ("why I say watch here, why I say do this"). Ask for the why if it is missing.
+- **Hunting:** "you're telling me what's interesting." If he points something out it is only to help me hunt better; work out why. **On the chart itself I decide.**
+- **The only hard rules** are the session rules (London and New York only, never Asia, nothing outside the sessions, the watch times, metals for looking). Everything else on this page is understanding, not a rule to execute.
+
+## The five judgements I make myself in a hunt (his list)
+1. Does price look choppy? 2. What is the bias? 3. Where are the areas of interest? 4. Is there any recent displacement? 5. Is price volatile or not?
+Everything below serves these five.
+
 ## The key (his words, 17 Nov 2026)
 **"Context is important, and where that context is, and time is key."** Every observation gets three tags before it counts: **what** happened (liquidity eaten or created, a displacement, a body closing in a gap), **where** (inside or against which higher-timeframe area), **when** (which session and window; before or after the first strong displacement). The same event somewhere else, or in a dead hour, means less.
 
