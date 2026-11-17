@@ -68,7 +68,7 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
                 if (side == "below" and hi > m["price"]) or (side == "above" and lo < m["price"]):   # strictly through: the candle that made the level is not a sweep of it
                     fired.append(key)
                     out.append(f"{asset}: price traded through {m['kind']} {m['price']} (from {side}); last {last}")
-            elif m.get("top") is not None and lo <= m["top"] and hi >= m["bottom"]:
+            elif m.get("top") is not None and lo < m["top"] and hi > m["bottom"]:      # strictly inside: the candle that made an edge has not entered
                 fired.append(key)
                 out.append(f"{asset}: price entered {m.get('tf', '')} {m['kind']} {m['bottom']}–{m['top']}; last {last}")
         wob = overlay.get(asset, {}).get("watch_ob")             # e.g. {"side": "sell", "below": 27303.3, "min_body": 50}
