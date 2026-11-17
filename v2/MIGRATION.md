@@ -48,7 +48,9 @@ time and sessions.
 | v2 folder, rules, tests running | [x] |
 | References cleaned into `v2/references/` (engine notes stripped; v1 summaries left out) | [x] waiting for his check |
 | A v2 page, feed, watcher and prep instructions | [ ] |
-| v1 folders moved under `v1/` and the hunt switched to v2 | [ ] |
+| v1 hunt switched off (preps cancelled, no watcher, no paper trades) | [x] 18 Nov 2026 |
+| v1 folders moved under `v1/` | [ ] |
+| Hunting again, on v2's eyes and brain | [ ] |
 
 ## Waiting on Sharif
 - [ ] How the next concept is started ("I will state how")

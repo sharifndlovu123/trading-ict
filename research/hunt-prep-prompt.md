@@ -1,3 +1,5 @@
+> **SWITCHED OFF, 18 Nov 2026 (Sharif).** Hunts are off while v2 is rebuilt. Do not schedule or run these prompts. Kept as v1 history.
+
 # Hunt prep prompts (for CronCreate; jobs are session-only and expire after 7 days)
 
 Times are local (SAST = New York + 7 h in winter; re-check after a US clock change).
