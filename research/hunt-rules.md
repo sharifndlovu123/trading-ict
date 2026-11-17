@@ -7,6 +7,8 @@ For each index, before anything else:
 1. **Conditions.** Is price moving cleanly and fast enough to even consider a trade? Clean = follow-through one way, shallow pullbacks, the three indices together. Choppy = large candles both ways inside one range, pushes taken back, the indices split. The summary gives a measure for the last hour (net move against distance travelled: under 0.15 choppy, over 0.35 clean); it is a first try, so also look at the candles. Chop is not a market to trade.
 2. **Eaten.** What liquidity has price just taken: equal highs or lows, a session or previous-day extreme, a marked level?
 3. **Created.** What liquidity has price just left behind: new equal highs or lows, a high or low it stopped short of?
+4. **The trade in view and its goal.** The summary gives it ("The trade in view"). Everything is read against that goal, not against a small range inside the move. If none is named, say so in the STATE line.
+5. **Context has a what, a where and a when.** What happened (a sweep, a displacement, a body closing in a gap), where it happened (inside or against which higher-timeframe area), and when (the summary says which of his key windows the time is in; 17 Nov: chop 07:00–09:20, the first strong displacement at 09:30 opened the entry, the clean move ran 10:30–11:00). The same event outside an area, or in a dead hour, means less.
 Liquidity is either created or eaten, and both can come before the same move: price can eat the highs and then sell, or leave the highs and sell anyway. Untaken liquidity is not a promise that price returns to it.
 
 Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index (short; these lines go on the page and never wake Fable), then `OK` or the `ESCALATE` lines.
@@ -43,13 +45,15 @@ Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: 
 - The three indices are compared: the weakest is favoured for a sell, the strongest for a buy, and the cleanest pool of equal highs or lows for a reversal.
 
 ## Wake Fable (answer `ESCALATE: <index>: <what happened, with prices>`) when any of these is true
-Fable is expensive: wake it only for something new that it would want to look at. A script already reports every marked level and zone the moment price trades it, so never escalate for price being near or at something that is already in Marked.
+Fable is expensive: wake it only for something new that it would want to look at. A script already reports every marked level and zone the moment price trades it, and separately when a candle CLOSES beyond a level (a body, not only a wick), and it follows the trade in view (entry, stop, the cancel level and the goal, the last two on closes); so never escalate for price being near or at something that is already in Marked or in the trade in view.
 1. **New liquidity that is not marked:** three or more highs, or three or more lows, on 15m or 1h within about 0.02 of the average day's range (ADR) of each other; or two that sit inside a marked 4h or daily zone (the monthly gaps are too wide to count).
 2. **Structure changed against the prep:** a 15m or 1h candle closed beyond the session's high or low, or beyond a marked level that the Read treats as holding.
 3. **The indices disagree in a new way:** one makes a new session high or low and another clearly does not, and the Read does not already say so.
 4. **A run:** three or more 5m candles in a row in one direction with bodies that add up to more than 0.10 ADR.
 5. **Something the Read lines say to watch for has happened**, and the Read does not already record it.
 6. **The idea no longer fits:** price is doing something the Read did not anticipate.
+8. **A displacement after liquidity was created on the other side** (the script flags it in its push report): escalate if the Read does not already have it.
+9. **The goal of the trade in view has been swept:** from then on anything new is a chase; say so.
 7. **The conditions changed:** from choppy to a clean one-way move on two or three indices together, or the other way round, and the Read does not already say so.
 
 Never repeat something that is already in Marked or Read, even in other words. Small back-and-forth inside the range is not news.

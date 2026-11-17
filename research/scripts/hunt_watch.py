@@ -59,7 +59,14 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
         hi, lo = max(bar["high"], last), min(bar["low"], last)
         for m in overlay.get(asset, {}).get("marks", []):
             key = f"{asset}|{mark_id(m)}"
-            if key in fired or "p0" in m or m.get("watch") is False:      # arrows and history marks ("… swept") are not watched
+            if "p0" in m or m.get("watch") is False:                  # arrows and history marks ("… swept") are not watched
+                continue
+            if key in fired:                                           # already traded: now, has a 5m candle CLOSED beyond it?
+                side0, done5 = state["side"].get(key), (c5[-2] if len(c5) > 1 else None)
+                if m.get("price") is not None and done5 and key + "|close" not in fired \
+                        and ((side0 == "below" and done5["close"] > m["price"]) or (side0 == "above" and done5["close"] < m["price"])):
+                    fired.append(key + "|close")
+                    out.append(f"{asset}: a 5m candle CLOSED {'above' if side0 == 'below' else 'below'} {m['kind']} {m['price']} ({done5['close']}): a body, not only a wick")
                 continue
             if m.get("price") is not None:                       # a level: fires when price trades through it
                 if key not in state["side"]:                     # first sight: note the side, judge from the next reading
@@ -68,10 +75,37 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
                 side = state["side"][key]
                 if (side == "below" and hi > m["price"]) or (side == "above" and lo < m["price"]):   # strictly through: the candle that made the level is not a sweep of it
                     fired.append(key)
-                    out.append(f"{asset}: price traded through {m['kind']} {m['price']} (from {side}); last {last}")
+                    out.append(f"{asset}: price traded through {m['kind']} {m['price']} (from {side}; a wick so far, watch the close); last {last}")
             elif m.get("top") is not None and lo < m["top"] and hi > m["bottom"]:      # strictly inside: the candle that made an edge has not entered
                 fired.append(key)
                 out.append(f"{asset}: price entered {m.get('tf', '')} {m['kind']} {m['bottom']}–{m['top']}; last {last}")
+        idea = overlay.get(asset, {}).get("idea") or {}
+        c1 = item.get("candles", {}).get("1m") or []
+        if idea.get("side") in ("sell", "buy") and len(c1) > 1:
+            sgn = -1 if idea["side"] == "sell" else 1                 # the way the trade goes
+            done1, bar1 = c1[-2], c1[-1]
+            beyond = lambda px, lvl: sgn * (px - lvl) > 0             # noqa: E731  price is past lvl in the trade's direction
+            def once(tag, text):
+                k = f"{asset}|idea|{tag}|{idea.get(tag.split(':')[0])}"
+                if k not in fired:
+                    fired.append(k)
+                    out.append(f"{asset}: IDEA ({idea['side']}, goal {idea.get('goal_name', '')} {idea.get('goal', '')}): {text}; last {last}")
+            ent = idea.get("entry")
+            if ent is not None:
+                e_lo, e_hi = (min(ent), max(ent)) if isinstance(ent, list) else (ent, ent)
+                if lo <= e_hi and hi >= e_lo:
+                    once("entry", f"price is at the entry {ent}")
+            if idea.get("stop") is not None and not beyond(hi if sgn < 0 else lo, idea["stop"]) and (hi >= idea["stop"] if sgn < 0 else lo <= idea["stop"]):
+                once("stop", f"the stop {idea['stop']} traded")
+            for tag, what in (("cancel", "cancel the entry if it has not filled (his rule: a closed candle beyond the next liquidity past the first target)"),
+                              ("goal", "the goal is closed through: if not in, the trade is missed and anything now is a chase")):
+                lvl = idea.get(tag)
+                if lvl is None:
+                    continue
+                if beyond(done1["close"], lvl):
+                    once(tag, f"a 1m candle CLOSED beyond the {tag} level {lvl} ({done1['close']}): {what}")
+                elif beyond(bar1["low"] if sgn < 0 else bar1["high"], lvl) or beyond(done1["low"] if sgn < 0 else done1["high"], lvl):
+                    once(tag + ":wick", f"a wick beyond the {tag} level {lvl}, no close: nothing changes yet")
         wob = overlay.get(asset, {}).get("watch_ob")             # e.g. {"side": "sell", "below": 27303.3, "min_body": 50}
         if wob and len(c5) > 2:                                  # a 5m order block: a closed candle engulfed by the next closed one
             blk, eng = c5[-3], c5[-2]
@@ -94,9 +128,33 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
             body = done["close"] - done["open"]
             if abs(body) >= PUSH_ADR * adr:
                 state["push"][asset] = done["time"]
+                extra = ""
+                if len(c5) > 3:
+                    prev, nxt = c5[-3], c5[-1]
+                    gap = (nxt["high"], prev["low"]) if body < 0 and prev["low"] > nxt["high"] else (prev["high"], nxt["low"]) if body > 0 and prev["high"] < nxt["low"] else None
+                    if gap:
+                        extra += f"; leaving a 5m gap {gap[0]}–{gap[1]} (not final until this candle closes)"
+                    opp = pools(c5[-74:-2], adr)["highs" if body < 0 else "lows"]
+                    near = [x for x in opp if abs(x["from"] - done["open"]) <= 0.5 * adr]
+                    if near:
+                        x = near[-1] if body < 0 else near[0]
+                        extra += (f"; equal {'highs' if body < 0 else 'lows'} were created {'above' if body < 0 else 'below'} at {x['from']}–{x['to']} (x{x['count']}) and left: "
+                                  "liquidity created, then displacement the other way; the return to the gap is where to look")
                 out.append(f"{asset}: hard 5m push {'up' if body > 0 else 'down'} ({abs(body):.1f} = {abs(body) / adr:.2f} ADR), "
-                           f"{done['open']} → {done['close']}; last {last}")
+                           f"{done['open']} → {done['close']}{extra}; last {last}")
     return out
+
+
+WINDOWS = (("08:20", "09:00"), ("09:20", "10:00"), ("10:20", "11:00"), ("13:20", "14:00"))   # Sharif's key windows, New York
+
+
+def window(hhmm: str) -> str:
+    """Where a New York time sits against his key windows (time is part of the context)."""
+    for a, b in WINDOWS:
+        if a <= hhmm < b:
+            return f"inside the {a}–{b} window"
+    nxt = next((a for a, _ in WINDOWS if a > hhmm), None)
+    return f"between windows (next {nxt})" if nxt else "after the last window"
 
 
 def conditions(c1: list[dict], n: int = 60) -> dict:
@@ -139,7 +197,7 @@ def summary(doc: dict, overlay: dict, state: dict | None = None) -> str:
     """A short text picture of the three indices for the checker: conditions, liquidity eaten and created, prices,
     recent candles, Claude's marks and read."""
     hm = lambda t: datetime.fromtimestamp(t, ZoneInfo("UTC")).strftime("%H:%M")  # noqa: E731  (candle times are NY wall clock)
-    out = [f"Now: {doc.get('now')} New York. Prep: {overlay.get('at')}"]
+    out = [f"Now: {doc.get('now')} New York, {window(str(doc.get('now', ''))[-5:])}. Prep: {overlay.get('at')}"]
     for asset, item in doc.get("assets", {}).items():
         c = item.get("candles", {})
         row = lambda xs: " | ".join(f"{hm(x['time'])} o{x['open']} h{x['high']} l{x['low']} c{x['close']}" for x in xs)  # noqa: E731
@@ -151,6 +209,7 @@ def summary(doc: dict, overlay: dict, state: dict | None = None) -> str:
         taken = [k.split("|", 1)[1] for k in (state or {}).get("fired", []) if k.startswith(asset + "|")]
         fmt = lambda xs: ", ".join(f"{x['from']}–{x['to']} x{x['count']}" for x in xs) or "none"  # noqa: E731
         out += [f"\n## {asset}: last {item.get('last')}, ADR {item.get('adr')}, levels {item.get('levels')}",
+                "The trade in view: " + ("; ".join(f"{k} {v}" for k, v in (ov.get("idea") or {}).items()) or "none named"),
                 f"Conditions, last hour of 1m candles: {cond['label']} (net {cond.get('net')} against {cond.get('travelled')} travelled, score {cond['score']})",
                 f"Eaten since the prep (marked levels and zones price has traded): {'; '.join(taken) or 'none'}",
                 f"Created and still resting on the 5m (equal highs): {fmt(pl['highs'])}; (equal lows): {fmt(pl['lows'])}",

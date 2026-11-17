@@ -336,8 +336,15 @@ function renderClaude() {                                   // Claude's read in 
   const nowRows = !n ? "" : `<div class="kv" style="margin:6px 0;padding:6px 8px;border:1px solid var(--line);border-radius:6px">
     <b>Conditions</b><span>${esc(n.conditions || "–")}${ws && ws.score != null ? ` <span class="dim">· last hour measured: ${esc(ws.label)} (${ws.score})</span>` : ""}</span>
     <b>Eaten</b><span>${esc(n.eaten || "–")}</span><b>Created</b><span>${esc(n.created || "–")}</span>${n.at ? `<span class="dim">as of</span><span class="dim">${esc(n.at)} New York</span>` : ""}</div>`;
+  // the trade card (Sharif 2026-11-17: name the trade and its goal, and where and when the context is): one per index while an idea is in view
+  const I = ov && ov.idea, irow = (k, v) => v == null || v === "" ? "" : `<b>${k}</b><span>${esc(Array.isArray(v) ? v.join(" – ") : v)}</span>`;
+  const ideaRows = !I ? "" : `<div class="kv" style="margin:6px 0;padding:6px 8px;border:1px solid var(--accent);border-radius:6px">
+    ${irow("The trade", (I.side || "") + (I.trade ? " · " + I.trade : ""))}${irow("The goal", [I.goal_name, I.goal].filter(x => x != null && x !== "").join(" · "))}
+    ${irow("Context: what", I.context)}${irow("Context: where", I.where)}${irow("Context: when", I.when)}${irow("Still missing", I.missing)}
+    ${irow("Entry", I.entry)}${irow("Stop", I.stop)}${irow("Cancel if", I.cancel == null ? null : "a candle closes beyond " + I.cancel + (I.cancel_name ? " (" + I.cancel_name + ")" : ""))}
+    ${irow("Missed if", I.goal == null ? null : "the goal is closed through before the entry fills")}${irow("Money", I.money || (I.goal != null ? "80% at the goal, the rest runs" : null))}${irow("State", I.state)}</div>`;
   if (L.length) $("cread").innerHTML = `<h2>Claude's read · ${esc(st.asset)}${st.overlay.at ? ` <span class="dim">· ${esc(st.overlay.at)}</span>` : ""}</h2>
-    <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div>${nowRows}<ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
+    <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div>${nowRows}${ideaRows}<ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
 }
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
