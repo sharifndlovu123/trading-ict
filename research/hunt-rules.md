@@ -7,6 +7,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - Hunting happens only from an hour before London (01:00) through New York. Never the Asian session.
 - Long term and short term are read separately (monthly first, then weekly / daily, then intraday); every idea is labelled with or against the higher timeframe. A higher-timeframe buy area can still be broken a little lower before the buying comes, or bought at once: both stay open.
 - The most important key: where is price right now. Trade what is in front of us; the small move may start the larger play, continue it, or run against it before the larger one plays out.
+- A higher-timeframe gap ahead of price is first a target (its near edge). Once reached, price may go deeper if liquidity is building beyond it or price keeps failing to make strong new highs (for a fall; mirror for a rise); how deep it fills is not known in advance.
 - The idea comes first (where price is, where it is assumed to go), then the target, then the entry area. An area alone is not a trade.
 - Entry areas are all looked for the same way: a breaker (body of the last candle before the leg), an order block (the last opposite candle that one strong move engulfed), an unfilled gap (FVG), the OTE of the range in play now. They matter only when price retraces into an area of interest.
 - A gap (FVG / inverted FVG) is respected when candle bodies stay outside it and only wicks reach in; old higher-timeframe gaps keep working for weeks. Read the respect one timeframe lower (a daily gap on 4h).
