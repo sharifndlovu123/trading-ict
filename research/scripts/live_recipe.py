@@ -98,11 +98,14 @@ def long_h1(asset: str, day: date, days: int = 2600) -> pd.DataFrame:
     """1h bars of the last ~7 years from the local cache, loaded once per index and day (for the 4h / D / W charts)."""
     if (asset, day) not in _LONG:
         from ict_engine.data import dukascopy
-        try:
-            b = dukascopy.load(asset, day - timedelta(days=days), day)
-            _LONG[(asset, day)] = b[list(AGG)].resample("1h", label="left", closed="left").agg(AGG).dropna()
-        except Exception:
-            _LONG[(asset, day)] = pd.DataFrame(columns=list(AGG))
+        _LONG[(asset, day)] = pd.DataFrame(columns=list(AGG))
+        for span in (days, 1840, 1100, 400):                     # gold and silver are cached from Oct 2021 only: take what there is
+            try:
+                b = dukascopy.load(asset, day - timedelta(days=span), day)
+                _LONG[(asset, day)] = b[list(AGG)].resample("1h", label="left", closed="left").agg(AGG).dropna()
+                break
+            except Exception:
+                continue
     return _LONG[(asset, day)]
 
 

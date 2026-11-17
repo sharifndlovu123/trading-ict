@@ -278,7 +278,7 @@ function renderCompare() {
   const mv = v.map(x => x.strength ? x.strength.session_move_adr : null), pos = v.map(x => x.strength ? x.strength.prev_range_pos : null);
   const g = v.map(x => x.gap || null), open = g.map(x => x && !x.closed);
   const lb = v.map(x => (x.breaks || [])[0] || null);
-  let h = `<h2>The three side by side <span class="dim" style="font-weight:400">· green = the weakest (for a sell), the cleanest pool, the hardest push</span></h2><div class="scroll"><table>
+  let h = `<h2>${names.length === 3 ? "The three" : "All " + names.length} side by side <span class="dim" style="font-weight:400">· green = the weakest (for a sell), the cleanest pool, the hardest push</span></h2><div class="scroll"><table>
     <tr><th></th>${names.map(n => `<th>${n}</th>`).join("")}</tr>` + sec("Strength") +
     row("move since the 18:00 open", mv.map(x => x == null ? null : sg(x) + " ADR"), best(mv, (a, b) => a < b)) +
     row("place in yesterday's range", pos.map(x => x == null ? null : x + "%"), best(pos, (a, b) => a < b)) +
