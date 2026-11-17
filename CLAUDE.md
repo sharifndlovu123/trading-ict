@@ -23,6 +23,7 @@ Claude to read the market his way.
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
 - `v2/references/`: cleaned copies of the source notes (private, not in git). The ICT PDFs are in `v1/references/`.
 - Tests: `uv run pytest -q v2`. Everything: `uv run pytest -q -rs` (v1's tests too; a skip is not a pass).
+- Skills: only `v2-concept-check` is at the top level (`.claude/skills/`). The six v1 skills were moved to `v1/.claude/skills/` so they are not used for v2 work; they are on the checklist to be cleaned or dropped.
 - Validate every concept with the `v2-concept-check` skill before ticking its box:
   `uv run python .claude/skills/v2-concept-check/check.py`, then the reading in its `SKILL.md`.
 

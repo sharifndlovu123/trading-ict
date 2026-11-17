@@ -56,6 +56,24 @@ time and sessions.
 | Memory notes sorted into current and v1 | [x] 18 Nov 2026 |
 | Hunting again, on v2's eyes and brain | [ ] |
 
+## Claude skills
+
+The skills written for v1 carry v1's process and its fixed values, so they need the same clean-up as the code. Until
+then they sit under `v1/.claude/skills/` (moved 18 Nov 2026, temporarily, so they are not picked up for v2 work).
+
+| Skill | What it was for | State |
+|---|---|---|
+| `v2-concept-check` (top level, `.claude/skills/`) | Validates a v2 concept: logic taken in context, not as a replica | [x] in use |
+| `trade-review` | Reviewing a trade on the ICT checklist | [ ] v1: to be cleaned or dropped |
+| `pattern-finder` | Mining trades for what to do more or less of | [ ] v1: to be cleaned or dropped |
+| `pd-array-audit` | Checking the engine's PD arrays against his drawn zones | [ ] v1: to be cleaned or dropped |
+| `change-gate` | Deciding whether a finding changes the code | [ ] v1: to be cleaned or dropped |
+| `pipelines` | The order the v1 improvement skills run in | [ ] v1: to be cleaned or dropped |
+| `microstructure-library` | Reading the order-flow books in `v1/references/microstructure/` | [ ] v1: skipped for now (Sharif: "skip micro structure") |
+
+For each: Sharif decides whether v2 needs it. If it does, it is rewritten against v2 (his words, no fixed values) and
+moved back to `.claude/skills/`; if not, it stays in v1 as history.
+
 ## Waiting on Sharif
 - [ ] How the next concept is started ("I will state how")
 - [ ] The three open bias questions
@@ -66,6 +84,7 @@ time and sessions.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | The six v1 skills moved to `v1/.claude/skills/` (temporary); skills added to this checklist |
 | 18 Nov 2026 | v1 folders moved under `v1/`; hunts off; `CLAUDE.md` rewritten; memory notes sorted. Bias: he confirmed a break needs a body close, not a wick |
 | 18 Nov 2026 | Concept 02: his answers on picking liquidity out; tools (`liquidity.py`, `alt_liquidity.py`) and 34 tests. Eyes and brain set for later, as the process that uses the concepts |
 | 17 Nov 2026 | Concept 02, liquidity: lesson and alt-liquidity (NDOG, NWOG, volume imbalance, FVG as BISI / SIBI, IFVG) written from his teaching; opening range gap dropped |

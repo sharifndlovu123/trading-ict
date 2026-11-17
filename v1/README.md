@@ -14,6 +14,8 @@ It still runs, for looking things up:
   --answers reports/reviews/live.jsonl`. Fresh candles: `cd v1 && uv run python research/scripts/live_recipe.py
   --assets US100 US500 US30 XAUUSD XAGUSD DXY UK100 DE40` (started by hand when a lesson needs them).
 - His saved reviews in `reports/reviews/*.jsonl` are read-only.
+- The v1 skills (trade-review, pattern-finder, pd-array-audit, change-gate, pipelines, microstructure-library) are in
+  `.claude/skills/` inside this folder. They describe v1's process and are not to be used for v2 work.
 
 What follows is the old project description, unchanged except for this header. Read it as a description of v1.
 
