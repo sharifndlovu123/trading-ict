@@ -114,7 +114,8 @@ function marksLayer(chart, series, el, o) {
           g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); ty = y - 9;
         } else {
           const a = yOf(u.top), b = yOf(u.bottom); if (a == null || b == null) continue;
-          g.globalAlpha = .22; g.fillRect(x0, a, x1 - x0, b - a); g.globalAlpha = 1; g.strokeRect(x0, a, x1 - x0, b - a);
+          if (!u.nofill) { g.globalAlpha = .22; g.fillRect(x0, a, x1 - x0, b - a); g.globalAlpha = 1; }   // a far higher timeframe's zone: edges only
+          g.strokeRect(x0, a, x1 - x0, b - a);
           ty = Math.min(a, b) - 9;
         }
         g.font = "bold 12px ui-monospace, Menlo, monospace";

@@ -145,6 +145,7 @@ const layer = marksLayer(chart, series, $("chart"), {
       color: css(a.side === "buy" ? "--pos" : "--neg"), alpha: weak(a) ? .04 : a.inside ? .16 : .09, label: `${a.tf} ${a.kind} · ${a.side}${weak(a) ? " · wick" : ""}` }))),
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
     ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).filter(m => tfShows(m.tf || "1h")).map(m => ({ ...m, bold: true,
+      nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(st.tf) >= 3,      // e.g. a daily or monthly zone on the 1m / 5m chart would wash the whole chart
       color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
 const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
 const tfShows = tf => TFS.indexOf(st.tf) <= TFS.indexOf(tf);      // a mark shows on its own timeframe and every lower one
