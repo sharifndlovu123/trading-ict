@@ -292,11 +292,11 @@
     "watch": false
    },
    {
-    "kind": "1h order block (dim)",
+    "kind": "1h order block (dim, weaker)",
     "tf": "1h",
     "side": "area",
     "t0": 1794873600,
-    "t1": 1794891600,
+    "t1": 1794898800,
     "top": 47.7,
     "bottom": 47.56,
     "watch": false
@@ -325,7 +325,8 @@
    "Hourly (07:20): Sunday's 20:00 candle (95% body) left the gap 47.88\u201348.55. Monday 10:00 swept to 46.53 through the weekly gap while gold made a higher low. Since then higher lows (46.70, 46.80, 47.26) and higher highs (47.35, 47.59, 47.99).",
    "The overnight high 47.99 was a wick into Sunday's gap, body out: respected from below. Price is on its second approach now (06:00 up candle, 81% body).",
    "Short term up into a bearish gap = against the higher timeframes. Above 47.99: the rest of the gap to 48.55, then 49.04\u201349.69.",
-   "The chain on silver (confirmed by Sharif): the 4h gap 47.84\u201348.46 was the area; equal highs were built just under it (47.84, 47.81, 47.83); they were swept into the gap (47.99 at 00:35, closed back out); then a 1h order block (dim) formed and its middle, 47.63, was hit at 02:01. Each step adds information to the same area."
+   "The chain on silver (confirmed by Sharif): the 4h gap 47.84\u201348.46 was the area; equal highs were built just under it (47.84, 47.81, 47.83); they were swept into the gap (47.99 at 00:35, closed back out); then a 1h order block (dim) formed and its middle, 47.63, was hit at 02:01. Each step adds information to the same area.",
+   "The dim 1h block (47.56\u201347.70) is weaker now: the 06:00 hourly candle closed inside it (47.68), on the block's own timeframe. At 02:00 it had only been wicked. Gold's dim 1h block (3,874.9\u20133,881.0) has had no hourly close inside it."
   ]
  },
  "hunt": {
