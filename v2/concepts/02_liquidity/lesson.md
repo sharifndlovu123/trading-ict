@@ -41,11 +41,18 @@ Sharif ("my references should be accounted for, they are clear and concise as we
 - Mine, not his: when a feed has no 4:59 p.m. print (the FTSE stops at 16:00 / 16:14 on this feed), I used the last
   print before the close. He accepted the marks; he did not rule on the method.
 
-## Open (not taught yet; nothing here may be guessed into code)
-- How equal is equal; when two nearby lows are one pool or two.
-- How far from price to go on each timeframe.
-- Trendline liquidity: how he draws it.
-- Which small intraday highs and lows count.
+## How to pick it out on the chart (his answers, 18 Nov 2026)
+- **Equal highs / lows:** "just relatively close to each other; you could put a straight line at one point and the
+  other point may not hit it but it's very close by."
+- **Eaten or not decides what stays, not distance.** "Focus on if it was eaten first; if it wasn't eaten keep it."
+  "If it was eaten it's no longer as useful to us, or if it's swept, it might be important for that current price where
+  it's nearby, but if it's not and it's far off in the past, it doesn't help us with old data if it's already eaten."
+- **Intraday:** "relative to where price currently is, we look at previous day and previous week for highs or lows
+  that were left uneaten."
+- **Trendline liquidity: skipped.** "The alt-liquidity tends to eat trendline liq either way."
+
+## Open
 - Taught live earlier in the week but only in v1 notes, to be re-confirmed before they enter: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the
   candles that judge it.
+- For code only: "very close by" has to become a measure. Any measure is my choice until he has seen what it picks.
