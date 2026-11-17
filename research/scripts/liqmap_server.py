@@ -6,6 +6,7 @@ reports/reviews/liqmap.jsonl (one JSON per save; the newest save for an id wins)
                          --answers reports/reviews/topdown.jsonl
 """
 import argparse
+import os
 import sys
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -21,7 +22,18 @@ def main():
     ap.add_argument("--answers", type=Path, default=ts.ROOT / "reports" / "reviews" / "liqmap.jsonl")
     ap.add_argument("--data", type=Path, default=ts.ROOT / "out" / "liqmap")
     ap.add_argument("--page", type=Path, default=ts.ROOT / "viewer" / "liqmap.html")
+    ap.add_argument("--password-env", help="name of a variable (environment or .env) holding a password that other devices must give")
     a = ap.parse_args()
+    if a.password_env:
+        pw = os.environ.get(a.password_env)
+        env = ts.ROOT / ".env"
+        if not pw and env.exists():
+            pw = next((ln.split("=", 1)[1].strip().strip("'\"") for ln in env.read_text().splitlines() if ln.startswith(a.password_env + "=")), None)
+        if not pw:
+            raise SystemExit(f"{a.password_env} is not set (environment or .env)")
+        ts.PASSWORD = pw
+    elif a.host != "127.0.0.1":
+        print("warning: open to the network without a password (--password-env)")
     ts.DATA, ts.PAGE, ts.ANSWERS = a.data.resolve(), a.page.resolve(), a.answers.resolve()
     if not (ts.DATA / "index.json").exists():
         raise SystemExit("build the set first: uv run python research/scripts/liqmap_build.py")

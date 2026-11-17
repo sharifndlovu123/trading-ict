@@ -4,6 +4,8 @@ reports/reviews/triage.jsonl (one JSON per answer; the newest answer for an id w
     uv run python research/scripts/triage_server.py [--port 8765]   # then open http://127.0.0.1:8765
 """
 import argparse
+import base64
+import hmac
 import json
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -13,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "out" / "triage"
 PAGE = ROOT / "viewer" / "triage.html"
 ANSWERS = ROOT / "reports" / "reviews" / "triage.jsonl"
+PASSWORD = None      # set by liqmap_server --password-env: devices other than this machine must give it (HTTP basic auth, any user name)
 
 
 def answers() -> dict:
@@ -40,7 +43,26 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _allowed(self) -> bool:
+        """This machine is always let in; with a password set, any other device has to send it."""
+        if not PASSWORD or self.client_address[0] in ("127.0.0.1", "::1"):
+            return True
+        h = self.headers.get("Authorization", "")
+        try:
+            given = base64.b64decode(h.split(" ", 1)[1]).decode().split(":", 1)[1] if h.startswith("Basic ") else ""
+        except Exception:
+            given = ""
+        if hmac.compare_digest(given.encode(), PASSWORD.encode()):
+            return True
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="live sheet"')
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+        return False
+
     def do_GET(self):
+        if not self._allowed():
+            return
         if self.path in ("/", "/index.html"):
             body = PAGE.read_bytes()
             self.send_response(200)
@@ -68,6 +90,8 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self):
+        if not self._allowed():
+            return
         if self.path != "/api/answer":
             return self._json({"error": "not found"}, 404)
         a = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
