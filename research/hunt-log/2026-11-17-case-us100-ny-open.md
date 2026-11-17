@@ -30,3 +30,14 @@ Read with `2026-11-17.md` (the running log) and the hunting playbook. Three thin
 ## 5. Judged on their own timeframes (the 10:00 closes)
 - The 4h gap held: one 4h wick in (27,382.4), no 4h body inside.
 - I called the 06:00 hour's gap "dead" at 09:37 from 5m prices; its hour had not closed. It closed with the body inside the gap but above its middle: weaker, not broken.
+
+## 6. How Sharif would have traded it (his review, same day; notes in `2026-11-17-ny1-discussion.md`)
+- **Bias (4h):** the bearish gap respected: wicks in, no body closing up into it. The 22:00 block was weak and not liked. Nothing nice in London, so let price play.
+- **Goal (1h):** the London low, 27,001.8, not yet swept. Sells are interesting once it breaks.
+- **No array on the 15m or 1h** that he liked, so the entry comes from the 5m.
+- **Entry:** the 09:30 5m candle closed beyond the 50% of the 06:00 hourly gap (27,213.2; close 27,162.7) and left a 5m gap, 27,212.5–27,254.0. Sell in that gap; it could be placed at 09:42.
+- **Stop:** the high of the hourly gap, 27,288.7.
+- **Cancel only if** a candle closes below the next sellside low on the way, 27,083.70 (first 1m close below: 10:10). **Missed only if** the London low is closed below with more candles under it.
+- **Why not US500:** it ate the top and the bottom of its range and looked messy; US100's 5m was respecting the 50% of the hourly gap.
+- **Runner:** kept for liquidity far to the left.
+- **So my cancel at 09:54 was wrong for two reasons:** the lows were only wicked, and they were not the range that mattered.

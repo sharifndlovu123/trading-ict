@@ -6,31 +6,37 @@ Material: `2026-11-17.md` (running log), `2026-11-17-case-us100-ny-open.md` (wor
 
 ## Points
 
-- [ ] **1. The cancel that was not needed.** Ruled already: only wicks below the range, no closed candle, not strong. To confirm: is the test a candle closing beyond the range on the timeframe the idea was built on (the 1-minute here), or on a higher one?
-  - Answer:
-- [ ] **2. What does end an unfilled idea?** A close beyond the range, the stop level taken, a time limit, or the reason for the trade gone?
-  - Answer:
-- [ ] **3. Entering at the first return, not after the fourth.** The entry was the returns into the 1m gap at 09:45–09:49; I found it at 09:51. Is the order set as soon as the 1m break leaves the gap, before price comes back?
-  - Answer:
+- [x] **1. The cancel that was not needed.** Ruled already: only wicks below the range, no closed candle, not strong. To confirm: is the test a candle closing beyond the range on the timeframe the idea was built on (the 1-minute here), or on a higher one?
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): "You're right to say we had a range, and that range was broken, but you're forgetting the bigger picture, which is our actual swing all the way to the London low; the sweep that was hit at TP1 EQL is not a part of the range we are looking at." I looked at 09:00–09:35 ("which is correct") but was "just a bit too strict with the range"; "price could still play around a bit; remember what the bigger picture says: the hourly showed us the London low is the goal." The close that counted in his example was a 1-minute candle ("the 1min candle which is red and closed [below the] sellside, this is where I would have cancelled").
+- [x] **2. What does end an unfilled idea?** A close beyond the range, the stop level taken, a time limit, or the reason for the trade gone?
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): Two different things. (a) Missed: "when we state a trade as missed, we need to see that low [the goal, the London low] closed against with a closed candle, and more candles below it." (b) Cancel the entry at the original zone: a candle closing below the next sellside low on the way; here his mark at 27,083.70 ("if price had a closed candle below this sellside I would cancel my entry then"). On the candles: first 1m close below it was 10:10 (27,063.97), twelve minutes after the entry would have filled.
+- [x] **3. Entering at the first return, not after the fourth.** The entry was the returns into the 1m gap at 09:45–09:49; I found it at 09:51. Is the order set as soon as the 1m break leaves the gap, before price comes back?
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): His entry was earlier and from a different place than mine: "look at the red closed candle [the 09:30 5m candle] and notice how it closed and surpassed the 50% [of the 06:00 1h gap, 27,213.2; it closed 27,162.7], and it left a 5min FVG [27,212.5–27,254.0]; at this point I would be looking to enter that area, and stop at the 1h 06:00 FVG high [27,288.7]. This is a different type of entry." "An entry for US100 could have been placed here" (his screenshot at 09:42, price back inside that 5m gap: 09:41 high 27,241.4, 09:42 high 27,267.2).
 - [ ] **4. Where in the gap to enter.** NY-1 the middle; NY-2 deep inside (too deep); NY-3 the near edge (the move left anyway). Near edge, middle or far edge, and does it depend on the speed of the market?
-  - Answer:
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): In his example: inside the 5m gap that the close-beyond-50% candle left. Not yet said: near edge, middle or far edge as a rule.
 - [ ] **5. Should NY-2 and NY-3 have been taken at all?** Both came after the move was running with no retrace. Was the answer to stand aside?
   - Answer:
 - [ ] **6. A clean read in choppy conditions.** NY-1 was found in the 09:30–10:30 chop; the clean move began at 10:30. Take it, take it smaller, or wait?
-  - Answer:
-- [ ] **7. The stop.** 27,270, above the wick high 27,267.2; it survived by 19 points. Right place?
-  - Answer:
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): "We let price play out, because there was nothing nice during this London session." "I would have been looking for a sell but we don't have any nice selling PD arrays after our higher time frame PD arrays such as the 4H FVG"; "we couldn't find a nice PD array on the 15 and hourly because price wasn't so nice; look at the 15 min, there's no OB we liked." So he went to the lower timeframe for the entry. Whether to size down in chop: not yet said.
+- [x] **7. The stop.** 27,270, above the wick high 27,267.2; it survived by 19 points. Right place?
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): "Stop at the 1h 06:00 FVG high" = 27,288.7, the top of the hourly gap the entry sits in; not my 27,270 above the wick.
 - [ ] **8. The targets and the split.** Equal lows / London low / weekly gap top at 50 / 30 / 20; the run went far past the last one. Manage it differently?
-  - Answer:
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): "The runner would have remained depending on any liquidity far left, so we look back." The goal the hourly gave was the London low. The split: not yet said.
 - [ ] **9. The pattern across the day.** Four right reads on US100 (London, NY-1, NY-2, NY-3), none filled. The one habit to change first?
   - Answer:
 
 - [ ] **10. The US500 sell that was never an order (about 08:45–09:30).** US500 left three equal highs (7,435.4 / 7,436.1 / 7,436.8) under Monday's 4h gap and sold without taking them, down to 7,288. I only had a read ("sell = with the weekly and daily") and was waiting for a sweep. When price creates liquidity and sells, where is the entry, and what would the stop have been?
-  - Answer:
+  - Answer (Sharif, 17 Nov, pasted notes + screenshots): "If you notice US500 was moving much worse, it ate the top and bottom, it looks messy." "This is how I also knew US100 is better: the 5min is respecting our 50% of the hourly FVG, you can clearly see." His two saved notes on the US500 chart: 07:45 at 7,441.65 "Notice how we nearly reached into this important 4hr fvg"; 07:35 at 7,435.43 "remember price will either eat or create liq, and that's enough to start thinking." So US500 was the one to leave alone; where the entry would be when liquidity is only created: not yet said.
 - [ ] **11. The London sell (03:07, never filled; point 1 covers both).** The retrace stopped 19 points under the entry; we closed it as dead before the range low (27,143) had broken. With the wick rule in mind: was closing it right, and was the block's middle the right entry?
   - Answer:
 
 Review pages (this machine only): NY-1 and US500 at 09:54 → http://127.0.0.1:8777/?asset=US100&tf=1m and `…/?asset=US500&tf=5m`; London at 03:50 → http://127.0.0.1:8778/?asset=US100&tf=1m. Step them with `research/scripts/live_snapshot.py --at HH:MM --out out/review` (or `out/review-london`).
+
+## The higher-timeframe read he gave with it (same notes)
+- 4h, US100: "remember when I stated look at the 4h FVG on US100, notice how it's wicks there, price has no body closing upwards into it, that's nice." "At 22:00 yesterday it had a weak OB, we saw it and didn't like it." The blue wicked 4h candle at 06:00 (on both indices) "is nice".
+- 1h: "the London low still hasn't been swept"; "at this point we had the bias as bearish, price is respecting our 4h FVG on US100 and it's looking decent, because wicks don't tell the story as well as the body; it's stronger if it's a body." "I would have been interested in looking for sells if we had the London low break, signals a BOS low." EQHs on US500 were created; on US100 the old 1D FVG is being respected, "price is struggling to break it".
+- The 06:00 1h gap: "we kept talking about possibly going lower inside it, we were watching the centre of it." "Notice price swept the bottom of this FVG we marked; we are now on lower tf."
+- His screenshots: `~/Pictures/Screenshots/Screenshot From 2026-11-17 18-54-39.png` to `19-23-43.png` (nine, in the order of his notes).
 
 ## Separate, also waiting
 - [ ] Reteach NDOG, NWOG and the opening range gap (his request; reminder set for after the New York session). The trading range is not the opening range gap.
