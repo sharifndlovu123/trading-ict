@@ -92,11 +92,13 @@ class Handler(SimpleHTTPRequestHandler):
             if not m:
                 return self._json({"error": "at=HH:MM"}, 400)
             doc = json.loads(Path(REPLAY_SRC).read_text())
-            snap = ls.cut(doc, ls.at_epoch(doc, f"{m.group(1)}:{m.group(2)}"))
+            want = ls.at_epoch(doc, f"{m.group(1)}:{m.group(2)}")
+            end = max(a["candles"]["1m"][-1]["time"] for a in doc["assets"].values() if a.get("candles", {}).get("1m")) + 60
+            snap = ls.cut(doc, min(want, end))                    # never past the last candle the live file has
             if not snap["assets"]:
                 return self._json({"error": "no candles before that time"}, 400)
             ls.write(snap, DATA)
-            self._json({"now": snap["now"], "live": doc["now"]})
+            self._json({"now": snap["now"], "live": doc["now"], "end": want >= end})
         elif self.path == "/api/answers":
             self._json(answers())
         else:

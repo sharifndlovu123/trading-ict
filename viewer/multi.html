@@ -267,7 +267,8 @@ async function poll(first) {
 let rpTimer = null;
 async function replayTo(hhmm) {
   try { const r = await (await fetch("api/replay?at=" + encodeURIComponent(hhmm))).json();
-    $("rpmsg").textContent = r.error ? r.error : ""; if (!r.error) await poll(false); return !r.error; } catch (e) { $("rpmsg").textContent = "this page cannot be moved"; return false; }
+    $("rpmsg").textContent = r.error ? r.error : r.end ? "this is the present: no candles after " + r.now.slice(-5) + " yet" : "";
+    if (!r.error) await poll(false); return !r.error && !r.end; } catch (e) { $("rpmsg").textContent = "this page cannot be moved"; return false; }
 }
 function replayStep(dm) {
   const m = /(\d\d):(\d\d)$/.exec(st.doc.now); if (!m) return false;
