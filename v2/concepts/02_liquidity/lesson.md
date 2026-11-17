@@ -3,8 +3,9 @@
 Taught by Sharif on 17 Nov 2026, starting from the cleaned references and worked on the DAX (weekly, daily, hourly).
 He closed the lesson with "that's it, we are good". Its sub-part is `alt-liquidity.md` (imbalances price is drawn to).
 
-**Standing:** the lesson is written. My marks on the DAX got "okay not bad" with one correction. It has not yet been
-tested on a chart I had not seen, and there is no eyes code yet (see "Open" below for why).
+**Standing:** taught and confirmed. First marks on the DAX: "okay not bad", with one correction. Then tested on a
+chart I had not marked (the FTSE, 17 Nov 2026: liquidity from the weekly down, then alt-liquidity): "nice, you found
+content well enough, I'm happy." No eyes code yet (see "Open" below for why).
 
 ## What liquidity is
 ICT (rulings §12, §18; 2022 mentorship; core content):
@@ -32,6 +33,13 @@ Sharif ("my references should be accounted for, they are clear and concise as we
    top-down, beside the bias, relative to now. One simple definition of what it is; which liquidity matters comes
    from the reading.
 4. **Original liquidity first, alt-liquidity second** (order of importance; see `alt-liquidity.md`).
+
+## From the FTSE test (his answers)
+- Highs that have not been eaten stand as resting liquidity, even when they were made months apart: "the weekly equal
+  highs have not been eaten" (July's high with two November highs, drawn as one pool).
+- He wants the NWOG and NDOG drawn, not only mentioned, even when small ("for NWOG I don't see it").
+- Mine, not his: when a feed has no 4:59 p.m. print (the FTSE stops at 16:00 / 16:14 on this feed), I used the last
+  print before the close. He accepted the marks; he did not rule on the method.
 
 ## Open (not taught yet; nothing here may be guessed into code)
 - How equal is equal; when two nearby lows are one pool or two.

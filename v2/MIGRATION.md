@@ -14,12 +14,12 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 | # | Concept | Taught | Brain | Eyes | In use |
 |---|---|---|---|---|---|
 | 01 | Bias | [x] | [x] | [~] | [ ] |
-| 02 | Liquidity, with alt-liquidity (imbalances as draws) | [~] | [x] | [ ] | [ ] |
+| 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [ ] | [ ] |
 
 Note on 01: the eyes agree fully with his confirmed read on the DAX, on direction on the dollar index, and differ on
 the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
 
-Note on 02: the lesson and its alt-liquidity sub-part are written from his answers. Not yet tested on an unseen chart, and no eyes code: how to pick pools out (how equal is equal, how far to look, trendlines) is not taught yet, and guessing it is how v1 went wrong.
+Note on 02: the lesson and its alt-liquidity sub-part are written from his answers. Tested on the FTSE and confirmed ("I'm happy"). No eyes code yet: how to pick pools out (how equal is equal, how far to look, trendlines) is not taught yet, and guessing it is how v1 went wrong.
 
 **Was next, now done as a lesson:** 02, liquidity (Sharif, 17 Nov 2026: "let's rather focus on liq next, it fits"), starting from the cleaned references. Order block context comes after.
 
