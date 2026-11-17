@@ -141,6 +141,7 @@ function build() {
   layout(); fill(false);
   const mine = st.panes;                                  // fit once the panes have their final width (a chart made in a half-built grid keeps the wrong zoom)
   requestAnimationFrame(() => requestAnimationFrame(() => { if (st.panes === mine) fill(true); }));
+  setTimeout(() => { if (st.panes === mine && !st.active) fill(true); }, 250);      // again once every chart has measured itself (untouched charts only)
 }
 // charts on the same timeframe show the same stretch of time as pane p (a 1h and a 5m chart keep their own zoom)
 function follow(p) {
