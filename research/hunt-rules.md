@@ -10,6 +10,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - A gap (FVG / inverted FVG) is respected when candle bodies stay outside it and only wicks reach in; old higher-timeframe gaps keep working for weeks. Read the respect one timeframe lower (a daily gap on 4h).
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
 - An order block: the next candle closes beyond the block candle's open (one move engulfs it); the block is the candle's body. A strong body that was still engulfed makes a better block; a body smaller than its wicks is a weak one (same for a breaker).
+- A sweep of a small pool matters most when it happens inside a higher-timeframe area of interest; say where it happened.
 - The three indices are compared: the weakest is favoured for a sell, the strongest for a buy, and the cleanest pool of equal highs or lows for a reversal.
 
 ## Wake Fable (answer `ESCALATE: <index>: <what happened, with prices>`) when any of these is true
