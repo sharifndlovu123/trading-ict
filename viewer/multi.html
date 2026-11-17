@@ -234,7 +234,7 @@ $("pct").onclick = () => { st.pct = !st.pct; controls(); build(); };
 async function huntBadge(overlay) {
   const el = document.getElementById("hunt"); if (!el) return;
   const h = (overlay && overlay.hunt) || {}; let beat = 0;
-  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) beat = (await r.json()).beat || 0; } catch (e) {}
+  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) { const w = await r.json(); beat = w.beat || 0; if (typeof st !== "undefined") st.watch = w; } } catch (e) {}
   const age = beat ? (Date.now() / 1000 - beat) / 60 : Infinity, at = beat ? new Date(beat * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   const set = (color, text, tip) => { el.style.borderColor = el.style.color = color; el.textContent = text; el.title = tip; };
   if (h.on && age <= 3) set("var(--pos)", `● Hunt ON · ${h.session || ""} · watcher checked ${at}`, "The script reads the chart every minute and the checker every 5 minutes.");

@@ -99,15 +99,61 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
     return out
 
 
-def summary(doc: dict, overlay: dict) -> str:
-    """A short text picture of the three indices for the checker: prices, recent candles, Claude's marks and read."""
+def conditions(c1: list[dict], n: int = 60) -> dict:
+    """Is price going anywhere? Over the last ``n`` 1m candles: the net move against the distance travelled
+    (sum of the candle bodies). Near 1 = one clean move, near 0 = chop. A first measure (Sharif 2026-11-17: know
+    whether the market moves cleanly and fast enough to even consider a trade); not yet checked against his calls."""
+    c = c1[-n:]
+    if len(c) < 5:
+        return {"score": None, "label": "unknown"}
+    net = abs(c[-1]["close"] - c[0]["open"])
+    path = sum(abs(x["close"] - x["open"]) for x in c) or 1e-9
+    score = round(net / path, 2)
+    return {"score": score, "net": round(net, 2), "travelled": round(path, 2),
+            "label": "choppy" if score < 0.15 else "mixed" if score < 0.35 else "clean"}
+
+
+def pools(c5: list[dict], adr: float, since: int | None = None) -> dict:
+    """Liquidity created and still resting on the 5m: groups of two or more swing highs (lows) within 0.02 ADR of
+    each other that no later candle has traded beyond. ``since`` = only swings from that time on."""
+    c = [x for x in c5 if since is None or x["time"] >= since]
+    out = {"highs": [], "lows": []}
+    for name, key, sgn in (("highs", "high", 1), ("lows", "low", -1)):
+        sw = sorted(((x["time"], x[key]) for i, x in enumerate(c) if 0 < i < len(c) - 1
+                     and sgn * x[key] >= sgn * c[i - 1][key] and sgn * x[key] >= sgn * c[i + 1][key]), key=lambda q: q[1])
+        groups: list[list] = []
+        for q in sw:
+            if groups and abs(q[1] - groups[-1][-1][1]) <= 0.02 * adr:
+                groups[-1].append(q)
+            else:
+                groups.append([q])
+        for g in groups:
+            ext = max(q[1] for q in g) if sgn > 0 else min(q[1] for q in g)
+            last_t = max(q[0] for q in g)
+            if len(g) >= 2 and not any(sgn * x[key] > sgn * ext for x in c if x["time"] > last_t):
+                out[name].append({"from": min(q[1] for q in g), "to": max(q[1] for q in g), "count": len(g)})
+    return out
+
+
+def summary(doc: dict, overlay: dict, state: dict | None = None) -> str:
+    """A short text picture of the three indices for the checker: conditions, liquidity eaten and created, prices,
+    recent candles, Claude's marks and read."""
     hm = lambda t: datetime.fromtimestamp(t, ZoneInfo("UTC")).strftime("%H:%M")  # noqa: E731  (candle times are NY wall clock)
     out = [f"Now: {doc.get('now')} New York. Prep: {overlay.get('at')}"]
     for asset, item in doc.get("assets", {}).items():
         c = item.get("candles", {})
         row = lambda xs: " | ".join(f"{hm(x['time'])} o{x['open']} h{x['high']} l{x['low']} c{x['close']}" for x in xs)  # noqa: E731
         ov = overlay.get(asset, {})
+        if ov.get("watch") is False:                             # on the page for looking only
+            continue
+        cond = conditions(c.get("1m") or [])
+        pl = pools((c.get("5m") or [])[-72:], item.get("adr") or 1e9)
+        taken = [k.split("|", 1)[1] for k in (state or {}).get("fired", []) if k.startswith(asset + "|")]
+        fmt = lambda xs: ", ".join(f"{x['from']}–{x['to']} x{x['count']}" for x in xs) or "none"  # noqa: E731
         out += [f"\n## {asset}: last {item.get('last')}, ADR {item.get('adr')}, levels {item.get('levels')}",
+                f"Conditions, last hour of 1m candles: {cond['label']} (net {cond.get('net')} against {cond.get('travelled')} travelled, score {cond['score']})",
+                f"Eaten since the prep (marked levels and zones price has traded): {'; '.join(taken) or 'none'}",
+                f"Created and still resting on the 5m (equal highs): {fmt(pl['highs'])}; (equal lows): {fmt(pl['lows'])}",
                 "5m (last 12): " + row((c.get("5m") or [])[-12:]), "15m (last 12): " + row((c.get("15m") or [])[-12:]),
                 "1h (last 8): " + row((c.get("1h") or [])[-8:]),
                 "Marked: " + "; ".join(f"{m.get('kind')} {m.get('price', (m.get('bottom'), m.get('top')))}" for m in ov.get("marks", []) if "p0" not in m),
@@ -115,19 +161,26 @@ def summary(doc: dict, overlay: dict) -> str:
     return "\n".join(out)
 
 
+def parse_state(reply: str) -> list[str]:
+    """The checker's one line per index on conditions, eaten and created (lines starting STATE); kept for the page,
+    never a reason to wake Fable."""
+    return [ln.strip()[5:].lstrip(": ").strip() for ln in reply.splitlines() if ln.strip().upper().startswith("STATE")]
+
+
 def parse_checker(reply: str) -> list[str]:
     """The checker's escalations (lines starting ESCALATE); anything else, including OK, is nothing."""
     return [ln.strip() for ln in reply.splitlines() if ln.strip().upper().startswith("ESCALATE")]
 
 
-def ask_checker(text: str, model: str = "sonnet", rules: Path = Path("research/hunt-rules.md")) -> list[str]:
+def ask_checker(text: str, model: str = "sonnet", rules: Path = Path("research/hunt-rules.md")) -> str:
     """One small call to a cheaper model, from an empty folder so no project context is loaded. It sees only the
     rules and the summary, and answers OK or ESCALATE lines."""
     prompt = (rules.read_text() + "\n\n---\nThe current picture:\n\n" + text
-              + "\n\nAnswer now: exactly `OK`, or one `ESCALATE: ...` line per thing Fable should look at.")
+              + "\n\nAnswer now: first one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index, "
+                "then exactly `OK`, or one `ESCALATE: ...` line per thing Fable should look at.")
     with tempfile.TemporaryDirectory() as tmp:
         r = subprocess.run(["claude", "-p", "--model", model, "--max-turns", "1"], input=prompt, capture_output=True, text=True, timeout=120, cwd=tmp)
-    return parse_checker(r.stdout)
+    return r.stdout
 
 
 def main():
@@ -160,9 +213,12 @@ def main():
             if a.checker_min and _time.time() - last_ask >= a.checker_min * 60:
                 last_ask = _time.time()
                 try:
-                    lines += [f"checker ({a.checker_model}) {x}" for x in ask_checker(summary(doc, overlay), a.checker_model)]
+                    reply = ask_checker(summary(doc, overlay, state), a.checker_model)
+                    state["checker"] = {"at": doc["now"][-5:], "state": parse_state(reply)}      # shown on the page
+                    lines += [f"checker ({a.checker_model}) {x}" for x in parse_checker(reply)]
                 except Exception as e:
                     lines.append(f"checker failed: {type(e).__name__}: {e}")
+            state["conditions"] = {k: conditions(v.get("candles", {}).get("1m") or []) for k, v in doc.get("assets", {}).items()}
             state["beat"] = int(_time.time())                     # the pages show the hunt as watched while this is fresh
             for ln in lines:
                 print(f"[{doc['now'][-5:]} NY] {ln}", flush=True)

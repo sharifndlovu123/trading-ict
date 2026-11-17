@@ -67,3 +67,25 @@ def test_a_requested_5m_order_block_is_reported_once_with_its_grade():
     assert "(dim, body 6%)" in hw.events(doc(99.6, wick, adr=1000.0), ov, {})[0]
     high = [(111, 113.2, 110.8, 113), (113, 113.1, 110.4, 110.5), (110.5, 110.7, 110.3, 110.6)]  # above the limit: not asked for
     assert hw.events(doc(110.6, high, adr=1000.0), ov, {}) == []
+
+
+def test_conditions_tell_a_clean_move_from_chop():
+    up = [{"open": 100 + i, "close": 101 + i, "high": 101 + i, "low": 100 + i} for i in range(30)]
+    chop = [{"open": 100 + (i % 2), "close": 101 - (i % 2), "high": 101, "low": 100} for i in range(30)]
+    assert hw.conditions(up)["label"] == "clean" and hw.conditions(up)["score"] == 1.0
+    assert hw.conditions(chop)["label"] == "choppy"
+    assert hw.conditions(up[:3])["label"] == "unknown"
+
+
+def test_pools_keep_only_equal_highs_that_were_not_taken():
+    def bar(t, hi, lo):
+        return {"time": t, "open": lo, "close": hi, "high": hi, "low": lo}
+    c = [bar(0, 10, 5), bar(1, 20, 6), bar(2, 12, 7), bar(3, 20.1, 8), bar(4, 13, 9), bar(5, 14, 9.5)]
+    assert hw.pools(c, adr=100)["highs"] == [{"from": 20, "to": 20.1, "count": 2}]
+    assert hw.pools(c + [bar(6, 25, 10)], adr=100)["highs"] == []          # a later candle traded beyond them: eaten
+
+
+def test_checker_state_lines_are_kept_apart_from_escalations():
+    reply = "STATE: US100: choppy; eaten: the equal lows; created: none\nSTATE US30: clean; eaten: none; created: none\nOK"
+    assert hw.parse_state(reply) == ["US100: choppy; eaten: the equal lows; created: none", "US30: clean; eaten: none; created: none"]
+    assert hw.parse_checker(reply) == []

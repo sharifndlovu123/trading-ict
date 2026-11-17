@@ -325,8 +325,13 @@ function renderAreas() {
 function renderClaude() {                                   // Claude's read in words: beside the chart, not on it
   const ov = st.overlay && st.overlay[st.asset], L = ov && ov.read || [];
   $("cread").style.display = L.length ? "" : "none";
+  // the three things every look starts with (Sharif 2026-11-17): the conditions, what liquidity was eaten, what was created
+  const n = ov && ov.now, ws = st.watch && st.watch.conditions && st.watch.conditions[st.asset];
+  const nowRows = !n ? "" : `<div class="kv" style="margin:6px 0;padding:6px 8px;border:1px solid var(--line);border-radius:6px">
+    <b>Conditions</b><span>${esc(n.conditions || "–")}${ws && ws.score != null ? ` <span class="dim">· last hour measured: ${esc(ws.label)} (${ws.score})</span>` : ""}</span>
+    <b>Eaten</b><span>${esc(n.eaten || "–")}</span><b>Created</b><span>${esc(n.created || "–")}</span>${n.at ? `<span class="dim">as of</span><span class="dim">${esc(n.at)} New York</span>` : ""}</div>`;
   if (L.length) $("cread").innerHTML = `<h2>Claude's read · ${esc(st.asset)}${st.overlay.at ? ` <span class="dim">· ${esc(st.overlay.at)}</span>` : ""}</h2>
-    <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div><ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
+    <div class="dim">His marks on the chart start with "C ·". Tell him what is missing or wrong.</div>${nowRows}<ul style="margin:6px 0 0 18px;padding:0">${L.map(x => `<li style="margin:4px 0">${esc(x)}</li>`).join("")}</ul>`;
 }
 function saveBtn(id) { return `<button class="primary" data-save="${id}">Save</button> <span class="saved" id="ok-${id}">${st.answers[id] ? "saved ✓" : ""}</span>`; }
 function choice(name, opts, cur) { return opts.map(([v, l]) => `<label><input type="radio" name="${name}" value="${v}" ${cur === v ? "checked" : ""}> ${l}</label>`).join(" "); }
@@ -411,7 +416,7 @@ function render(fit) {
 async function huntBadge(overlay) {
   const el = document.getElementById("hunt"); if (!el) return;
   const h = (overlay && overlay.hunt) || {}; let beat = 0;
-  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) beat = (await r.json()).beat || 0; } catch (e) {}
+  try { const r = await fetch("watch_state.json?t=" + Date.now()); if (r.ok) { const w = await r.json(); beat = w.beat || 0; if (typeof st !== "undefined") st.watch = w; } } catch (e) {}
   const age = beat ? (Date.now() / 1000 - beat) / 60 : Infinity, at = beat ? new Date(beat * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   const set = (color, text, tip) => { el.style.borderColor = el.style.color = color; el.textContent = text; el.title = tip; };
   if (h.on && age <= 3) set("var(--pos)", `● Hunt ON · ${h.session || ""} · watcher checked ${at}`, "The script reads the chart every minute and the checker every 5 minutes.");

@@ -2,6 +2,15 @@
 
 Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are still being learned: when one is corrected, change it here. The checker (a smaller model called by `research/scripts/hunt_watch.py`) reads this file with a short summary of the three indices and decides only one thing: **should Fable be woken?** It never trades and never changes marks.
 
+## The first three things, on every check (Sharif 2026-11-17: key importance)
+For each index, before anything else:
+1. **Conditions.** Is price moving cleanly and fast enough to even consider a trade? Clean = follow-through one way, shallow pullbacks, the three indices together. Choppy = large candles both ways inside one range, pushes taken back, the indices split. The summary gives a measure for the last hour (net move against distance travelled: under 0.15 choppy, over 0.35 clean); it is a first try, so also look at the candles. Chop is not a market to trade.
+2. **Eaten.** What liquidity has price just taken: equal highs or lows, a session or previous-day extreme, a marked level?
+3. **Created.** What liquidity has price just left behind: new equal highs or lows, a high or low it stopped short of?
+Liquidity is either created or eaten, and both can come before the same move: price can eat the highs and then sell, or leave the highs and sell anyway. Untaken liquidity is not a promise that price returns to it.
+
+Answer with one `STATE: <index>: <clean | mixed | choppy>; eaten: ...; created: ...` line per index (short; these lines go on the page and never wake Fable), then `OK` or the `ESCALATE` lines.
+
 ## Context
 - Three indices: US100, US500, US30. Prices are CFD prices. All times New York.
 - Hunting happens only from an hour before London (01:00) through New York. Never the Asian session.
@@ -19,8 +28,6 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - Context stacks on one area: an area of interest, then liquidity built right against its edge (equal highs under a bearish gap, equal lows over a bullish one), then that liquidity swept into the area, then an order block there. Each step adds to the same area; a sweep into a marked area is worth escalating.
 - Judge a pool or an area on its own timeframe: a 4h area holds while 4h candles only wick into it and none closes with its body inside. Lower-timeframe closes inside a higher-timeframe area do not mean it is broken.
 - A candle of the block's own timeframe closing inside the block weakens it (an hourly close inside an hourly order block); it is not broken, but expect less from it. Closes inside it on a lower timeframe are normal.
-- Every move either eats liquidity (takes a pool) or creates it (leaves a pool). Both can come before the same move: price can eat the highs and then sell, or leave the highs and sell anyway. Untaken liquidity is not a promise that price returns to it.
-- Conditions come first: is price moving cleanly (follow-through one way, shallow pullbacks, the three indices together) or is it choppy (large candles both ways in one range, pushes taken back, the indices split)? Chop is not a market to trade; say which it is.
 - An order block has its own middle entry: enter at the 50% of the block's body, stop at the block's far edge (the top, for a sell).
 - A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
@@ -37,8 +44,9 @@ Fable is expensive: wake it only for something new that it would want to look at
 4. **A run:** three or more 5m candles in a row in one direction with bodies that add up to more than 0.10 ADR.
 5. **Something the Read lines say to watch for has happened**, and the Read does not already record it.
 6. **The idea no longer fits:** price is doing something the Read did not anticipate.
+7. **The conditions changed:** from choppy to a clean one-way move on two or three indices together, or the other way round, and the Read does not already say so.
 
 Never repeat something that is already in Marked or Read, even in other words. Small back-and-forth inside the range is not news.
 
 ## Otherwise
-Answer exactly `OK`. Quiet, sideways trading inside the range is `OK`. Do not explain.
+After the STATE lines answer exactly `OK`. Quiet, sideways trading inside the range is `OK`. Do not explain.
