@@ -6,6 +6,8 @@ important moments. It reads `out/live/today.json` (written by live_recipe.py) ag
   - price trades through a marked level (a sweep of marked liquidity)
   - price enters a marked zone (an area of interest)
   - a 5m candle is a hard push (body ≥ ``PUSH_ADR`` of the average day's range)
+  - the first opposite-colour 5m candle after a run one way (`watch_pause`: N per index; Sharif 2026-11-17: the area
+    "only became interesting after we saw a small bullish candle")
   - a 5m order block forms where the overlay asks for one (`watch_ob` per index: side, below / above, min_body);
     it is graded clean or dim by the body's share of the candle
   - Sharif saves new marks or notes (`reports/reviews/live.jsonl` grows; the file is only read)
@@ -87,6 +89,15 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
                     continue
                 out.append(f"{asset}: 5m {'sell' if sell else 'buy'} order block formed ({grade}, body {pct}%): "
                            f"{min(blk['open'], blk['close'])}–{max(blk['open'], blk['close'])}, engulfed to {eng['close']}; last {last}")
+        n_run = overlay.get(asset, {}).get("watch_pause")        # e.g. 3: the first opposite candle after 3+ candles one way
+        if n_run and len(c5) > n_run + 1:
+            col = lambda x: 1 if x["close"] > x["open"] else -1 if x["close"] < x["open"] else 0  # noqa: E731
+            cur, prev = c5[-2], c5[-2 - n_run:-2]
+            key = f"{asset}|pause@{cur['time']}"
+            if col(cur) != 0 and all(col(x) == -col(cur) for x in prev) and key not in fired:
+                fired.append(key)
+                out.append(f"{asset}: first 5m {'up' if col(cur) > 0 else 'down'} candle after {n_run}+ {'down' if col(cur) > 0 else 'up'} candles: "
+                           f"body {min(cur['open'], cur['close'])}–{max(cur['open'], cur['close'])} (a possible order block if the next candle engulfs it); last {last}")
         adr = item.get("adr")
         done = c5[-2] if len(c5) > 1 else None                   # the last closed 5m candle
         if adr and done and state["push"].get(asset) != done["time"]:

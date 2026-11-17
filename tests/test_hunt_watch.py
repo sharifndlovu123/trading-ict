@@ -67,3 +67,14 @@ def test_a_requested_5m_order_block_is_reported_once_with_its_grade():
     assert "(dim, body 6%)" in hw.events(doc(99.6, wick, adr=1000.0), ov, {})[0]
     high = [(111, 113.2, 110.8, 113), (113, 113.1, 110.4, 110.5), (110.5, 110.7, 110.3, 110.6)]  # above the limit: not asked for
     assert hw.events(doc(110.6, high, adr=1000.0), ov, {}) == []
+
+
+def test_the_first_opposite_candle_after_a_run_is_reported_once():
+    ov = {"at": "p", "US100": {"marks": [], "watch_pause": 3}}
+    run = [(105, 105.2, 103.9, 104), (104, 104.1, 102.9, 103), (103, 103.1, 101.9, 102), (102, 102.6, 101.8, 102.4), (102.4, 102.5, 102.2, 102.3)]
+    st = {}
+    e = hw.events(doc(102.3, run, adr=1000.0), ov, st)                      # three down candles, then a small up candle (closed)
+    assert len(e) == 1 and "first 5m up candle after 3+ down candles: body 102–102.4" in e[0]
+    assert hw.events(doc(102.3, run, adr=1000.0), ov, st) == []
+    mixed = [(105, 105.2, 103.9, 104), (104, 104.6, 103.9, 104.5), (104.5, 104.6, 101.9, 102), (102, 102.6, 101.8, 102.4), (102.4, 102.5, 102.2, 102.3)]
+    assert hw.events(doc(102.3, mixed, adr=1000.0), ov, {}) == []           # the run was broken: nothing
