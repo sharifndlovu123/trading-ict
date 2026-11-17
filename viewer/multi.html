@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live · charts together</title>
+<style>
+:root { --bg:#f2f3f0; --panel:#fcfcfb; --ink:#141614; --ink2:#52514e; --line:#d9ddd7; --pos:#1f7a55; --neg:#b23b3b;
+  --up:#2a78d6; --down:#eb6834; --warn:#9a6a00; --accent:#2a78d6; --area:#8a63d2; --bs:#2b62b8; --ss:#c0562a; --mine:#138a72; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111110; --panel:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --line:#34342f;
+  --pos:#4cc28c; --neg:#e66767; --up:#3987e5; --down:#d95926; --warn:#e0b040; --accent:#3987e5; --area:#a98be6; --bs:#7ea6e8; --ss:#f0915f; --mine:#4fd1b5; } }
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; display:flex; flex-direction:column; }
+.bar { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:8px 12px; }
+.bar h1 { font-size:17px; margin:0; } .dim { color:var(--ink2); } .num { font-family:ui-monospace,Menlo,monospace; }
+.tabs { display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+button { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:3px 9px; cursor:pointer; }
+button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+a { color:var(--accent); }
+#grid { flex:1; min-height:0; display:grid; gap:6px; padding:0 8px 8px; }
+.pane { background:var(--panel); border:1px solid var(--line); border-radius:8px; display:flex; flex-direction:column; min-width:0; min-height:180px; }
+.pane.active { border-color:var(--accent); }
+.pane .head { display:flex; gap:8px; align-items:center; padding:4px 6px 0; white-space:nowrap; overflow:hidden; }
+.pane .head select { font:inherit; font-weight:600; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:1px 4px; }
+.pane .head .info { display:flex; gap:10px; align-items:baseline; overflow:hidden; } .pane .head .sp { flex:1; }
+.pane .head button { padding:0 7px; } .up { color:var(--pos); } .dn { color:var(--neg); }
+.pane .c { flex:1; min-height:0; position:relative; }
+.sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
+</style>
+<script src="linedrag.js"></script>
+<script src="marks.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="bar">
+  <h1>Charts together</h1>
+  <a href="/">← single chart</a>
+  <span class="tabs"><span class="dim">start from</span><span id="sets" class="tabs"></span></span>
+  <button id="add" title="one more chart; pick its instrument and timeframe in its own header">+ chart</button>
+  <span class="tabs"><span class="dim">columns</span><span id="cols" class="tabs"></span></span>
+  <span class="tabs"><span class="dim">all to</span><span id="tfs" class="tabs"></span></span>
+  <label title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> linked</label>
+  <label id="ovwrap" style="display:none"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
+  <button id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">% compare</button>
+  <button id="refresh" title="newest candles and re-centre (Alt+R)">↻ refresh</button>
+  <span id="when" class="dim"></span>
+</div>
+<div id="grid"></div>
+<script>
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
+const SHOW = { "1m": 150, "5m": 150, "15m": 110, "1h": 120, "4h": 120, "1D": 130, "1W": 110, "1M": 90 };
+const SETS = { Indices: ["US100", "US500", "US30"], Metals: ["XAUUSD", "XAGUSD"] };       // charts that move together
+const COLORS = ["#2a78d6", "#eb6834", "#138a72", "#d4a017", "#8a63d2", "#c0408a", "#5a6b7a"];
+const keep = (() => { try { return JSON.parse(localStorage.getItem("live-multi-v2") || "{}"); } catch (e) { return {}; } })();
+// cfg = the layout: one entry per chart (its instrument and its timeframe), in reading order; cols 0 = automatic
+const st = { doc: null, overlay: null, cfg: keep.cfg || null, cols: keep.cols || 0, pct: false, solo: null, panes: [], active: null, sig: "" };
+const save = () => { try { localStorage.setItem("live-multi-v2", JSON.stringify({ cfg: st.cfg, cols: st.cols })); } catch (e) {} };
+const names = () => Object.keys(st.doc.assets);
+const cands = (asset, tf) => (st.doc.assets[asset] || { candles: {} }).candles[tf] || [];
+const dp = v => Math.abs(v) < 500 ? 3 : 2;
+
+// bar number <-> time on one pane (bar counts differ between instruments, so the panes are linked by time)
+function iOf(a, t) { const n = a.length; if (!n) return 0; const s1 = n > 1 ? a[n - 1] - a[n - 2] : 1, s0 = n > 1 ? a[1] - a[0] : 1;
+  if (t <= a[0]) return (t - a[0]) / s0; if (t >= a[n - 1]) return n - 1 + (t - a[n - 1]) / s1;
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m] <= t) lo = m; else hi = m; }
+  return lo + (t - a[lo]) / (a[hi] - a[lo]); }
+function tOf(a, l) { const n = a.length; if (!n) return 0; const s1 = n > 1 ? a[n - 1] - a[n - 2] : 1, s0 = n > 1 ? a[1] - a[0] : 1;
+  if (l <= 0) return a[0] + l * s0; if (l >= n - 1) return a[n - 1] + (l - n + 1) * s1;
+  const i = Math.floor(l); return a[i] + (l - i) * (a[i + 1] - a[i]); }
+const atOrBefore = (p, t) => { const a = p.times; if (!a.length || t < a[0]) return null; let lo = 0, hi = a.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (a[m] <= t) lo = m; else hi = m - 1; } return p.data[lo]; };
+
+function mkChart(el) {
+  return LightweightCharts.createChart(el, { autoSize: true,
+    layout: { background: { color: "transparent" }, textColor: css("--ink2") },
+    grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
+    crosshair: { mode: 0 },
+    timeScale: { timeVisible: true, secondsVisible: false, borderColor: css("--line") }, rightPriceScale: { borderColor: css("--line") } });
+}
+function head(p, c) {                                    // the price and the day's change; under the crosshair: that candle
+  const a = st.doc.assets[p.c.asset]; if (!a) return;
+  const m1 = a.candles["1m"] || [], o = m1.length ? m1[0].open : null, ch = o ? 100 * (a.last - o) / o : null;
+  const f = v => v.toFixed(dp(a.last));
+  p.infoEl.innerHTML = `<span class="num">${a.last}</span>` +
+    (ch == null ? "" : `<span class="num ${ch >= 0 ? "up" : "dn"}" title="since the 18:00 open">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</span>`) +
+    (c ? `<span class="num dim">O ${f(c.open)} H ${f(c.high)} L ${f(c.low)} C ${f(c.close)}</span>` : "");
+}
+function layout() {
+  const n = st.solo != null ? 1 : st.panes.length, cols = st.solo != null ? 1 : st.cols || (n <= 3 ? n : Math.ceil(Math.sqrt(n)));
+  $("grid").style.gridTemplateColumns = `repeat(${Math.max(Math.min(cols, n), 1)}, minmax(0, 1fr))`; $("grid").style.gridAutoRows = "minmax(0, 1fr)";
+  st.panes.forEach((p, i) => p.el.style.display = st.solo != null && st.solo !== i ? "none" : "");
+}
+function build() {
+  for (const p of st.panes) p.chart.remove();
+  st.panes = []; st.active = null; if (st.solo != null && st.solo >= st.cfg.length) st.solo = null;
+  const g = $("grid"); g.innerHTML = "";
+  if (st.pct) return buildPct(g);
+  const all = names();
+  st.cfg.forEach((c, i) => {
+    const el = document.createElement("div"); el.className = "pane";
+    el.innerHTML = `<div class="head"><select class="a">${all.map(n => `<option ${n === c.asset ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <select class="t">${[...TFS].reverse().map(t => `<option ${t === c.tf ? "selected" : ""}>${t}</option>`).join("")}</select>
+      <span class="info"></span><span class="sp"></span>
+      <button class="solo" title="this chart alone; again: all back">⤢</button><button class="x" title="remove this chart">×</button></div><div class="c"></div>`;
+    g.appendChild(el);
+    const chart = mkChart(el.lastChild);
+    const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
+    const p = { c, el, infoEl: el.querySelector(".info"), chart, series, times: [], data: [] };
+    const shows = tf => TFS.indexOf(tf) >= TFS.indexOf(c.tf);
+    p.layer = marksLayer(chart, series, el.lastChild, { list: () => [], times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: () => {},
+      under: () => !(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
+        nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })) });
+    const act = () => { if (st.active !== p) { st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p)); } };
+    for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, act, { passive: true });
+    el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
+    el.querySelector(".a").onchange = e => { c.asset = e.target.value; save(); fillPane(p, true); };
+    el.querySelector(".t").onchange = e => { c.tf = e.target.value; save(); fillPane(p, true); };
+    el.querySelector(".solo").onclick = () => { st.solo = st.solo === i ? null : i; layout(); };
+    el.querySelector(".x").onclick = () => { if (st.cfg.length > 1) { st.cfg.splice(i, 1); st.solo = null; save(); build(); } };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { if (st.active === p && $("sync").checked) follow(p); });
+    chart.subscribeCrosshairMove(prm => {
+      if (st.active !== p) return;
+      const t = prm.time;
+      head(p, t != null ? atOrBefore(p, t) : null);
+      if (!$("sync").checked) return;
+      for (const q of st.panes) if (q !== p) {            // the same moment on every chart, whatever its timeframe
+        const k = t != null ? atOrBefore(q, t) : null;
+        if (k) q.chart.setCrosshairPosition(k.close, k.time, q.series); else q.chart.clearCrosshairPosition();
+        head(q, k);
+      }
+    });
+    st.panes.push(p);
+  });
+  layout(); fill(false);
+  const mine = st.panes;                                  // fit once the panes have their final width (a chart made in a half-built grid keeps the wrong zoom)
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (st.panes === mine) fill(true); }));
+}
+// charts on the same timeframe show the same stretch of time as pane p (a 1h and a 5m chart keep their own zoom)
+function follow(p) {
+  const r = p.chart.timeScale().getVisibleLogicalRange(); if (!r || !p.times.length) return;
+  const t0 = tOf(p.times, r.from), t1 = tOf(p.times, r.to);
+  for (const q of st.panes) if (q !== p && q.c.tf === p.c.tf && q.times.length) q.chart.timeScale().setVisibleLogicalRange({ from: iOf(q.times, t0), to: iOf(q.times, t1) });
+}
+function fillPane(p, fit, alone) {
+  p.data = cands(p.c.asset, p.c.tf); p.times = p.data.map(x => x.time);
+  const last = (st.doc.assets[p.c.asset] || {}).last || 0;
+  p.series.applyOptions({ priceFormat: { type: "price", precision: dp(last), minMove: dp(last) === 3 ? 0.001 : 0.01 } });
+  p.series.setData(p.data); head(p); p.layer.redraw();
+  if (fit && p.times.length) {
+    p.chart.applyOptions({ rightPriceScale: { autoScale: true } });
+    const mate = alone ? null : st.panes.find(q => q !== p && q.c.tf === p.c.tf && q.times.length);
+    if (mate && $("sync").checked) { const r = mate.chart.timeScale().getVisibleLogicalRange();
+      if (r) return p.chart.timeScale().setVisibleLogicalRange({ from: iOf(p.times, tOf(mate.times, r.from)), to: iOf(p.times, tOf(mate.times, r.to)) }); }
+    const n = p.times.length; p.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - SHOW[p.c.tf]), to: n + 6 });
+  }
+}
+function fill(fit) {
+  if (st.pct) return fillPct(fit);
+  st.panes.forEach(p => fillPane(p, fit, true));
+  const seen = new Set();                                 // line up each timeframe's charts on the first of them
+  if (fit && $("sync").checked) for (const p of st.panes) if (!seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); }
+}
+// one chart: every instrument in the layout as a line, in % from the left edge of the window
+function buildPct(g) {
+  g.style.gridTemplateColumns = "minmax(0, 1fr)"; g.style.gridAutoRows = "minmax(0, 1fr)";
+  const list = [...new Set(st.cfg.map(c => c.asset))], tf = st.cfg[0].tf;
+  const el = document.createElement("div"); el.className = "pane";
+  el.innerHTML = `<div class="head"><span class="info"></span></div><div class="c"></div>`; g.appendChild(el);
+  const chart = mkChart(el.lastChild);
+  const p = { pct: true, tf, el, infoEl: el.querySelector(".info"), chart, lines: list.map(asset => { const color = COLORS[names().indexOf(asset) % COLORS.length];
+    return { asset, color, series: chart.addLineSeries({ color, lineWidth: 2, priceLineVisible: false, title: asset,
+      priceFormat: { type: "custom", minMove: 0.01, formatter: v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%" } }) }; }) };
+  chart.subscribeCrosshairMove(prm => pctHead(p, prm));
+  st.panes.push(p); fillPct(true);
+}
+function pctHead(p, prm) {
+  p.infoEl.innerHTML = p.lines.map(l => { const d = prm && prm.seriesData ? prm.seriesData.get(l.series) : null, v = d ? d.value : l.lastV;
+    return `<span><span class="sw" style="background:${l.color}"></span><b>${l.asset}</b> <span class="num ${v >= 0 ? "up" : "dn"}">${v == null ? "–" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span></span>`; }).join("") +
+    `<span class="dim">${p.tf} (the first chart's timeframe) · % change since ${p.from || ""} New York</span>`;
+}
+function fillPct(fit) {
+  const p = st.panes[0]; if (!p || !p.lines.length) return;
+  const first = cands(p.lines[0].asset, p.tf); if (!first.length) return;
+  if (fit || p.t0 == null) p.t0 = first[Math.max(0, first.length - SHOW[p.tf])].time;
+  p.from = new Date(p.t0 * 1000).toISOString().slice(0, 16).replace("T", " ");
+  for (const l of p.lines) {
+    const c = cands(l.asset, p.tf), b = c.find(x => x.time >= p.t0) || c[0];
+    const d = b ? c.map(x => ({ time: x.time, value: 100 * (x.close / b.close - 1) })) : [];
+    l.series.setData(d); l.lastV = d.length ? d[d.length - 1].value : null;
+  }
+  if (fit) { p.chart.applyOptions({ rightPriceScale: { autoScale: true } }); const n = first.length; p.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - SHOW[p.tf]), to: n + 6 }); }
+  pctHead(p);
+}
+
+function controls() {
+  const all = names(), cur = () => (st.active && st.active.c) || st.cfg[0];
+  // starting points; after that every chart is changed in its own header
+  const sets = { ...Object.fromEntries(Object.entries(SETS).map(([k, v]) => [k, v.filter(n => all.includes(n))]).filter(([, v]) => v.length).map(([k, v]) => [k, () => v.map(asset => ({ asset, tf: cur().tf }))])),
+    All: () => all.map(asset => ({ asset, tf: cur().tf })),
+    "One · 1h 15m 5m": () => ["1h", "15m", "5m"].map(tf => ({ asset: cur().asset, tf })),
+    "One · 1D 4h 1h": () => ["1D", "4h", "1h"].map(tf => ({ asset: cur().asset, tf })),
+    "One · 15m 5m 1m": () => ["15m", "5m", "1m"].map(tf => ({ asset: cur().asset, tf })) };
+  $("sets").innerHTML = Object.keys(sets).map(k => `<button data-s="${k}" title="${k.startsWith("One") ? "the chart you last touched, on three timeframes" : ""}">${k}</button>`).join("");
+  $("sets").querySelectorAll("button").forEach(b => b.onclick = () => { st.cfg = sets[b.dataset.s](); st.solo = null; st.cols = 0; save(); controls(); build(); });
+  $("cols").innerHTML = [0, 1, 2, 3, 4].map(n => `<button data-c="${n}" class="${n === st.cols ? "on" : ""}">${n || "auto"}</button>`).join("");
+  $("cols").querySelectorAll("button").forEach(b => b.onclick = () => { st.cols = +b.dataset.c; save(); controls(); layout(); });
+  $("tfs").innerHTML = [...TFS].reverse().map(t => `<button data-t="${t}">${t}</button>`).join("");
+  $("tfs").querySelectorAll("button").forEach(b => b.onclick = () => { st.cfg.forEach(c => c.tf = b.dataset.t); save(); build(); });
+  $("pct").className = st.pct ? "on" : "";
+}
+$("add").onclick = () => { const c = (st.active && st.active.c) || st.cfg[st.cfg.length - 1]; st.cfg.push({ asset: c.asset, tf: c.tf }); st.solo = null; st.pct = false; save(); controls(); build(); };
+$("pct").onclick = () => { st.pct = !st.pct; controls(); build(); };
+async function poll(first) {
+  try {
+    const d = await (await fetch("today.json?t=" + Date.now())).json();
+    const fresh = !st.doc || d.now !== st.doc.now, sig = Object.keys(d.assets).join();
+    st.doc = d;
+    try { const r = await fetch("overlay.json?t=" + Date.now()); st.overlay = r.ok ? await r.json() : null; } catch (e) { st.overlay = null; }
+    $("ovwrap").style.display = st.overlay ? "" : "none";
+    $("when").textContent = `New York ${d.now} · checked ${new Date().toLocaleTimeString()}`;
+    const ok = (st.cfg || []).filter(c => d.assets[c.asset] && TFS.includes(c.tf));      // an instrument that left the feed leaves the layout
+    st.cfg = ok.length ? ok : (SETS.Indices.filter(n => d.assets[n]).length ? SETS.Indices.filter(n => d.assets[n]) : Object.keys(d.assets)).map(asset => ({ asset, tf: "15m" }));
+    if (first || sig !== st.sig) { st.sig = sig; controls(); build(); } else if (fresh) fill(false);
+  } catch (e) { $("when").textContent = "waiting for today.json (is live_recipe.py running?)"; }
+}
+async function refresh() { $("refresh").textContent = "↻ …"; await poll(false); if (st.doc) fill(true); $("refresh").textContent = "↻ refresh"; }
+$("refresh").onclick = refresh;
+$("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
+$("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = new Set(); for (const p of st.active ? [st.active, ...st.panes] : st.panes) if (!seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); } } };
+document.addEventListener("keydown", e => { if (e.altKey && e.key.toLowerCase() === "r") { e.preventDefault(); refresh(); } });
+poll(true); setInterval(() => poll(false), 20000);
+</script>
+</body>
+</html>
