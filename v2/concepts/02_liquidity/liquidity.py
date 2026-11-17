@@ -13,7 +13,9 @@ Candles are dicts with ``time``, ``open``, ``high``, ``low``, ``close``, oldest 
 
 Two choices here are mine, not his, and are named so they can be changed:
   * an "old high" is a candle whose high is above the highs of the candle before and after it (a turn), low likewise;
-  * "very close by" is a distance the caller passes in (``near``). There is no built-in number.
+  * a high is eaten as soon as a later candle trades above it; a wick is enough (he did not say wick or close);
+  * "very close by" is a distance the caller passes in (``near``). There is no built-in number;
+  * equal highs are joined neighbour to neighbour, so a long group can be wider end to end than ``near``.
 """
 from __future__ import annotations
 

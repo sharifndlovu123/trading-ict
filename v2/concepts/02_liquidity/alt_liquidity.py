@@ -6,7 +6,10 @@ Candles are dicts with ``time`` (epoch seconds), ``open``, ``high``, ``low``, ``
 Choices that are mine, not his, named so they can be changed:
   * "filled" = price has since traded across the whole gap; "partly" = into it but not across;
   * "traded through" for an IFVG = a later candle CLOSED beyond the gap's far edge;
-  * when a feed has no 4:59 p.m. print, the close of an opening gap is the last print before 5 p.m.
+  * when a feed has no 4:59 p.m. print, the close of an opening gap is the last print before 5 p.m.;
+  * a three-candle gap whose middle candle did not close in the gap's direction is not called a BISI or a SIBI;
+  * an IFVG is only flagged as possible ("may later act the other way"): whether price then treats it as support or
+    resistance is read on the chart, not decided here.
 """
 from __future__ import annotations
 
@@ -84,7 +87,7 @@ def opening_gaps(m: list[dict], tz: str = "America/New_York") -> list[dict]:
     """NDOG and NWOG from the lowest timeframe available (he: "use the lowest timeframe available when marking them, so 1m").
     NDOG: "prior session's 5 p.m. close to the 6 p.m. futures reopen". NWOG: "Friday's close at 4:59 p.m. to Sunday's
     6 p.m. open". A gap is found wherever trading stops before 5 p.m. and starts again at or after 6 p.m.: over a
-    weekend it is the NWOG, otherwise the NDOG.
+    weekend (Friday's close to Sunday's open) it is the NWOG, otherwise the NDOG, also across a day with no trading.
     ``{"type": "NDOG" | "NWOG", "bottom", "top", "close", "open", "direction", "t_close", "t_open", "size", "state", ...}``.
     ``tz`` is the clock the candle times are read in (New York by default)."""
     z, out = ZoneInfo(tz), []
@@ -97,7 +100,8 @@ def opening_gaps(m: list[dict], tz: str = "America/New_York") -> list[dict]:
         if cl == op:
             continue
         lo, hi = min(cl, op), max(cl, op)
-        out.append({"type": "NWOG" if (b.date() - a.date()).days >= 1 else "NDOG", "bottom": lo, "top": hi, "close": cl, "open": op,
+        weekend = a.weekday() == 4 and b.weekday() == 6            # his words: Friday's close to Sunday's open
+        out.append({"type": "NWOG" if weekend else "NDOG", "bottom": lo, "top": hi, "close": cl, "open": op,
                     "direction": "up" if op > cl else "down", "t_close": m[i - 1]["time"], "t_open": m[i]["time"], "size": hi - lo,
                     **_state(lo, hi, m[i:], from_above=op > cl)})
     return out

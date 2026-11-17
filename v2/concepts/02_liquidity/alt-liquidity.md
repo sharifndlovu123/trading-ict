@@ -40,3 +40,9 @@ as a draw; trading from them is a later concept.
 Choices that are mine, named in the code: "filled" = price has traded across the whole gap, "partly" = into it;
 "traded through" for an IFVG = a later candle closed beyond the far edge; with no 4:59 p.m. print, the last print
 before 5 p.m. is the close.
+A three-candle gap whose middle candle did not close in the gap's direction is left unnamed. An IFVG is only
+flagged as possible; whether price then treats it as support or resistance is read on the chart.
+
+**Left to the reading, on purpose (no code):** how much weight each type gets (the NWOG more than the NDOG, a higher
+timeframe's volume imbalance more than a lower one's), whether a gap is too small to matter, and dropping a volume
+imbalance once it is nowhere near the price range being watched.

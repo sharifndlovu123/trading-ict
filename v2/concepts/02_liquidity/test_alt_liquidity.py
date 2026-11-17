@@ -123,3 +123,23 @@ def test_nothing_is_known_before_it_happened():
     assert fvgs(c[:2]) == []                                             # no gap until the third candle is in
     g = fvgs(c)[0]
     assert g["closed_through_at"] > g["t"] and fvgs(c[:3])[0]["ifvg"] is None
+
+
+def test_only_fridays_close_to_sundays_open_is_the_nwog():
+    """A weekday with no trading in between still gives an NDOG: the NWOG is Friday to Sunday, by his definition."""
+    skipped_day = [bar("2032-01-06", "16:59", 100, 101), bar("2032-01-07", "18:00", 103, 103.5)]      # Tuesday's close, Wednesday evening's reopen
+    assert [x["type"] for x in opening_gaps(skipped_day)] == ["NDOG"]
+    assert [x["type"] for x in opening_gaps(WEEK)] == ["NWOG", "NDOG"]
+
+
+def test_a_feed_with_no_459_print_uses_the_last_print_before_5pm():
+    """My choice, not his: some instruments stop printing earlier in the afternoon."""
+    early = [bar("2032-01-05", "16:00", 100, 101), bar("2032-01-05", "18:00", 102, 102.5)]
+    g = opening_gaps(early)
+    assert [(x["type"], x["bottom"], x["top"]) for x in g] == [("NDOG", 101, 102)]
+
+
+def test_a_gap_whose_middle_candle_did_not_close_its_way_is_not_named():
+    """His words: a BISI is formed by an up-close candle, a SIBI by a down-close candle. (Leaving the odd one unnamed is my choice.)"""
+    odd = mk([(100, 101, 99, 100.5), (106, 106.5, 104, 104.5), (104.5, 107, 103, 106)])            # a gap above 101, but the middle candle closed down
+    assert fvgs(odd) == []

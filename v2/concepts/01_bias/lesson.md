@@ -26,6 +26,15 @@ whose high is above the highs either side). That is my way of putting his "highe
 importance" into code. He has not confirmed it, and on the FTSE daily it placed the level behind differently from
 his own mark.
 
+Also mine, not his sentences (he said "perfect, now you've got it" to DAX marks drawn this way, which is a check of
+the result, not of each rule):
+- a break and a change are judged on a **close** beyond the level, never a wick;
+- the level behind is the lowest low (highest high) between the level that was broken and the candle that broke it;
+- after a break, only the highest significant high since then continues the trend; a lower high closed through is a
+  smaller piece;
+- after a change, the new level behind is the extreme since the old one;
+- the highest timeframe, with nothing above it, uses its own swings.
+
 Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to them):
 | Chart | Code against the confirmed hand read |
 |---|---|

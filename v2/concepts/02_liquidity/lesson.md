@@ -65,8 +65,13 @@ does not list them, because it only counts a low that is a turn (lower than the 
 lows rose one after another. Whether a plain previous daily low counts as liquidity beyond "the previous day" is
 his to say.
 
-Choices that are mine, not his (named in the code): what makes an "old high" (a turn); and "very close by" is a
-distance the caller passes in, with no built-in number.
+Choices that are mine, not his (named in the code): what makes an "old high" (a turn); a wick beyond a level is
+enough to eat it; "very close by" is a distance the caller passes in, with no built-in number; equal highs are
+joined neighbour to neighbour.
+
+**Left to the reading, on purpose (no code):** single levels lining up with a nearby equal pool, pools as targets,
+reading from the weekly down, the hint to bias, and original liquidity before alt-liquidity. These belong to the
+top-down process (the eyes), which is built later.
 
 ## Open
 - Taught live earlier in the week but only in v1 notes, to be re-confirmed before they enter: liquidity created
