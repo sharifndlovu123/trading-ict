@@ -18,7 +18,7 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 Note on 01: the eyes agree fully with his confirmed read on the DAX, on direction on the dollar index, and differ on
 the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
 
-**Next:** 02, order block context (Sharif, 17 Nov 2026), starting from the cleaned references.
+**Next:** 02, liquidity (Sharif, 17 Nov 2026: "let's rather focus on liq next, it fits"), starting from the cleaned references. Order block context comes after.
 
 Sharif names each concept and says how it is done. Nothing is listed ahead of him.
 
