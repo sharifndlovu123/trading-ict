@@ -85,6 +85,7 @@ Order agreed: calendars → the unseen 2020 news split → forward log → condi
 - ☑ K2 Order block (answered 2026-11-17): engulf = the next candle closes beyond the block candle's open; the block is the body only. A better block has a strong body that was still engulfed; a body smaller than the wicks is not a strong block
 - ☑ K3 Weak blocks: keep them dimmed for now, for learning (answered 2026-11-17)
 - ☐ K4 His stop on the gap trade (trade 1, US100 Thu 12 Nov 10:03)
+- ☐ K0 **Remind Sharif to reteach NDOG, NWOG and the opening range gap** (his request, 2026-11-17: he mixed some content up; the trading range is not the opening range gap). Until then the page's opening-gap rows and `research/ndog/` are unconfirmed
 - ☐ K5 The weekend gap (NWOG) on regular-hours charts: which two prices define it
 - ☐ K6 Watching 05:00–09:00 New York (tradable by his rule, no check-ins now); is 15 minutes the right rhythm
 - ☑ K8 Afternoon window = 13:20–14:00 New York (answered 2026-11-17)
