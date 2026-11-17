@@ -44,3 +44,11 @@ Why the retrace was shallow: price was already 25 points from the liquidity it w
 - A missed trade is missed once the trading range breaks without the entry being hit; no chasing. Being on the wrong side is part of the process.
 - A re-entry is a separate trade inside the same move, for the small piece that is left.
 - The most important key: where is price right now.
+
+## Sharif's review, the same evening (answers in `2026-11-17-ny1-discussion.md`, point 11)
+- **The 03:07 sell was a good trade and an accepted miss:** no premium, but the middle was enough.
+- **The tip I missed:** the small equal highs at 27,246–27,249 meant price was creating liquidity, not eating it, so that area would not be swept soon.
+- **The order stays on** until a major pool is hit and the retrace clearly will not come; a closed candle below the 01:40 gap (27,177–27,182) would have ended it.
+- **The re-entry, in his order:** equal highs created → the equal low 27,191.27 broken (structure) → a 5m candle closes with its body inside the 01:40 gap → 1m displacement and break → sell limit in the 1m gap (27,167.2–27,169.5), stop above the 5m gap (27,182.3). At 03:57 price tipped the higher low (27,143.14 against 27,143.31) without taking it, then came back and filled the order at 03:58.
+- **Not a chase:** the higher low had been the larger goal since 03:20 and was still ahead; the 00:25 high was unbroken.
+- **The money:** 80% at the higher low (the real range target; passed 04:01, about 1.6 R on a 15.7-point risk), 20% as the runner (overnight low 04:03, 4.5 R; July low 04:04, 6.7 R; the low 27,001.8, 10.6 R).
