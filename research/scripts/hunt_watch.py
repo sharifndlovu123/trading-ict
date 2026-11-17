@@ -63,7 +63,7 @@ def events(doc: dict, overlay: dict, state: dict) -> list[str]:
                     state["side"][key] = "below" if last < m["price"] else "above"
                     continue
                 side = state["side"][key]
-                if (side == "below" and hi >= m["price"]) or (side == "above" and lo <= m["price"]):
+                if (side == "below" and hi > m["price"]) or (side == "above" and lo < m["price"]):   # strictly through: the candle that made the level is not a sweep of it
                     fired.append(key)
                     out.append(f"{asset}: price traded through {m['kind']} {m['price']} (from {side}); last {last}")
             elif m.get("top") is not None and lo <= m["top"] and hi >= m["bottom"]:
