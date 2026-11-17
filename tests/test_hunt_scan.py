@@ -90,3 +90,23 @@ def test_choppy_and_clean_are_told_apart_and_the_judgements_cover_all_five():
     doc = {"now": "Tue 2026-01-06 09:42", "assets": {"X": {"last": up[-1]["close"], "adr": 50.0, "candles": {"5m": up, "1D": mk([(90, 131, 89, 130)] * 8, step=86400)}}}}
     j = hs.judgements(hs.scan(doc, "X"), up[-1]["close"])
     assert set(j) == {"choppy", "bias", "areas", "displacement", "volatile", "liquidity"} and "5m clean" in j["choppy"][0]
+
+
+def test_equal_highs_belong_to_one_sub_group_not_to_a_price_level():
+    """Sharif 2026-11-17: "EQHs are relative to a sub group, not for an area... always relative to the group"."""
+    peak = [(100, 105, 99.8, 101), (101, 102, 100, 100.5)]
+    near = mk(QUIET + peak + peak + QUIET[:4])                       # two highs at 105, a couple of candles apart: one group
+    g = [x for x in hs.liquidity(near, "1D", 100.5) if x["side"] == "highs" and x["top"] == 105]
+    assert len(g) == 1 and g[0]["count"] == 2 and g[0]["t_end"] <= near[-1]["time"]
+    far = mk(QUIET + peak + QUIET * 4 + peak + QUIET[:4])           # the same two highs, dozens of candles apart: two stories, no group
+    assert [x for x in hs.liquidity(far, "1D", 100.5) if x["side"] == "highs" and x["top"] == 105] == []
+    broken = mk(QUIET + peak + [(100.5, 108, 100, 101)] + peak + QUIET[:4])    # a higher high between them: the first was already taken
+    assert [x for x in hs.liquidity(broken, "1D", 100.5) if x["top"] == 105 and x["count"] == 2] == []
+
+
+def test_only_what_is_near_price_now_is_kept():
+    peak = [(100, 105, 99.8, 101), (101, 102, 100, 100.5)]
+    c = mk(QUIET + peak + peak + QUIET[:4])
+    assert [x for x in hs.liquidity(c, "5m", 100.5, reach=10) if x["top"] == 105]           # 4.5 away: kept
+    assert not [x for x in hs.liquidity(c, "5m", 100.5, reach=2) if x["top"] == 105]         # farther than we are looking: dropped
+    assert not [x for x in hs.gaps(mk(QUIET + GAP_UP + [(106.5, 107.5, 105, 107)]), "5m", 140.0, reach=5)]

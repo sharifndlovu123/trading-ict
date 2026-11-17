@@ -37,6 +37,9 @@ BACK = 150            # candles read back on any timeframe
 NEAR = 14             # an area counts as near while it is within this many typical candles of price
 GAP_MIN = 0.15        # a gap smaller than this share of a typical candle is noise
 EQ_TOL = 0.2          # equal highs / lows: within this share of a typical candle of each other
+GROUP_GAP = 8         # ...and no more than this many candles after the previous one in its group
+GROUP_SPAN = 20       # a group is one small stretch of price action, at most this many candles long
+REACH_ADR = 1.0       # keep to where price is NOW: areas and liquidity within this many average days' ranges (or holding price)
 DISP = 2.2            # a displacement candle's body against the usual body on its timeframe
 RECENT = 8            # "recent" = within this many closed candles, on whichever timeframe
 
@@ -60,15 +63,16 @@ def _w(tf: str, dist: float, typ: float, age: int = 0) -> float:
     return round((1 + RANK[tf]) * near * max(0.3, 1 - age / BACK), 2)
 
 
-def gaps(c: list[dict], tf: str, last: float) -> list[dict]:
+def gaps(c: list[dict], tf: str, last: float, reach: float | None = None) -> list[dict]:
     typ, out = typical(c), []
+    reach = reach if reach is not None else NEAR * typ
     for i in range(max(2, len(c) - BACK), len(c)):
         a, b = c[i - 2], c[i]
         for side, lo, hi in (("bull", a["high"], b["low"]), ("bear", b["high"], a["low"])):
             if hi - lo < GAP_MIN * typ:
                 continue
             dist = 0 if lo <= last <= hi else min(abs(lo - last), abs(hi - last))
-            if dist > NEAR * typ:
+            if dist > reach:
                 continue
             after = c[i + 1:]
             wick = [k for k in after if k["low"] < hi and k["high"] > lo]
@@ -93,38 +97,47 @@ def gaps(c: list[dict], tf: str, last: float) -> list[dict]:
     return out
 
 
-def liquidity(c: list[dict], tf: str, last: float) -> list[dict]:
-    """Equal highs / lows: created and still resting, or eaten (when, and whether that candle closed back)."""
+def liquidity(c: list[dict], tf: str, last: float, reach: float | None = None) -> list[dict]:
+    """Equal highs / lows, each belonging to ONE sub-group of candles (Sharif 2026-11-17: "EQHs are relative to a sub
+    group, not for an area... always relative to the group"). Swing highs count as equal only when they sit next to
+    each other in time, inside the same small stretch of price action; highs that merely share a price weeks apart
+    are separate stories. Each group is created and still resting, or eaten (when, and did that candle close back)."""
     c = c[-BACK:]
     typ, out = typical(c), []
+    reach = reach if reach is not None else NEAR * typ
     for side, key, sgn in (("highs", "high", 1), ("lows", "low", -1)):
-        sw = sorted(((n, x[key]) for n, x in enumerate(c) if 0 < n < len(c) - 1
-                     and sgn * x[key] >= sgn * c[n - 1][key] and sgn * x[key] >= sgn * c[n + 1][key]), key=lambda q: q[1])
+        sw = [(n, x[key]) for n, x in enumerate(c) if 0 < n < len(c) - 1
+              and sgn * x[key] >= sgn * c[n - 1][key] and sgn * x[key] >= sgn * c[n + 1][key]]          # in time order
         groups: list[list] = []
         for q in sw:
-            if groups and abs(q[1] - groups[-1][0][1]) <= EQ_TOL * typ:     # against the group's first price: no chaining
-                groups[-1].append(q)
+            g = groups[-1] if groups else None
+            between = c[g[-1][0] + 1:q[0]] if g else []
+            same = (g is not None and q[0] - g[-1][0] <= GROUP_GAP and q[0] - g[0][0] <= GROUP_SPAN
+                    and abs(q[1] - g[0][1]) <= EQ_TOL * typ and not any(sgn * k[key] > sgn * max(g[0][1], q[1], key=lambda v: sgn * v) for k in between))
+            if same:
+                g.append(q)
             else:
                 groups.append([q])
         for g in groups:
             if len(g) < 2:
                 continue
             ext = max(q[1] for q in g) if sgn > 0 else min(q[1] for q in g)
-            n_last, n_first = max(q[0] for q in g), min(q[0] for q in g)
+            n_last, n_first = g[-1][0], g[0][0]
             lo, hi = min(q[1] for q in g), max(q[1] for q in g)
             eat = next((n for n in range(n_last + 1, len(c)) if sgn * c[n][key] > sgn * ext), None)
-            base = {"tf": tf, "side": side, "bottom": lo, "top": hi, "price": ext, "count": len(g), "t0": c[n_first]["time"], "t_last": c[n_last]["time"]}
+            base = {"tf": tf, "side": side, "bottom": lo, "top": hi, "price": ext, "count": len(g), "t0": c[n_first]["time"], "t_last": c[n_last]["time"],
+                    "t_end": c[min(n_last + 1, len(c) - 1)]["time"]}
+            if abs(ext - last) > reach:
+                continue                                        # keep to where price is now
             if eat is None:
-                if abs(ext - last) > NEAR * typ:
-                    continue
                 out.append({**base, "type": "liq.created", "weight": round(_w(tf, abs(ext - last), typ, len(c) - n_last) * (1 + 0.15 * len(g)), 2),
-                            "text": f"{tf} equal {side} {lo}–{hi} (x{len(g)}, {hm(base['t0'], tf)} to {hm(base['t_last'], tf)}): created, still resting"})
+                            "text": f"{tf} equal {side} {lo}–{hi} (x{len(g)}, one group, {hm(base['t0'], tf)} to {hm(base['t_last'], tf)}): created, still resting"})
             elif len(c) - eat <= 30:                            # eaten recently enough to still be news
                 k = c[eat]
                 back = sgn * k["close"] < sgn * ext
                 out.append({**base, "type": "liq.eaten", "t1": k["time"], "extreme": k[key], "closed_back": back,
                             "weight": round(_w(tf, abs(ext - last), typ, len(c) - eat) * (1 + 0.15 * len(g)), 2),
-                            "text": f"{tf} equal {side} {lo}–{hi} (x{len(g)}): eaten at {hm(k['time'], tf)} to {k[key]}; "
+                            "text": f"{tf} equal {side} {lo}–{hi} (x{len(g)}, one group): eaten at {hm(k['time'], tf)} to {k[key]}; "
                                     + ("that candle closed back: a wick" if back else "that candle closed beyond: a body")})
     return out
 
@@ -161,6 +174,8 @@ def displacements(c: list[dict], tf: str, liq: list[dict], gps: list[dict]) -> l
     step = median([b["time"] - a["time"] for a, b in zip(closed[-20:], closed[-19:])]) if len(closed) > 20 else 0
     for i in range(max(8, len(closed) - RECENT), len(closed)):
         x = closed[i]
+        if closed[-1]["time"] - x["time"] > max(2 * step, 2 * 86400):   # recent = the last two days, or the last two candles on a larger timeframe
+            continue
         body, rng = x["close"] - x["open"], x["high"] - x["low"]
         if not rng or abs(body) < DISP * usual or abs(body) / rng < 0.6:
             continue
@@ -192,17 +207,18 @@ def displacements(c: list[dict], tf: str, liq: list[dict], gps: list[dict]) -> l
     return out
 
 
-def blocks(c: list[dict], tf: str, last: float) -> list[dict]:
+def blocks(c: list[dict], tf: str, last: float, reach: float | None = None) -> list[dict]:
     """Order blocks by his reading: the last opposite candle engulfed by the very next one, its body."""
     closed, out = c[:-1], []
     typ = typical(closed)
+    reach = reach if reach is not None else NEAR * typ
     for i in range(max(0, len(closed) - 60), len(closed) - 1):
         b, e = closed[i], closed[i + 1]
         rng = b["high"] - b["low"]
         lo, hi = _body(b)
         side = "sell" if b["close"] > b["open"] and e["close"] < b["open"] else "buy" if b["close"] < b["open"] and e["close"] > b["open"] else None
         dist = min(abs(lo - last), abs(hi - last))
-        if not side or not rng or hi - lo < GAP_MIN * typ or dist > NEAR * typ:
+        if not side or not rng or hi - lo < GAP_MIN * typ or dist > reach:
             continue
         after = closed[i + 2:]
         if any((k["close"] > hi if side == "sell" else k["close"] < lo) for k in after):
@@ -268,22 +284,23 @@ def scan(doc: dict, asset: str) -> list[dict]:
     out.append({"type": "time.in_window" if "inside" in hw.window(now) else "time.outside_window", "tf": "", "weight": 1,
                 "text": f"{now} New York, {hw.window(now)}"})
     gps, liq, typ = [], [], {}
+    reach = REACH_ADR * it["adr"] if it.get("adr") else None      # one yardstick for "near", whatever the timeframe: the instrument's own average day
     for tf in TFS:
         c = C.get(tf) or []
         closed = c[:-1]                                          # the last candle on any timeframe is still forming
         if len(closed) < 6:
             continue
         typ[tf] = typical(closed)
-        gps += gaps(closed, tf, last)
-        liq += liquidity(closed, tf, last)
-        out += blocks(c, tf, last)
+        gps += gaps(closed, tf, last, reach)
+        liq += liquidity(closed, tf, last, reach)
+        out += blocks(c, tf, last, reach)
         for f in (bias(closed, tf), conditions(c, tf), volatility(c, tf)):
             if f:
                 out.append(f)
     out += gps + liq + against_areas(liq, gps, typ)
     for tf in TFS:
         if len(C.get(tf) or []) > 12:
-            out += displacements(C[tf], tf, liq, gps)
+            out += [x for x in displacements(C[tf], tf, liq, gps) if reach is None or min(abs(x["p0"] - last), abs(x["p1"] - last)) <= 1.5 * reach]
     day = (C.get("1D") or [None])[-1]
     if day and it.get("adr"):
         used = (day["high"] - day["low"]) / it["adr"]
@@ -316,8 +333,9 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     tfo = lambda xs: sorted(xs, key=lambda o: RANK.get(o["tf"], 0))          # noqa: E731
     lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in tfo(xs)) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
+    wrong = {"type": "summary", "tf": "", "text": "NOT TO BE TRUSTED YET: Sharif says this bias reading is very wrong (17 Nov 2026); he will explain. It only compares the last two swing highs and lows."}
     out = {"choppy": [lab(cond)] + by("cond.displacement_out_of_chop")[:2],
-           "bias": [lab(by("bias."))] + by("candle.counter_in_gap")[:2]}
+           "bias": [wrong, lab(by("bias."))] + by("candle.counter_in_gap")[:2]}
     areas = [o for o in by("gap.", "block.") if "bottom" in o]
     pick = sorted((o for o in areas if o["bottom"] <= last <= o["top"]), key=lambda o: -RANK[o["tf"]])[:3]
     for above in (True, False):                                               # the nearest standing areas each side of price, small and large
@@ -359,9 +377,9 @@ def to_mark(o: dict) -> dict | None:
         return {**base, "kind": f"{tf} {o['side']} block" + (" (dim)" if o["grade"] == "dim" else "") + (" · weaker" if t.endswith("weakened") else ""),
                 "side": "area", "top": o["top"], "bottom": o["bottom"]}
     if t == "liq.created":
-        return {**base, "kind": f"{hl} x{o['count']}", "side": lside, "price": o["price"]}
+        return {**base, "kind": f"{hl} x{o['count']}", "side": lside, "price": o["price"], "t1": o["t_end"]}
     if t == "liq.created_against_area":
-        return {**base, "kind": f"{hl} x{o['count']} against {o['area_tf']} gap", "side": lside, "price": o["price"]}
+        return {**base, "kind": f"{hl} x{o['count']} against {o['area_tf']} gap", "side": lside, "price": o["price"], "t1": o["t_end"]}
     if t in ("liq.eaten", "liq.swept_into_area"):
         how = "wick" if o["closed_back"] else "body"
         return {**base, "kind": f"{hl} eaten ({how})" + (f" into {o['area_tf']} gap" if t.endswith("area") else ""), "side": lside, "price": o["price"], "t1": o["t1"]}
