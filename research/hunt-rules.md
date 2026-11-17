@@ -18,6 +18,7 @@ Written from Sharif's lessons on the live sheet (16–17 Nov 2026). They are sti
 - A retrace will not always reach the premium (the OTE or a block far back); sometimes the middle (50%) of the range in play is enough.
 - Context stacks on one area: an area of interest, then liquidity built right against its edge (equal highs under a bearish gap, equal lows over a bullish one), then that liquidity swept into the area, then an order block there. Each step adds to the same area; a sweep into a marked area is worth escalating.
 - Judge a pool or an area on its own timeframe: a 4h area holds while 4h candles only wick into it and none closes with its body inside. Lower-timeframe closes inside a higher-timeframe area do not mean it is broken.
+- A candle of the block's own timeframe closing inside the block weakens it (an hourly close inside an hourly order block); it is not broken, but expect less from it. Closes inside it on a lower timeframe are normal.
 - An order block has its own middle entry: enter at the 50% of the block's body, stop at the block's far edge (the top, for a sell).
 - A planned entry that has not been hit is cancelled once price breaks out of the trading range the plan was built in: the trade is missed, no chasing.
 - An OTE belongs to its own range and time; a range that has played out is not carried forward.
