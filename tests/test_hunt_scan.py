@@ -143,3 +143,24 @@ def test_bias_is_the_structure_rule_he_taught_not_the_last_two_swings():
     assert hs.bias(broke, "1h")["type"] == "bias.bull"
     wick = fall + mk([(g - 30, g + 20, g - 32, g - 28), (g - 28, g - 20, g - 35, g - 30)], step=3600)             # only a wick above it, the close back under
     assert hs.bias(wick, "1h")["type"] == "bias.bear"
+
+
+def test_named_levels_are_liquidity_resting_or_taken_by_a_wick_or_a_close():
+    today = mk([(100, 101, 99, 100.5), (100.5, 103.2, 100, 101), (101, 102, 100.5, 101.5)], step=60)
+    lv = {"pdh": 103.0, "pdl": 95.0, "pwl": 60.0, "midnight_open": 100.0}
+    got = {o["name"]: o for o in hs.named_levels(lv, today, 101.5, reach=20)}
+    assert set(got) == {"previous day's high", "previous day's low"}                       # the far one is dropped, and an open is not liquidity
+    assert got["previous day's high"]["type"] == "level.taken" and got["previous day's high"]["closed_beyond"] is False   # a wick only
+    assert got["previous day's low"]["type"] == "level.resting"
+    closed = mk([(100, 101, 99, 100.5), (100.5, 104, 100, 103.6), (103.6, 104, 103.2, 103.8)], step=60)
+    assert hs.named_levels(lv, closed, 103.8, reach=20)[0]["closed_beyond"] is True
+
+
+def test_areas_are_listed_top_down_and_liquidity_is_the_nearest_on_each_side():
+    g = lambda tf, lo, hi: {"type": "gap.wicked", "tf": tf, "side": "bull", "bottom": lo, "top": hi, "weight": 1, "text": f"{tf} {lo}-{hi}"}   # noqa: E731
+    p = lambda side, px: {"type": "liq.created", "tf": "5m", "side": side, "price": px, "weight": 1, "text": f"{side} {px}"}                    # noqa: E731
+    obs = [g("5m", 99, 101), g("1W", 80, 120), g("1D", 104, 106), g("1h", 90, 92), g("5m", 102, 103),
+           p("highs", 110), p("highs", 103), p("highs", 107), p("lows", 97), p("lows", 80), p("lows", 95)]
+    sel = hs.select(obs, 100.0)
+    assert [o["tf"] for o in sel["areas"]] == ["1W", "1D", "1h", "5m", "5m"]                # weekly first, then daily, then lower
+    assert [o["price"] for o in sel["liquidity"]] == [103, 107, 97, 95]                     # the nearest two above, the nearest two below

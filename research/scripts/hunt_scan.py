@@ -288,6 +288,33 @@ def volatility(c: list[dict], tf: str) -> dict | None:
             "text": f"{tf} candles lately are {r} times their usual size: {label}"}
 
 
+NAMED = {"pdh": ("previous day's high", "highs"), "pdl": ("previous day's low", "lows"), "pwh": ("previous week's high", "highs"),
+         "pwl": ("previous week's low", "lows"), "pmh": ("previous month's high", "highs"), "pml": ("previous month's low", "lows"),
+         "asia_high": ("Asia high", "highs"), "asia_low": ("Asia low", "lows"), "london_high": ("London high", "highs"), "london_low": ("London low", "lows")}
+
+
+def named_levels(levels: dict, today: list[dict], last: float, reach: float | None) -> list[dict]:
+    """The named highs and lows the feed already knows (previous day / week, the sessions) as liquidity: resting, or
+    taken since the day's open (by a wick so far, or with a close beyond)."""
+    out = []
+    for key, price in (levels or {}).items():
+        if key not in NAMED or price is None or (reach is not None and abs(price - last) > reach):
+            continue
+        name, side = NAMED[key]
+        sgn = 1 if side == "highs" else -1
+        hit = next((k for k in today if sgn * (k["high"] if sgn > 0 else k["low"]) > sgn * price), None)
+        base = {"tf": "1D" if key[:2] in ("pd", "pw", "pm") else "1h", "side": side, "price": price, "name": name, "t0": today[0]["time"] if today else None,
+                "weight": round(4 * max(0.2, 1 - abs(price - last) / reach) if reach else 2, 2)}
+        if hit is None:
+            out.append({**base, "type": "level.resting", "text": f"{name} {price}: not taken today, resting"})
+        else:
+            beyond = any(sgn * k["close"] > sgn * price for k in today if k["time"] >= hit["time"])
+            out.append({**base, "type": "level.taken", "t1": hit["time"], "closed_beyond": beyond,
+                        "text": f"{name} {price}: taken today at {hm(hit['time'], '1m')}"
+                                + ("; lower-timeframe candles have closed beyond it" if beyond else "; wicks only so far")})
+    return out
+
+
 def scan(doc: dict, asset: str) -> list[dict]:
     """Every observation for one instrument at the moment of ``doc``, heaviest first."""
     it = doc["assets"][asset]
@@ -311,6 +338,7 @@ def scan(doc: dict, asset: str) -> list[dict]:
             if f:
                 out.append(f)
     out += gps + liq + against_areas(liq, gps, typ)
+    out += named_levels(it.get("levels") or {}, C.get("1m") or [], last, reach)
     for tf in TFS:
         if len(C.get(tf) or []) > 12:
             out += [x for x in displacements(C[tf], tf, liq, gps) if reach is None or min(abs(x["p0"] - last), abs(x["p1"] - last)) <= 1.5 * reach]
@@ -347,7 +375,7 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     lab = lambda xs: {"type": "summary", "tf": "", "text": ", ".join(f"{o['tf']} {o['type'].split('.')[1]}" for o in (xs if xs and xs[0]["type"].startswith("bias.") else tfo(xs))) or "nothing to go on"}   # noqa: E731
     cond = [o for o in by("cond.") if o["type"] in ("cond.choppy", "cond.mixed", "cond.clean")]
     bs = sorted(by("bias."), key=lambda o: -RANK[o["tf"]])                  # the higher timeframe first: its highs and lows matter more
-    note = {"type": "summary", "tf": "", "text": "For Sharif to check: this now uses the structure rule he taught on 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. His first verdict on the old version was \"very wrong\"."}
+    note = {"type": "summary", "tf": "", "text": "The structure rule he taught on 16 Nov (protected highs and lows; a close, not a wick, changes it), highest timeframe first. He answered \"perfect\" to this reading on 17 Nov; keep checking it with him."}
     rel = []
     for hi_, lo_ in zip(bs, bs[1:]):                                          # a lower timeframe going the other way is a shift inside the higher one
         if hi_["side"] in ("bear", "bull") and lo_["side"] in ("bear", "bull") and hi_["side"] != lo_["side"]:
@@ -356,19 +384,23 @@ def select(obs: list[dict], last: float) -> dict[str, list[dict]]:
     out = {"choppy": [lab(cond)] + by("cond.displacement_out_of_chop")[:2],
            "bias": [note, lab(bs)] + bs + rel[:3] + by("candle.counter_in_gap")[:2]}
     areas = [o for o in by("gap.", "block.") if "bottom" in o]
-    pick = sorted((o for o in areas if o["bottom"] <= last <= o["top"]), key=lambda o: -RANK[o["tf"]])[:3]
-    for above in (True, False):                                               # the nearest standing areas each side of price, small and large
-        side = [o for o in areas if (o["bottom"] > last if above else o["top"] < last)]
-        for big in (False, True):
-            pick += sorted((o for o in side if (RANK[o["tf"]] >= 3) == big), key=lambda o: abs((o["bottom"] if above else o["top"]) - last))[:2]
-    out["areas"] = pick + by("liq.created_against_area", "liq.swept_into_area")[:4]
+    pick = []
+    for tier in (("1M", "1W"), ("1D",), ("4h", "1h"), ("15m", "5m", "1m")):       # top-down (Sharif 16 Nov 2026: weekly first, then daily, ...; both sides, no forced draw)
+        t = sorted((o for o in areas if o["tf"] in tier), key=lambda o: -RANK[o["tf"]])
+        inside = [o for o in t if o["bottom"] <= last <= o["top"]][:1]
+        above = sorted((o for o in t if o["bottom"] > last), key=lambda o: o["bottom"] - last)[:1]
+        below = sorted((o for o in t if o["top"] < last), key=lambda o: last - o["top"])[:1]
+        pick += inside + above + below
+    out["areas"] = pick + by("liq.created_against_area", "liq.swept_into_area")[:3]
     disp, lines = by("displacement"), []
     for o in sorted((o for o in disp if o["type"] == "displacement"), key=lambda o: -o["weight"])[:3]:
         lines += sorted((x for x in disp if x.get("t0") == o["t0"] and x["tf"] == o["tf"]), key=lambda x: len(x["type"]))
     out["displacement"] = lines or [{"type": "summary", "tf": "", "text": "none recently on any timeframe"}]
     out["volatile"] = [lab([o for o in by("vol.") if o["type"] != "vol.day_used"])] + by("vol.day_used")
-    out["liquidity"] = sorted((o for o in by("liq.created") if o["type"] == "liq.created"), key=lambda o: abs(o["price"] - last))[:4] + \
-        sorted((o for o in by("liq.eaten") if o["type"] == "liq.eaten"), key=lambda o: -o.get("t1", 0))[:3]
+    pools = [o for o in obs if o["type"] in ("liq.created", "level.resting")]
+    out["liquidity"] = (sorted((o for o in pools if o["side"] == "highs" and o["price"] > last), key=lambda o: o["price"] - last)[:2]       # the nearest two buyside above
+                        + sorted((o for o in pools if o["side"] == "lows" and o["price"] < last), key=lambda o: last - o["price"])[:2]      # and the nearest two sellside below
+                        + sorted((o for o in obs if o["type"] in ("liq.eaten", "level.taken")), key=lambda o: -o.get("t1", 0))[:4])
     return out
 
 
@@ -402,6 +434,9 @@ def to_mark(o: dict) -> dict | None:
     if t in ("liq.eaten", "liq.swept_into_area"):
         how = "wick" if o["closed_back"] else "body"
         return {**base, "kind": f"{hl} eaten ({how})" + (f" into {o['area_tf']} gap" if t.endswith("area") else ""), "side": lside, "price": o["price"], "t1": o["t1"]}
+    if t in ("level.resting", "level.taken"):
+        short = "".join(w[0] for w in o["name"].replace("'s", "").split()).upper() if o["name"].startswith("previous") else o["name"]
+        return {**base, "kind": short + (" taken" + ("" if o.get("closed_beyond") else " (wick)") if t.endswith("taken") else ""), "side": lside, "price": o["price"], "t1": o.get("t1")}
     if t in ("bias.bear", "bias.bull"):
         return {**base, "kind": f"{tf} protected {'high' if t.endswith('bear') else 'low'}", "side": "buyside" if t.endswith("bear") else "sellside", "price": o["guard"], "t0": o["since"]}
     if t == "displacement":
