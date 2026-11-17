@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--answers", type=Path, default=ts.ROOT / "reports" / "reviews" / "liqmap.jsonl")
     ap.add_argument("--data", type=Path, default=ts.ROOT / "out" / "liqmap")
     ap.add_argument("--page", type=Path, default=ts.ROOT / "viewer" / "liqmap.html")
+    ap.add_argument("--replay-src", type=Path, help="a review page: the live today.json it may re-cut itself from, so the page can step through time")
     ap.add_argument("--password-env", help="name of a variable (environment or .env) holding a password that other devices must give")
     a = ap.parse_args()
     if a.password_env:
@@ -35,6 +36,7 @@ def main():
     elif a.host != "127.0.0.1":
         print("warning: open to the network without a password (--password-env)")
     ts.DATA, ts.PAGE, ts.ANSWERS = a.data.resolve(), a.page.resolve(), a.answers.resolve()
+    ts.REPLAY_SRC = a.replay_src.resolve() if a.replay_src else None
     if not (ts.DATA / "index.json").exists():
         raise SystemExit("build the set first: uv run python research/scripts/liqmap_build.py")
     print(f"liquidity map: http://{a.host}:{a.port}  (marks → {ts.ANSWERS})")

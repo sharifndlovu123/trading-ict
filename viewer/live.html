@@ -67,6 +67,11 @@ details { margin-top:6px; } summary { cursor:pointer; color:var(--ink2); }
   <div class="top">
     <h1>Recipe live sheet</h1>
     <span id="hunt" class="chip"></span>
+    <span id="replay" class="tabs" style="display:none" title="this is a review page: move its time forward or back">
+      <button data-d="-5">◀ 5m</button><button data-d="-1">◀ 1m</button>
+      <input id="rpat" class="px" style="width:74px" placeholder="HH:MM" title="type a New York time and press Enter">
+      <button data-d="1">1m ▶</button><button data-d="5">5m ▶</button><button data-d="15">15m ▶</button>
+      <button id="rpplay" title="one minute every second and a half">▶ play</button><span id="rpmsg" class="dim"></span></span>
     <span id="when" class="dim"></span>
     <span id="fresh" class="dim"></span>
     <a href="/multi" style="color:var(--accent)" title="correlated charts side by side, linked">charts together →</a>
@@ -159,7 +164,7 @@ const layer = marksLayer(chart, series, $("chart"), {
     // Claude's marks: drawn like the palette's marks (zones and levels, a short name only); his words are in the card, never on the chart
     ...(!(st.overlay && $("ovon").checked && st.overlay[st.asset]) ? [] : (st.overlay[st.asset].marks || []).filter(m => tfShows(m.tf || "1h")).map(m => ({ ...m, bold: true,
       nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(st.tf) >= 3,      // e.g. a daily or monthly zone on the 1m / 5m chart would wash the whole chart
-      color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
+      color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") }))) ] });
 const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
 const tfShows = tf => TFS.indexOf(st.tf) <= TFS.indexOf(tf);      // a mark shows on its own timeframe and every lower one
 const weak = a => (a.kind === "breaker" || a.kind === "order block") && a.body_pct != null && a.body_pct < 50;      // "more wick than body: not a nice breaker"
@@ -404,7 +409,7 @@ async function save(id, body) {
 function render(fit) {
   const d = st.doc;
   $("when").textContent = `${d.mode === "replay" ? "REPLAY · " : ""}New York ${d.now}`;
-  renderTabs(); renderCond(); renderCompare(); renderAreas(); renderClaude();
+  renderTabs(); renderCond(); renderCompare(); renderAreas(); renderClaude(); replayUI();
   const a = d.assets[st.asset];
   const sig = st.asset + JSON.stringify((a.breaks || []).map(b => [b.id, b.state, b.near])) + JSON.stringify((a.setups || []).map(s => [s.id, s.ok, s.result])) + Object.keys(st.answers).length;
   if (sig !== st.sig && !st.dirty) { st.sig = sig; renderRead(); renderPlans(); }
@@ -438,6 +443,25 @@ async function poll(first) {
     if (first || fresh) render(first);
   } catch (e) { $("fresh").textContent = "waiting for today.json (is live_recipe.py running?)"; }
 }
+// review pages only (mode "replay"): move the snapshot's time; the server re-cuts it from the live file (temporary, Sharif 2026-11-17)
+let rpTimer = null;
+async function replayTo(hhmm) {
+  try { const r = await (await fetch("api/replay?at=" + encodeURIComponent(hhmm))).json();
+    $("rpmsg").textContent = r.error ? r.error : ""; if (!r.error) await poll(false); return !r.error; } catch (e) { $("rpmsg").textContent = "this page cannot be moved"; return false; }
+}
+function replayStep(d) {
+  const m = /(\d\d):(\d\d)$/.exec(st.doc.now); if (!m) return;
+  const t = Math.max(0, Math.min(1439, +m[1] * 60 + +m[2] + d));
+  return replayTo(String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"));
+}
+function replayUI() {
+  const on = st.doc && st.doc.mode === "replay"; $("replay").style.display = on ? "" : "none";
+  if (on && document.activeElement !== $("rpat")) $("rpat").value = st.doc.now.slice(-5);
+}
+$("replay").querySelectorAll("button[data-d]").forEach(b => b.onclick = () => replayStep(+b.dataset.d));
+$("rpat").addEventListener("keydown", e => { if (e.key === "Enter") { replayTo($("rpat").value.trim()); $("rpat").blur(); } e.stopPropagation(); });
+$("rpplay").onclick = () => { if (rpTimer) { clearInterval(rpTimer); rpTimer = null; $("rpplay").textContent = "▶ play"; return; }
+  $("rpplay").textContent = "❚❚ pause"; rpTimer = setInterval(async () => { if (!(await replayStep(1))) $("rpplay").click(); }, 1500); };
 const recentre = () => chart.applyOptions({ rightPriceScale: { autoScale: true } });      // price axis back to fit; drawChart(true) resets the time axis
 async function refreshChart() { $("refresh").textContent = "↻ …"; await poll(false);
   if (st.doc) { chart.applyOptions({ rightPriceScale: { autoScale: true } }); render(true); } $("refresh").textContent = "↻ refresh"; }

@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "out" / "triage"
 PAGE = ROOT / "viewer" / "triage.html"
 ANSWERS = ROOT / "reports" / "reviews" / "triage.jsonl"
+REPLAY_SRC = None    # set by liqmap_server --replay-src: the live file a review page may re-cut itself from (/api/replay?at=HH:MM)
 PASSWORD = None      # set by liqmap_server --password-env: devices other than this machine must give it (HTTP basic auth, any user name)
 
 
@@ -84,6 +85,18 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path.startswith("/api/replay") and REPLAY_SRC:    # temporary: step a review page forward or back in time
+            import re
+            import live_snapshot as ls
+            m = re.search(r"at=(\d{1,2})(?::|%3A)(\d{2})", self.path)
+            if not m:
+                return self._json({"error": "at=HH:MM"}, 400)
+            doc = json.loads(Path(REPLAY_SRC).read_text())
+            snap = ls.cut(doc, ls.at_epoch(doc, f"{m.group(1)}:{m.group(2)}"))
+            if not snap["assets"]:
+                return self._json({"error": "no candles before that time"}, 400)
+            ls.write(snap, DATA)
+            self._json({"now": snap["now"], "live": doc["now"]})
         elif self.path == "/api/answers":
             self._json(answers())
         else:

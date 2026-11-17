@@ -56,6 +56,19 @@ def cut(doc: dict, at: int) -> dict:
     return out
 
 
+def at_epoch(doc: dict, hhmm: str) -> int:
+    h, m = map(int, hhmm.split(":"))
+    return int(datetime.strptime(doc["day"], "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()) + h * 3600 + m * 60
+
+
+def write(snap: dict, out: Path) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    tmp = out / "today.json.tmp"
+    tmp.write_text(json.dumps(snap))
+    tmp.replace(out / "today.json")                                # atomic: the page never reads half a file
+    (out / "index.json").write_text(json.dumps({"ids": ["today"]}))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--at", required=True, help="New York time today, HH:MM")
@@ -63,14 +76,8 @@ def main():
     ap.add_argument("--out", type=Path, default=Path("out/review"))
     a = ap.parse_args()
     doc = json.loads(a.src.read_text())
-    h, m = map(int, a.at.split(":"))
-    day = datetime.strptime(doc["day"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    snap = cut(doc, int(day.timestamp()) + h * 3600 + m * 60)
-    a.out.mkdir(parents=True, exist_ok=True)
-    tmp = a.out / "today.json.tmp"
-    tmp.write_text(json.dumps(snap))
-    tmp.replace(a.out / "today.json")
-    (a.out / "index.json").write_text(json.dumps({"ids": ["today"]}))
+    snap = cut(doc, at_epoch(doc, a.at))
+    write(snap, a.out)
     print(f"snapshot at {snap['now']} New York → {a.out / 'today.json'}")
 
 

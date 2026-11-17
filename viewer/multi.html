@@ -118,7 +118,7 @@ function build() {
     const shows = tf => TFS.indexOf(tf) >= TFS.indexOf(c.tf);
     p.layer = marksLayer(chart, series, el.lastChild, { list: () => [], times: () => p.times, nowT: () => null, paletteEl: null, color: css, tfName: () => c.tf, changed: () => {},
       under: () => !(st.overlay && $("ovon").checked && st.overlay[c.asset]) ? [] : (st.overlay[c.asset].marks || []).filter(m => shows(m.tf || "1h")).map(m => ({ ...m, bold: true,
-        nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: "C · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })) });
+        nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3, color: "#22d3ee", label: (m.by || "C") + " · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") })) });
     const act = () => { if (st.active !== p) { st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p)); } };
     for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, act, { passive: true });
     el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
