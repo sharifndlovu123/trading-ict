@@ -22,6 +22,14 @@ timeframe, right now. Fixed statements are how a read hardens into a rule, and t
    try to make the market do what it wants."
 4. **Recent and relative to now.** "Focus on where price currently is." Old, eaten, far-off things are not the read.
 
+## Breaks: say "a closed candle below", and on which timeframe
+
+When a level is broken or not, say it as **a closed candle below (or above) it**, and name the timeframe of that
+candle: "a daily candle has closed below it; no weekly candle has closed below it yet." Do not sum it up as "only
+wicked": on a lower timeframe a candle may already have closed beyond the level, and that is on the chart for him to
+see. (He, 18 Nov 2026: "we have a body below it, so it's closed… maybe the better wording should be a closed candle
+below.")
+
 ## Before and after
 
 | Not this | This |
@@ -30,6 +38,7 @@ timeframe, right now. Fixed statements are how a read hardens into a rule, and t
 | It's going for the lows. | The equal lows just under price are interesting: they are the nearest sellside left uneaten. |
 | This is a sell setup. | Liquidity above was eaten and displacement followed; that might leave an imbalance worth watching. |
 | The market wants higher. | What is left close by is buyside above; nothing says it has to be taken. |
+| The weekly has only wicked under it. | A daily candle has closed below it; no weekly candle has closed below it yet. |
 
 ## When in doubt
 
