@@ -6,7 +6,8 @@
 Then http://127.0.0.1:8776/?asset=UK100&tf=1D
 
 A display and nothing else. Claude's marks are read from `marks.json` beside this file; what Sharif draws and saves
-is appended to `saves.jsonl`, and the notes he writes in the side panel (learn or hunt) to `notes.jsonl`. Candles come from `data/bars/` (refresh them with `fetch.py`).
+is appended to `saves.jsonl`, and the notes he writes in the side panel to `notes.jsonl`. `mode.json` says whether a
+learn session or a hunt is running; the page shows it across the top. Candles come from `data/bars/` (refresh them with `fetch.py`).
 """
 from __future__ import annotations
 
@@ -28,7 +29,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import candles as cd  # noqa: E402
 
-MARKS, SAVES, PAGE, NOTES = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl"
+MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
+MODES = ("learn", "hunt", "")          # "" = no session
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
@@ -85,6 +87,27 @@ def same_origin(origin: str | None, host: str | None) -> bool:
 
 
 MAX_SAVE = 512 * 1024      # bytes: a save is a handful of marks and a note
+
+
+def get_mode(path: Path) -> dict:
+    """Which session is running: {"mode": "learn" | "hunt" | "", "by": who set it, "at": when}. The page shows it so
+    it is always clear whether this is learning or a hunt. Claude sets it when a pipeline starts; Sharif can set it
+    on the page."""
+    try:
+        d = json.loads(path.read_text())
+        if d.get("mode") in MODES:
+            return {"mode": d["mode"], "by": str(d.get("by", "")), "at": int(d.get("at", 0))}
+    except Exception:
+        pass
+    return {"mode": "", "by": "", "at": 0}
+
+
+def set_mode(path: Path, mode: str, by: str, now: float) -> dict:
+    if mode not in MODES:
+        raise ValueError("the mode is learn, hunt or nothing")
+    d = {"mode": mode, "by": by[:20], "at": int(now)}
+    path.write_text(json.dumps(d))
+    return d
 
 
 def add_note(path: Path, body: dict, now: float) -> dict:
@@ -192,6 +215,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(marks_for(q.get("asset", "")))
             elif u.path == "/api/notes":
                 self._json(list_notes(NOTES))
+            elif u.path == "/api/mode":
+                self._json(get_mode(MODE))
             else:
                 self._send(404, b"not found", "text/plain")
         except FileNotFoundError as e:
@@ -222,11 +247,16 @@ class Handler(BaseHTTPRequestHandler):
         if not self._ok():
             return
         path = urlparse(self.path).path
-        if path not in ("/api/save", "/api/note"):
+        if path not in ("/api/save", "/api/note", "/api/mode"):
             return self._send(404, b"not found", "text/plain")
         body = self._body()
         if body is None:
             return
+        if path == "/api/mode":
+            try:
+                return self._json(set_mode(MODE, str(body.get("mode", "")), "Sharif", time.time()))
+            except ValueError as e:
+                return self._json({"error": str(e)}, 400)
         if path == "/api/note":
             try:
                 if body.get("delete"):

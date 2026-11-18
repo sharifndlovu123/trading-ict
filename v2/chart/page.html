@@ -20,6 +20,14 @@ button, select, input { font:inherit; color:var(--ink); }
 #top { background:var(--panel); height:40px; display:flex; align-items:center; padding:0 6px; gap:2px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; flex:none; }
 #top .sep { width:1px; height:22px; background:var(--line); margin:0 5px; flex:none; }
 #top .sp { flex:1; }
+/* which session is running: always in sight */
+#modebar { height:4px; flex:none; background:var(--panel); } body.learn #modebar { background:#2962ff; } body.hunt #modebar { background:#e8590c; }
+#mode { display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; height:28px; flex:none; }
+#mode button { background:none; border:0; padding:0 12px; cursor:pointer; font-weight:800; letter-spacing:.06em; color:var(--ink2); }
+#mode button:hover { background:var(--panel2); }
+body.learn #mode [data-m="learn"] { background:#2962ff; color:#fff; } body.hunt #mode [data-m="hunt"] { background:#e8590c; color:#fff; }
+body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:var(--ink); }
+#modewho { margin-left:6px; }
 .tb { background:none; border:0; border-radius:6px; padding:5px 8px; cursor:pointer; height:30px; display:inline-flex; align-items:center; gap:5px; }
 .tb:hover { background:var(--panel2); } .tb.on { color:var(--accent); } .tb.act { background:var(--accent); color:#fff; }
 #sym { font-weight:700; font-size:14px; background:none; border:0; border-radius:6px; padding:5px 4px; cursor:pointer; height:30px; }
@@ -42,8 +50,7 @@ button, select, input { font:inherit; color:var(--ink); }
 #tabs button:hover { color:var(--ink); } #tabs button.on { color:var(--ink); border-bottom-color:var(--accent); }
 .tab { display:none; flex:1; min-height:0; overflow:auto; } .tab.on { display:block; }
 #tab-notes.on { display:flex; flex-direction:column; padding:10px 12px; gap:8px; overflow:auto; }
-#kinds { display:flex; gap:4px; } #kinds button { flex:1; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px; cursor:pointer; }
-#kinds button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+#notekind b.learn { color:#5b8cff; } #notekind b.hunt { color:#ff8a4c; }
 #notetext { width:100%; height:450px; min-height:150px; max-height:80vh; flex:none; resize:vertical; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; line-height:1.45; }
 #noteadd { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:7px; cursor:pointer; font-weight:600; }
 #notelist { flex:none; margin:0 -12px; }
@@ -87,6 +94,9 @@ button, select, input { font:inherit; color:var(--ink); }
 </head>
 <body>
 <div id="top">
+  <span id="mode" title="which session this is. Claude sets it when a learn session or a hunt starts; you can set it too"><button data-m="learn">LEARN</button><button data-m="hunt">HUNT</button><button data-m="" title="no session running">OFF</button></span>
+  <span id="modewho" class="dim"></span>
+  <span class="sep"></span>
   <select id="sym" title="the instrument of the chart you last touched"></select>
   <span class="sep"></span>
   <span id="tfs" style="display:flex;gap:1px"></span>
@@ -104,6 +114,7 @@ button, select, input { font:inherit; color:var(--ink); }
   <button class="tb" id="fsbtn" title="the chart you last touched on the whole screen (Shift+F)">⛶</button>
   <button class="tb" id="readbtn" title="the side panel: watchlist, your notes, Claude's read (W)">☰</button>
 </div>
+<div id="modebar"></div>
 <div id="mid">
   <div id="tools"></div>
   <div id="grid"></div>
@@ -111,7 +122,7 @@ button, select, input { font:inherit; color:var(--ink); }
     <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="read">Claude's read</button></div>
     <div class="tab" id="tab-watch"><div id="watch"></div></div>
     <div class="tab" id="tab-notes">
-      <div id="kinds"><button data-kind="learn" title="a note while you are teaching">Learn</button><button data-kind="hunt" title="a note or correction during a hunt">Hunt</button></div>
+      <div id="notekind" class="dim"></div>
       <textarea id="notetext" placeholder="Write your note here. It is saved with the instrument, the timeframe and the time the chart was showing."></textarea>
       <button id="noteadd" title="Ctrl+Enter">Save note</button>
       <div id="notectx" class="dim"></div>
@@ -156,9 +167,9 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 // cfg = the layout: one entry per chart (its instrument, its timeframe, line or candles), in reading order; cols 0 = automatic
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
-             tab: keep.tab || "watch", kind: keep.kind || "learn", written: [],
+             tab: keep.tab || "watch", mode: "", written: [],
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, kind: st.kind })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -426,7 +437,7 @@ function side() {
   $("readh").innerHTML = `${esc(a)} <span style="text-transform:none;letter-spacing:0">${esc(d.at || "")}</span>`;
   $("read").innerHTML = ((d.read || []).length ? `<ul>${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="dim">Nothing written for this instrument.</div>') +
     `<div class="dim" style="margin-top:10px">${n} mark${n === 1 ? "" : "s"} of Claude's on this instrument (labels start "C ·"). Yours start "S ·".</div>`;
-  document.querySelectorAll("#kinds button").forEach(b => b.classList.toggle("on", b.dataset.kind === st.kind));
+  $("notekind").innerHTML = st.mode ? `This note is saved as a <b class="${st.mode}">${st.mode.toUpperCase()}</b> note.` : 'No session is running: the note is saved as a <b class="learn">LEARN</b> note. Switch the mode at the top left.';
   $("notectx").textContent = `Saved with: ${a} · ${TFNAME[c.tf]} · ${st.until != null ? "replay " + wall(st.until) : "newest candles"}`;
 }
 // ---- his notes: a place to write, so the chart itself stays clean. One list for learning and for hunts.
@@ -441,12 +452,20 @@ async function loadNotes() { try { st.written = await (await fetch("api/notes"))
 async function addNote() {
   const text = $("notetext").value.trim(); if (!text) return;
   const c = curCfg(), r = await fetch("api/note", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind: st.kind, text, asset: c.asset, tf: c.tf, chart_time: st.until }) });
+    body: JSON.stringify({ kind: st.mode || "learn", text, asset: c.asset, tf: c.tf, chart_time: st.until }) });
   if (!r.ok) { alert("the note was not saved"); return; }
   $("notetext").value = ""; try { localStorage.removeItem(KEEP + "-draft"); } catch (e) {} loadNotes();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => { st.tab = b.dataset.tab; save(); side(); if (st.tab === "notes") $("notetext").focus(); });
-document.querySelectorAll("#kinds button").forEach(b => b.onclick = () => { st.kind = b.dataset.kind; save(); side(); });
+// ---- the mode: learn, hunt or no session. Shared with Claude through the server, so both always see the same one.
+function showMode(d) { st.mode = d.mode || ""; document.body.classList.toggle("learn", st.mode === "learn"); document.body.classList.toggle("hunt", st.mode === "hunt");
+  document.title = (st.mode ? st.mode.toUpperCase() + " · " : "") + "Charts";
+  $("modewho").textContent = st.mode && d.at ? `set by ${d.by || "?"} ${new Date(d.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "";
+  if (st.side) side(); }
+async function pollMode() { try { showMode(await (await fetch("api/mode")).json()); } catch (e) {} }
+document.querySelectorAll("#mode button").forEach(b => b.onclick = async () => {
+  const r = await fetch("api/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: b.dataset.m }) }); if (r.ok) showMode(await r.json()); });
+setInterval(pollMode, 4000);
 $("noteadd").onclick = addNote;
 $("notetext").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addNote(); } e.stopPropagation(); });
 $("notetext").addEventListener("input", () => { try { localStorage.setItem(KEEP + "-draft", $("notetext").value); } catch (e) {} });     // a draft survives a reload
@@ -542,7 +561,7 @@ document.addEventListener("keydown", e => {
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
-  build(); side(); watch(); loadNotes();
+  build(); side(); watch(); loadNotes(); pollMode();
 })();
 </script>
 </body>

@@ -35,6 +35,8 @@ Claude to read the market his way.
 ## Pipelines: one word, one pipeline (design: `v2/specs/2026-11-18-pipelines-and-skills.md`)
 
 Only one pipeline runs at a time, and its first line says which. If it is not clear which he means, ask once.
+**The chart shows the mode** (LEARN / HUNT / OFF, top left, with a coloured strip): set it in `v2/chart/mode.json`
+when a pipeline starts and clear it when it ends, so he can always tell which one is running.
 
 | He says | Pipeline (skill) | In short |
 |---|---|---|

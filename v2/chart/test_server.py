@@ -79,3 +79,19 @@ def test_an_empty_note_is_refused_and_a_removed_note_is_not_listed(tmp_path):
     server.remove_note(f, b["id"], now=3.0)
     assert [n["id"] for n in server.list_notes(f)] == [a["id"]]
     assert len(f.read_text().splitlines()) == 3                                     # nothing is rewritten: the removal is one more line
+
+
+def test_the_mode_is_learn_hunt_or_nothing_and_says_who_set_it(tmp_path):
+    import pytest
+    f = tmp_path / "mode.json"
+    assert server.get_mode(f) == {"mode": "", "by": "", "at": 0}                    # no file: no session
+    assert server.set_mode(f, "learn", "Claude", now=50.0) == {"mode": "learn", "by": "Claude", "at": 50}
+    assert server.get_mode(f)["mode"] == "learn"
+    server.set_mode(f, "hunt", "Sharif", now=60.0)
+    assert server.get_mode(f) == {"mode": "hunt", "by": "Sharif", "at": 60}
+    server.set_mode(f, "", "Sharif", now=70.0)
+    assert server.get_mode(f)["mode"] == ""
+    with pytest.raises(ValueError):
+        server.set_mode(f, "backtest", "Claude", now=80.0)
+    f.write_text("not json")
+    assert server.get_mode(f)["mode"] == ""                                         # a broken file never shows a wrong mode

@@ -10,6 +10,9 @@ description: The DAY REVIEW pipeline - going through the corrections held from t
 A correction made during a hunt is about one chart on one day. This is where it is decided whether it is a lesson.
 Sharif: "then at the end of the trading day we discuss it further and properly implement it into the brain."
 
+The chart's mode is set to no session during a day review (`"mode": ""` in `v2/chart/mode.json`): it is neither a
+lesson nor a hunt until a note is taken into learn.
+
 ## The steps
 
 | # | Step | Who |

@@ -17,6 +17,18 @@ Read `CLAUDE.md`, "Where things stand". **If it says hunts are off, answer in on
 whether he wants them on. Run nothing else.** Only Sharif switches hunting on; when he does, update that line in
 `CLAUDE.md` and `v2/hunts/README.md` first.
 
+## Show the mode on the chart
+
+Sharif: "we should be able to clearly tell when it's in hunt or learn mode." The chart page shows the mode at the top
+left (LEARN blue, HUNT orange, OFF) with a coloured strip across the page, and saves his notes under it.
+
+- **When this pipeline starts and hunts are on,** write the mode: `{"mode": "hunt", "by": "Claude", "at": <epoch seconds>}` into
+  `v2/chart/mode.json`. The page picks it up within a few seconds.
+- **When it ends,** write `"mode": ""` (no session).
+- **He can set it himself** on the page. Read `v2/chart/mode.json` when a session starts: if he has set a mode that
+  differs from what you were about to run, say so and ask which he means. If the page says HUNT while hunts are off,
+  that is him asking: answer that hunts are off and ask whether to switch them on.
+
 ## The steps (once hunts are on)
 
 | # | Step | Who |

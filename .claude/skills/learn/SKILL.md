@@ -13,6 +13,17 @@ He is mostly giving the answer, or teaching outright. The job is to take in the 
 learning the next thing and when hunting. Learning is also where the brain is built: concepts, and the links between
 them.
 
+## Show the mode on the chart
+
+Sharif: "we should be able to clearly tell when it's in hunt or learn mode." The chart page shows the mode at the top
+left (LEARN blue, HUNT orange, OFF) with a coloured strip across the page, and saves his notes under it.
+
+- **When this pipeline starts,** write the mode: `{"mode": "learn", "by": "Claude", "at": <epoch seconds>}` into
+  `v2/chart/mode.json`. The page picks it up within a few seconds.
+- **When it ends,** write `"mode": ""` (no session).
+- **He can set it himself** on the page. Read `v2/chart/mode.json` when a session starts: if he has set a mode that
+  differs from what you were about to run, say so and ask which he means.
+
 ## The steps
 
 | # | Step | Who |

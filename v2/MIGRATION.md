@@ -75,6 +75,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Chart: our candle colours; a Notes tab (tall text area) in the right panel; a LEARN / HUNT / OFF mode shared by the page and the pipelines, shown at the top left with a coloured strip |
 | 18 Nov 2026 | Chart: the old single chart and multi-chart rebuilt as one page in the TradingView layout he is used to; replay added on the server (nothing after the chosen minute is sent); 16 tests |
 | 18 Nov 2026 | Sweep: the old version made self-contained and sealed off; a clean chart built in `chart/` with tests; every pointer into the old version removed from the notes, skills and tests. The four hunt stages confirmed by him |
 | 18 Nov 2026 | Pipelines and skills designed with him, approved and built: `learn`, `hunt` (off), `day-review`, `context-check`, `draw`, `brain-write`, `speak` |
