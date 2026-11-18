@@ -23,9 +23,30 @@ Claude to read the market his way.
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
 - `v2/references/`: cleaned copies of the source notes (private, not in git). The ICT PDFs are in `v1/references/`.
 - Tests: `uv run pytest -q v2`. Everything: `uv run pytest -q -rs` (v1's tests too; a skip is not a pass).
-- Skills: only `v2-concept-check` is at the top level (`.claude/skills/`). The six v1 skills were moved to `v1/.claude/skills/` so they are not used for v2 work; they are on the checklist to be cleaned or dropped.
-- Validate every concept with the `v2-concept-check` skill before ticking its box:
-  `uv run python .claude/skills/v2-concept-check/check.py`, then the reading in its `SKILL.md`.
+- The six v1 skills are parked in `v1/.claude/skills/`; they are not used for v2 work.
+- Validate every concept with the `context-check` skill before ticking its box:
+  `uv run python .claude/skills/context-check/check.py`, then the reading in its `SKILL.md`.
+
+## Pipelines: one word, one pipeline (design: `v2/specs/2026-11-18-pipelines-and-skills.md`)
+
+Only one pipeline runs at a time, and its first line says which. If it is not clear which he means, ask once.
+
+| He says | Pipeline (skill) | In short |
+|---|---|---|
+| "learn", or he starts teaching | `learn` | He teaches → Claude draws it on a chart it has not seen → he corrects → he says it is done → lesson and links written → tools and tests → context check. **The only pipeline in which the brain changes** |
+| "hunt" | `hunt` | **Off for now: answer that hunts are off and ask.** When on: where is price now → draw what is interesting → what the brain brings to mind → his corrections are noted in `v2/hunts/` and held |
+| end of the trading day | `day-review` | Go through the held notes together; he says which are lessons; those go through learn |
+| (later) | backtest | Runs the hunt pipeline over old data and assesses it. Not built |
+
+Small skills the pipelines use: `context-check` (context, not the example), `draw` (marks on the chart),
+`brain-write` (how a lesson and its links are recorded), `speak` (wording).
+
+**The goal (his words):** "You're watching the market live for yourself and you're seeing these patterns and
+pointing them out and drawing them yourself, to the point where you can place limits and stops yourself."
+
+**How to speak, always** (skill `speak`): point at what is **interesting**; never say "price is buying" or "price is
+selling"; tie every statement to a timeframe and to now ("the weekly is bullish, the hourly is bearish"); a pattern
+is "might be".
 
 ## How to work with Sharif (these caused v1's damage; they are not optional)
 

@@ -1,9 +1,9 @@
 ---
-name: v2-concept-check
-description: Validate a v2 concept (v2/concepts/NN_name: lesson, tools, tests) before calling it done - that the tools follow what Sharif taught in context and are not replicas of his examples, that nothing is locked to a price, time, timeframe or instrument, that every rule traces to his words or is named as Claude's own choice, and that tests on hand-built candles validate each claim. Use whenever a concept is added or changed in v2, when a lesson is written or edited, before ticking a box in v2/MIGRATION.md, when Sharif says "validate", "check the process", "are you copying my example", or asks whether a tool was built the right way; also run it on every existing concept after any change to v2's rules.
+name: context-check
+description: Check that what entered v2 is the context Sharif taught and not a copy of the example he showed - for a concept's lesson, its links, its tools and its tests, and for hunt notes. Catches prices, clock times, timeframes and instruments lifted from an example, links without a status, fixed statements about what price "is doing", rules with no words of his behind them, and tests that lean on a real day instead of testing the idea. Use at the end of every learn session, whenever a lesson, link, tool or test in v2 is added or changed, before ticking a box in v2/MIGRATION.md, and whenever Sharif says "validate", "check", "context check", "are you copying my example" or asks whether something was built the right way.
 ---
 
-# v2 concept check
+# Context check
 
 Sharif rebuilt this project as v2 because v1 was damaged in one specific way: Claude turned his worked examples into
 rules. A price, a time of day, a timeframe or a fitted margin from one chart became "the rule", and tools and tests
@@ -17,13 +17,17 @@ carries the **reason** he gave or a **copy** of what he showed.
 ## 1. Run the script
 
 ```bash
-uv run python .claude/skills/v2-concept-check/check.py              # every concept
-uv run python .claude/skills/v2-concept-check/check.py 02_liquidity # one
+uv run python .claude/skills/context-check/check.py              # every concept, and the hunt notes
+uv run python .claude/skills/context-check/check.py 02_liquidity # one
 ```
 
 - `FAIL` lines must be fixed before anything else. They are the give-aways: a value from the lesson's examples in the
   code or tests, a named timeframe or instrument in a tool, a test that leans on a real day, an import from v1, a tool
-  without tests, no test across price scales and timeframes, no no-look-ahead test, a lesson without his words.
+  without tests, no test across price scales and timeframes, no no-look-ahead test, a lesson without his words,
+  a link that carries a clock time, a price, a timeframe or an instrument, a link without a status, a link that
+  states what price "is doing".
+- A lesson with no links is reported as "no links yet". That is not a failure: links are added in learn, when he
+  states them.
 - `JUDGE` lines are for step 2.
 - The script also runs `pytest v2`. Failing tests fail the check.
 
@@ -57,6 +61,18 @@ For each row, ask these and be hard on yourself:
 Then compare with the hand read he confirmed, if the tool was run on that chart: differences are written in the
 lesson as open questions. Never change the tool to make it match that chart.
 
+### Links and lessons get the same reading
+
+For every row of a lesson's Links table, and every sentence of the lesson that is not a quote of his:
+
+- **Is this the context, or the example?** His own illustration: "notice what happened with price at 8:21, it left a
+  FVG." The lesson is not 8:21; "that time won't always leave a FVG." The lesson is a FVG found in an interesting
+  area. If a sentence would be false on another day or another chart, it is the example.
+- **Who stated the link?** "Stated by Sharif" only if he said it. Anything Claude noticed is "noticed by Claude,
+  unconfirmed" and is not used until he confirms it.
+- **Is it a fixed statement?** "Price is buying" is one. A lesson says what is interesting, tied to a timeframe and
+  to now (see the speak skill).
+
 ## 3. Report
 
 Lead with the verdict: **passes**, or **fails**, with the failing rows. Then the table, then the list of choices
@@ -66,4 +82,4 @@ it is done. Only then tick the concept's box in `v2/MIGRATION.md` and add a line
 ## What this skill does not do
 
 It does not say whether the concept is *right*: only Sharif's check on a chart you had not seen says that. It also
-does not cover the eyes or the brain (the top-down process and how lessons are pulled); those come later.
+does not cover the eyes or how the brain pulls a lesson; those come later.

@@ -54,6 +54,7 @@ time and sessions.
 | v1 folders moved under `v1/` (`ict_engine`, `tests`, `research`, `reports`, `references`, `out`); v1 still runs from there, all tests pass | [x] 18 Nov 2026 |
 | Project notes (`CLAUDE.md`) rewritten around v2; the v1 description moved to `v1/README.md` | [x] 18 Nov 2026 |
 | Memory notes sorted into current and v1 | [x] 18 Nov 2026 |
+| Chart viewer moved to the root, out of `v1/` (page server, feed and its data), so `v1/` can be marked deprecated or deleted (Sharif, 18 Nov 2026: "at some point") | [ ] |
 | Hunting again, on v2's eyes and brain | [ ] |
 
 ## Claude skills
@@ -63,7 +64,12 @@ then they sit under `v1/.claude/skills/` (moved 18 Nov 2026, temporarily, so the
 
 | Skill | What it was for | State |
 |---|---|---|
-| `v2-concept-check` (top level, `.claude/skills/`) | Validates a v2 concept: logic taken in context, not as a replica | [x] in use |
+| `context-check` (was `v2-concept-check`) | Context, not the example: checks lessons, links, tools, tests and hunt notes | [x] in use; 11 tests |
+| `learn` | The learn pipeline: the only one in which the brain changes | [x] built 18 Nov 2026; not yet used on a concept |
+| `hunt` | The hunt pipeline | [x] built; switched off |
+| `day-review` | Held hunt corrections become lessons, or not | [x] built; not yet used |
+| `draw`, `brain-write`, `speak` | Marks on the chart; how a lesson and its links are written; wording | [x] built |
+| backtest pipeline | Runs the hunt pipeline over old data and assesses it | [ ] later, after the eyes |
 | `trade-review` | Reviewing a trade on the ICT checklist | [ ] v1: to be cleaned or dropped |
 | `pattern-finder` | Mining trades for what to do more or less of | [ ] v1: to be cleaned or dropped |
 | `pd-array-audit` | Checking the engine's PD arrays against his drawn zones | [ ] v1: to be cleaned or dropped |
@@ -80,10 +86,13 @@ moved back to `.claude/skills/`; if not, it stays in v1 as history.
 - [ ] His check of my weekly bias marks on US100, US500 and US30
 - [ ] Reteaching NDOG, NWOG and the opening range gap
 - [ ] The brain's pulling design
+- [ ] The first links for bias and liquidity (both lessons have none yet; only he can state them)
+- [ ] Whether the four hunt stages are right
 
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Pipelines and skills designed with him, approved and built: `learn`, `hunt` (off), `day-review`, `context-check` (widened to lessons, links and hunt notes), `draw`, `brain-write`, `speak` |
 | 18 Nov 2026 | The six v1 skills moved to `v1/.claude/skills/` (temporary); skills added to this checklist |
 | 18 Nov 2026 | v1 folders moved under `v1/`; hunts off; `CLAUDE.md` rewritten; memory notes sorted. Bias: he confirmed a break needs a body close, not a wick |
 | 18 Nov 2026 | Concept 02: his answers on picking liquidity out; tools (`liquidity.py`, `alt_liquidity.py`) and 34 tests. Eyes and brain set for later, as the process that uses the concepts |

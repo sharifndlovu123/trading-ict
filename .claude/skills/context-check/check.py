@@ -1,7 +1,7 @@
-"""Mechanical half of the v2 concept check. Run from the repo root:
+"""Mechanical half of the context check. Run from the repo root:
 
-    uv run python .claude/skills/v2-concept-check/check.py            # every concept
-    uv run python .claude/skills/v2-concept-check/check.py 02_liquidity
+    uv run python .claude/skills/context-check/check.py            # every concept, and the hunt notes
+    uv run python .claude/skills/context-check/check.py 02_liquidity
 
 It cannot judge whether the logic matches what Sharif meant; it finds the things that usually give a copy away
 (values lifted from an example, tests that lean on a real day, rules with no words of his behind them) and lists
@@ -23,6 +23,67 @@ REAL = ("today.json", "out/live", "dukascopy", ".parquet", "reports/", "data/bar
 TF = re.compile(r"""["'](1m|5m|15m|30m|1h|4h|1D|1W|1M|daily|weekly|monthly)["']""")
 ASSET = re.compile(r"\b(US100|US500|US30|NQ|ES|YM|XAUUSD|XAGUSD|DXY|EURUSD|UK100|DE40|US2000|FTSE|DAX|gold|silver)\b")
 DATE = re.compile(r"\b20[12]\d-\d\d-\d\d\b")
+# what gives a copied example away inside a link (a link is context: it must hold on any chart, any day)
+CLOCK = re.compile(r"\b\d{1,2}:\d{2}\b")
+PRICE = re.compile(r"(?<![\w.])\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<![\w.,])\d{4,}(?:\.\d+)?")
+TF_WORD = re.compile(r"(?<![\w-])(\d{1,2}\s?(m|min|h|hr|D|W|M)|\d{1,2}[- ](minute|hour))\b")
+STATUS = re.compile(r"(?i)^(stated by Sharif\b|noticed by Claude, unconfirmed)")
+# a fixed statement about something fluid: "don't ever say price is buying nor selling"
+FLAT = re.compile(r"(?i)\b(price|the market|it)\s+(is|was)\s+(buying|selling|bullish|bearish)\b")
+
+
+def unquoted(text: str) -> str:
+    """The text with his quoted words taken out: a quote of his is never Claude's statement."""
+    return re.sub(r'"[^"\n]*"', '""', text)
+
+
+def flat_statements(text: str) -> list[str]:
+    """Phrases that state what price is doing as a fact, outside his quotes."""
+    return [m.group(0) for m in FLAT.finditer(unquoted(text))]
+
+
+def links(text: str) -> list[dict] | None:
+    """The rows of a lesson's "## Links" table as {"when", "then", "status"}; None when there is no Links section."""
+    m = re.search(r"(?ms)^## Links\s*\n(.*?)(?=^## |\Z)", text)
+    if not m:
+        return None
+    out = []
+    for line in m.group(1).splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not line.strip().startswith("|") or len(cells) < 3 or set(cells[0]) <= set("-: ") or cells[0].lower().startswith("comes to mind"):
+            continue
+        out.append({"when": cells[0], "then": cells[1], "status": cells[2]})
+    return out
+
+
+def check_links(text: str) -> tuple[list[str], list[str], list[str]]:
+    fail, judge, ok = [], [], []
+    rows = links(text)
+    if rows is None:
+        return fail, ["no links yet: nothing says what brings this to mind or what to look for next (links are added in learn, when he states them)"], ok
+    if not rows:
+        return fail, ["no links yet: the Links section is empty"], ok
+    for r in rows:
+        body, short = f"{r['when']} | {r['then']}", r["when"][:50]
+        for rx, what in ((CLOCK, "a clock time"), (PRICE, "a price"), (TF_WORD, "a named timeframe"), (ASSET, "an instrument's name")):
+            m = rx.search(unquoted(body))
+            if m:
+                fail.append(f"link \"{short}\": carries {what} from an example ({m.group(0)}): a link is the context, not the day it was shown on")
+                break
+        else:
+            if flat_statements(body):
+                fail.append(f"link \"{short}\": a fixed statement about price ({flat_statements(body)[0]}): say what is interesting, tied to a timeframe and to now")
+            elif not STATUS.match(r["status"]):
+                fail.append(f"link \"{short}\": status \"{r['status']}\" must be \"stated by Sharif, <date>\" or \"noticed by Claude, unconfirmed\"")
+            elif r["status"].lower().startswith("noticed"):
+                judge.append(f"link \"{short}\": noticed by Claude, unconfirmed: not to be used until he confirms it")
+    ok.append(f"{len(rows)} link(s) in the lesson")
+    return fail, judge, ok
+
+
+def check_notes(path: Path) -> list[str]:
+    """A hunt-notes file: flag any fixed statement about price outside his quotes."""
+    return [f"{path.name}: \"{x}\"" for x in flat_statements(path.read_text())]
 
 
 def numbers(text: str) -> set[str]:
@@ -43,7 +104,7 @@ def literals(path: Path) -> list[tuple[int, object]]:
     return sorted(out)
 
 
-def check(folder: Path) -> tuple[list[str], list[str], list[str]]:
+def check(folder: Path, migration_text: str | None = None) -> tuple[list[str], list[str], list[str]]:
     fail, judge, ok = [], [], []
     lessons = sorted(folder.glob("*.md"))
     tools = sorted(p for p in folder.glob("*.py") if not p.name.startswith("test_"))
@@ -59,6 +120,11 @@ def check(folder: Path) -> tuple[list[str], list[str], list[str]]:
         (ok if re.search(r"\b(1[0-9]|2[0-9]|[1-9]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w* 20\d\d", text) else fail).append("lesson says when it was taught / confirmed")
         (ok if re.search(r"(?i)\b(mine|my choice|my reading|not his|not yet confirmed|unconfirmed)\b", text) else judge).append(
             "lesson separates what is mine from what is his" if re.search(r"(?i)\b(mine|not his)\b", text) else "lesson names nothing as mine: is every rule really his words?")
+
+        for x in sorted(set(flat_statements(text))):
+            judge.append(f"lesson states \"{x}\" as a fact: is it tied to a timeframe and to now, or should it say what is interesting?")
+        f2, j2, o2 = check_links(text)
+        fail, judge, ok = fail + f2, judge + j2, ok + o2
 
     # 2. tools: no v1, no example values, every number accounted for
     lesson_numbers = numbers(text)
@@ -99,7 +165,7 @@ def check(folder: Path) -> tuple[list[str], list[str], list[str]]:
 
     # 4. the checklist knows about it
     num = folder.name.split("_")[0]
-    mig = (V2 / "MIGRATION.md").read_text()
+    mig = migration_text if migration_text is not None else (V2 / "MIGRATION.md").read_text()
     (ok if re.search(rf"^\| {num} \|", mig, re.M) else fail).append(f"MIGRATION.md has a row for {num}")
     return fail, judge, ok
 
@@ -118,6 +184,11 @@ def main() -> int:
             print(f"  JUDGE  {x}")
         for x in ok:
             print(f"  ok     {x}")
+    notes = [x for f in sorted((V2 / "hunts").glob("20*.md")) for x in check_notes(f)] if (V2 / "hunts").exists() else []
+    if notes:
+        print("\n== hunt notes")
+        for x in notes:
+            print(f"  JUDGE  fixed statement about price in {x}")
     r = subprocess.run(["uv", "run", "pytest", "-q", "v2"], cwd=ROOT, capture_output=True, text=True)
     tail = (r.stdout.strip().splitlines() or ["no output"])[-1]
     print(f"\n== tests: {tail}")
