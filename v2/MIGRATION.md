@@ -19,6 +19,7 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 |---|---|---|---|---|---|---|
 | 01 | Bias | [x] | [x] | [ ] | [x] | [ ] |
 | 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [ ] | [x] | [ ] |
+| 03 | Bias and liquidity working together (favouring, the sequence, the trading range and its 50%, targets by timeframe and by bias) | [ ] taught on one chart; not yet shown back on a chart I had not seen | [x] | [x] 7 stated by him, 1 of mine unconfirmed | none yet: read on the chart | [ ] |
 
 Note on 01: the tool agrees fully with his confirmed read on the DAX, on direction on the dollar index, and differs
 on the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
@@ -74,6 +75,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Concept 03, bias and liquidity working together: taught on the Russell 2000 from the monthly down to the 5-minute; lesson and links written when he said it was done. Chart: trading range and 50% marks |
 | 18 Nov 2026 | "Very close" is judged by eye, from far (his words). Tool: close = a share of the chart's height; a slider on the chart (≈) shows the equal highs and lows found for any share, so he can set it by eye |
 | 18 Nov 2026 | Learn run-through on the Russell 2000 (bias, liquidity, alt-liquidity): "so far I am happy". Added to the lessons: a body beyond a level is a break however it got there; mark from the monthly down; equal and eaten are both relative; an eaten set comes off the chart. Liquidity tool fixed (3 tests), bias test added |
 | 18 Nov 2026 | Chart: a Live switch (free feed, about a minute behind; only the instruments on the page; stops by itself when the page is closed) |
