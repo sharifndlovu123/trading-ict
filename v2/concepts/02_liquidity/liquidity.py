@@ -71,6 +71,24 @@ def equal(levels: list[dict], near: float) -> list[dict]:
     return out
 
 
+def near_from_view(view: list[dict], share: float) -> float:
+    """"Very close by" as an eye sees it from far: a share of the height of the stretch of chart being looked at.
+    He: "if someone couldn't tell these two highs are the same height from far, it's good enough to be an EQH or EQL."
+    ``view`` are the candles on screen; ``share`` is how much of that picture's height two highs may differ by and
+    still look level (he sets it by eye; there is no built-in number). Using the picture's height as the yardstick is
+    mine, not his."""
+    if not view:
+        return 0.0
+    return share * (max(x["high"] for x in view) - min(x["low"] for x in view))
+
+
+def equal_sets(c: list[dict], near: float) -> list[dict]:
+    """The sets of equal highs and equal lows still resting, with ``near`` as "very close by": a later high that lands
+    within ``near`` of an earlier one joins it; one that goes past by more eats it."""
+    r = resting(c, near)
+    return equal(r["buyside"] + r["sellside"], near)
+
+
 def previous_period(periods: list[dict], since: list[dict]) -> dict:
     """The previous day's (or week's) high and low, and whether each was left uneaten. ``periods`` are completed
     daily (or weekly) candles; ``since`` are the candles traded after the last of them (any timeframe).

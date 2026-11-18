@@ -1,7 +1,7 @@
 """Liquidity as Sharif taught it (lesson.md). Hand-built candles with known answers; no real chart's values."""
 import pytest
 
-from liquidity import eaten_since, equal, highs_lows, previous_period, resting
+from liquidity import eaten_since, equal, equal_sets, highs_lows, near_from_view, previous_period, resting
 
 
 def mk(rows, step=3600, k=1.0):
@@ -108,3 +108,26 @@ def test_the_same_holds_for_lows():
     c = mk([(100, 101, 96, 97), (97, 98, 90, 93), (93, 99, 92, 98), (98, 99, 89.8, 95), (95, 100, 94, 99), (99, 100, 80, 82), (82, 85, 81, 84)])
     assert [x["price"] for x in resting(c[:5], near=0.5)["sellside"]] == [90, 89.8]
     assert all(x["eaten_at"] == c[5]["time"] for x in highs_lows(c, near=0.5) if x["side"] == "low" and x["price"] > 85)
+
+
+def test_very_close_is_a_share_of_the_height_of_the_picture_being_looked_at():
+    view = mk([(100, 150, 90, 120), (120, 130, 50, 60)])                  # the picture is 100 tall (50 to 150)
+    assert near_from_view(view, 0.01) == pytest.approx(1.0)
+    assert near_from_view(view, 0.0) == 0 and near_from_view([], 0.01) == 0
+    tall = mk([(100, 150, 90, 120), (120, 130, 50, 60)], k=40)             # the same picture at forty times the price
+    assert near_from_view(tall, 0.01) == pytest.approx(40.0)              # the eye's tolerance grows with it
+
+
+def test_the_same_highs_are_equal_from_far_and_separate_up_close():
+    c = mk(SET[:5])                                                        # two highs 0.3 apart; the stretch is about 11 tall
+    far = equal_sets(c, near_from_view(c, 0.05))                           # an eye that cannot tell 5% of the picture apart
+    assert [(g["side"], g["count"]) for g in far] == [("high", 2)]
+    close_up = equal_sets(c, near_from_view(c, 0.01))                      # a sharper eye: 0.3 is more than 1% of the picture
+    assert close_up == []
+
+
+@pytest.mark.parametrize("k", [0.0001, 1.0, 300.0])
+def test_the_eye_gives_the_same_sets_at_any_price_scale(k):
+    c = mk(SET[:5], k=k)
+    g = equal_sets(c, near_from_view(c, 0.05))
+    assert len(g) == 1 and g[0]["count"] == 2 and g[0]["top"] == pytest.approx(110.3 * k)

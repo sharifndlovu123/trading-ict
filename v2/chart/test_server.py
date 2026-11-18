@@ -110,3 +110,14 @@ def test_live_downloads_only_while_switched_on_and_a_page_is_asking():
     assert server.live_status(st, now=1000.0 + server.LIVE_IDLE + 1)["on"] is False
     server.live_set(st, False, [], now=2000.0)
     assert server.live_due(st, now=2001.0) == [] and st["assets"] == []
+
+
+def test_the_equal_slider_uses_only_what_is_on_screen_or_to_its_left():
+    def c(t, h, lo):
+        return {"time": t, "open": lo + 1, "high": h, "low": lo, "close": h - 1}
+    cs = [c(0, 104, 99), c(1, 110, 102), c(2, 107, 100), c(3, 110.3, 100), c(4, 105, 99), c(5, 140, 99), c(6, 120, 110)]
+    seen = server.equal_in_view(cs, 0, 4, share=0.05)                              # the screen ends before the candle that ate the set
+    assert [(g["side"], g["count"]) for g in seen["sets"]] == [("high", 2)] and seen["near"] > 0
+    assert server.equal_in_view(cs, 0, 6, share=0.05)["sets"] == []                # with that candle on screen the set is gone
+    assert server.equal_in_view(cs, 0, 4, share=0.0)["sets"] == []                 # a perfectly sharp eye sees no two highs as equal here
+    assert server.equal_in_view(cs, 50, 60, share=0.05) == {"near": 0.0, "sets": []}   # nothing on screen

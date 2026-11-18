@@ -31,6 +31,9 @@ sys.path.insert(0, str(HERE))
 import candles as cd  # noqa: E402
 import fetch  # noqa: E402
 
+sys.path.insert(0, str(HERE.parent / "concepts" / "02_liquidity"))
+import liquidity  # noqa: E402     the concept's own tool: the chart only shows what it finds
+
 MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
 MODES = ("learn", "hunt", "")          # "" = no session
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
@@ -201,6 +204,16 @@ def candles(asset: str, tf: str, until: int | None = None) -> dict:
     return {"candles": cd.to_candles(cd.cut(df, done[tf], tf, at), LAST.get(tf)), "last": newest, "end": False}
 
 
+def equal_in_view(cs: list[dict], t_from: int, t_to: int, share: float) -> dict:
+    """For the "how close is equal" slider: the equal highs and lows still resting, where "very close" is ``share`` of
+    the height of the stretch on screen (``t_from`` to ``t_to``). Only sets that touch that stretch are returned."""
+    view = [x for x in cs if t_from <= x["time"] <= t_to]
+    near = liquidity.near_from_view(view, max(0.0, min(share, 0.2)))
+    known = [x for x in cs if x["time"] <= t_to]                       # nothing to the right of the screen is used
+    sets = [{k: g[k] for k in ("side", "top", "bottom", "count", "t0", "t1")} for g in liquidity.equal_sets(known, near)] if view else []
+    return {"near": near, "sets": [g for g in sets if g["t1"] >= t_from]}
+
+
 def marks_for(asset: str) -> dict:
     doc = json.loads(MARKS.read_text()) if MARKS.exists() else {}
     return {"at": doc.get("at", ""), **{"marks": [], "read": []}, **doc.get(asset, {})}
@@ -252,6 +265,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "unknown instrument or timeframe"}, 400)
                 until = int(q["until"]) if q.get("until", "").lstrip("-").isdigit() else None
                 self._json(candles(q["asset"], q["tf"], until))
+            elif u.path == "/api/equal":
+                if q.get("asset") not in cd.FOLDERS or q.get("tf") not in cd.TIMEFRAMES:
+                    return self._json({"error": "unknown instrument or timeframe"}, 400)
+                until = int(q["until"]) if q.get("until", "").lstrip("-").isdigit() else None
+                cs = candles(q["asset"], q["tf"], until)["candles"]
+                self._json(equal_in_view(cs, int(float(q.get("from", 0))), int(float(q.get("to", 0))), float(q.get("share", 0))))
             elif u.path == "/api/marks":
                 self._json(marks_for(q.get("asset", "")))
             elif u.path == "/api/notes":

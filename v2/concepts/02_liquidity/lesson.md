@@ -108,4 +108,9 @@ top-down process (the eyes), which is built later.
   it's good enough to be an EQH or EQL. I don't know the best way to teach it to a machine." So it is a judgement of
   how the chart looks from a distance, not a number. The tool still leaves it to the caller. How to give a machine
   that eye is open: any measure I propose is mine until he has looked at what it picks.
+  **Being tried (mine):** "from far" = a share of the height of the stretch of chart on screen (`near_from_view`). The
+  chart has a slider (the ≈ tool) that shows the sets found for any share, so he can set it by eye and save the one that
+  looks right as a note. First look on the Russell daily: about 1% reproduces his reading of the October pair being
+  eaten in November; the tool cannot see two highs on neighbouring candles as a pair (his "small EQH"), because it
+  only counts a high that is a turn. That choice of mine needs his ruling.
 - Whether two neighbouring highs a point apart (his "small EQH") count the same as a wider set.

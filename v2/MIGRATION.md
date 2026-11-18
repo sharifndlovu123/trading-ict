@@ -74,6 +74,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | "Very close" is judged by eye, from far (his words). Tool: close = a share of the chart's height; a slider on the chart (≈) shows the equal highs and lows found for any share, so he can set it by eye |
 | 18 Nov 2026 | Learn run-through on the Russell 2000 (bias, liquidity, alt-liquidity): "so far I am happy". Added to the lessons: a body beyond a level is a break however it got there; mark from the monthly down; equal and eaten are both relative; an eaten set comes off the chart. Liquidity tool fixed (3 tests), bias test added |
 | 18 Nov 2026 | Chart: a Live switch (free feed, about a minute behind; only the instruments on the page; stops by itself when the page is closed) |
 | 18 Nov 2026 | Chart: one colour per kind of mark (Claude's dashed, his solid); a light / dark switch; candles blue and black (light grey for black on the dark page) |

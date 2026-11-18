@@ -81,7 +81,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 .pbtn button:hover { background:var(--panel2); }
 /* bottom bar */
 #bottom { background:var(--panel); height:34px; flex:none; display:flex; align-items:center; gap:4px; padding:0 8px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; }
-#bottom .sp { flex:1; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
+#bottom .sp { flex:1; } #eqbar { display:none; align-items:center; gap:8px; margin-right:10px; } #eqbar.on { display:flex; } #eqshare { width:220px; accent-color:#f5b942; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
 #at { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:2px 6px; height:26px; }
 #menu { position:absolute; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:210px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
 #menu h4 { margin:4px 8px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
@@ -152,6 +152,12 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
     <button class="tb" id="play" title="one candle every second">▶ Play</button>
     <button class="tb" id="now" title="leave replay: back to the newest candles">✕ Exit replay</button>
   </span>
+  <span id="eqbar" title="drag until the sets it finds match what you would call equal highs and lows">
+    <b>≈ How close is equal</b>
+    <input type="range" id="eqshare" min="0" max="5" step="0.05" autocomplete="off">
+    <span id="eqinfo" class="dim"></span>
+    <button class="tb" id="eqok" title="save this setting as a note, with the chart it was judged on">✓ This looks right</button>
+  </span>
   <span id="when" class="dim"></span>
   <span class="sp"></span>
   <span id="marksn" class="dim"></span>
@@ -181,8 +187,9 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
+             eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 1,
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, live: st.live, theme: document.documentElement.dataset.theme })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -226,6 +233,7 @@ function tools() {                                       // the toolbar down the
     GROUPS.map((g, i) => `<button class="tl ${on(g) ? "on" : ""}" data-g="${i}" title="${g[1]}">${g[0]}</button>`).join("") +
     `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button><span class="ln"></span>` +
     `<button class="tl ${st.snap ? "on" : ""}" id="t-snap" title="snap (M): a point you place or drag jumps to the nearest candle's open, high, low or close">🧲</button>` +
+    `<button class="tl ${st.eqOn ? "on" : ""}" id="t-eq" title="find equal highs and lows: shows the sets it finds, with a slider for how close counts as equal">≈</button>` +
     `<button class="tl ${allLocked() ? "on" : ""}" id="t-lock" title="lock every mark of mine on these charts, or unlock them all. One mark: double-click it to lock, double-click again to unlock">🔒</button>` +
     `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
     `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
@@ -233,6 +241,7 @@ function tools() {                                       // the toolbar down the
   $("t-grab").onclick = () => setGrab(!st.grab);
   $("t-note").onclick = () => setNoteTool(!st.noteTool);
   $("t-snap").onclick = toggleSnap;
+  $("t-eq").onclick = () => { st.eqOn = !st.eqOn; save(); tools(); eqAll(); };
   $("t-lock").onclick = () => { const on = !allLocked(); shownMarks().forEach(m => m.locked = on); keepMine(); st.panes.forEach(p => p.layer && (p.layer.deselect(), p.layer.redraw())); tools(); };
   $("tools").querySelectorAll("[data-g]").forEach(b => b.onclick = e => { e.stopPropagation(); fly(+b.dataset.g, b); });
   $("t-clear").onclick = () => { const as = [...new Set(st.cfg.map(c => c.asset))], n = as.reduce((s, a) => s + myMarks(a).length + myNotes(a).length, 0);
@@ -293,7 +302,7 @@ function underMarks(c) {                                 // Claude's marks for t
     t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
     color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") + (m.tf ? " " + m.tf : "") }));       // Claude's labels always carry the timeframe: the read refers to marks by that name
 }
-function activate(p) { if (st.active === p) return; st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
+function activate(p) { if (st.active === p) return; st.active = p; setTimeout(eqInfo, 0); st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
 function build() {
   for (const p of st.panes) { if (p.layer) p.layer.destroy(); p.dead = true; p.chart.remove(); }
   st.panes = []; st.active = null; if (st.solo != null && st.solo >= st.cfg.length) st.solo = null;
@@ -307,14 +316,14 @@ function build() {
     const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
     const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const p = { c, el, box, infoEl: el.firstChild, chart, series, lineS, times: [], data: [] };
-    p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c), times: () => p.times, candles: () => p.data, snap: () => st.snap,
+    p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c).concat(eqMarks(p)), times: () => p.times, candles: () => p.data, snap: () => st.snap,
       tfName: () => c.tf, color: css, changed: marksChanged });
     notesFor(p);
     for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, () => activate(p), { passive: true });
     el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
     el.querySelector(".solo").onclick = () => { st.solo = st.solo === i ? null : i; layout(); };
     el.querySelector(".x").onclick = () => { if (st.cfg.length > 1) { st.cfg.splice(i, 1); st.solo = null; save(); build(); } };
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { if (st.active === p && $("sync").checked) follow(p); });
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { if (st.active === p && $("sync").checked) follow(p); eqSoon(p); });
     chart.subscribeCrosshairMove(prm => {
       if (st.active !== p) return;
       const t = prm.time; head(p, t != null ? atOrBefore(p, t) : null);
@@ -354,7 +363,7 @@ async function fillPane(p, fit, newAsset) {
   // line chart: the candles stay underneath, invisible, so the marks keep their place
   p.series.applyOptions(c.line ? { upColor: CLEAR, downColor: CLEAR, wickUpColor: CLEAR, wickDownColor: CLEAR } : { upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down") });
   p.lineS.setData(c.line ? data.map(x => ({ time: x.time, value: x.close })) : []);
-  head(p); p.layer.redraw(); if (p === cur()) topbar();
+  head(p); p.layer.redraw(); if (p === cur()) topbar(); eqSoon(p);
   if (fit && p.times.length) recentre(p);
   status(); if (p === cur()) side();
 }
@@ -543,6 +552,30 @@ $("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = ne
 async function refresh() { st.cache.clear(); st.claude = {}; await fill(true); watch(); }
 $("refresh").onclick = refresh;
 
+// ---- "how close is equal": the equal highs and lows the liquidity tool finds on each chart, for a closeness he sets by eye.
+// Close is a share of the height of what is on screen ("if someone couldn't tell these two highs are the same height from far").
+const eqMarks = p => !st.eqOn || !p.eqSets ? [] : p.eqSets.map(g => { const pad = (g.top - g.bottom) < 1e-9 ? Math.abs(g.top) * 0.0002 : 0;
+  return { shape: "zone", kind: g.side === "high" ? "EQH" : "EQL", top: g.top + pad, bottom: g.bottom - pad, t0: g.t0, t1: null, color: "#f5b942", dash: [2, 3],
+           label: `≈ ${g.side === "high" ? "EQH" : "EQL"} ×${g.count}` }; });
+async function eqFetch(p) {
+  if (!st.eqOn || p.pct || p.dead || !p.times.length) { p.eqSets = []; if (p.layer) p.layer.redraw(); return; }
+  const r = p.chart.timeScale().getVisibleLogicalRange(); if (!r) return;
+  const from = Math.round(tOf(p.times, Math.max(0, r.from))), to = Math.round(tOf(p.times, Math.min(p.times.length - 1, r.to)));
+  const key = [p.c.asset, p.c.tf, from, to, st.eqShare, st.until].join("|"); if (p.eqKey === key) return; p.eqKey = key;
+  try { const d = await (await fetch(`api/equal?asset=${p.c.asset}&tf=${p.c.tf}&from=${from}&to=${to}&share=${st.eqShare / 100}${st.until != null ? "&until=" + st.until : ""}`)).json();
+    if (p.eqKey !== key) return; p.eqSets = d.sets || []; p.eqNear = d.near; p.eqView = [from, to]; } catch (e) { p.eqSets = []; }
+  p.layer.redraw(); eqInfo();
+}
+const eqSoon = p => { clearTimeout(p.eqT); p.eqT = setTimeout(() => eqFetch(p), 250); };       // after the chart stops moving
+function eqAll() { $("eqbar").classList.toggle("on", st.eqOn); $("eqshare").value = st.eqShare; st.panes.forEach(p => { if (!p.pct) { p.eqKey = null; eqFetch(p); } }); eqInfo(); }
+function eqInfo() { const p = cur(); if (!st.eqOn || !p) return;
+  const n = (p.eqSets || []).length; $("eqinfo").textContent = `${st.eqShare.toFixed(2)}% of the chart's height${p.eqNear ? " = " + p.eqNear.toFixed(dp(p.eqNear * 50)) + " in price here" : ""} · ${n} set${n === 1 ? "" : "s"} on ${p.c.asset} ${TFNAME[p.c.tf]}`; }
+$("eqshare").addEventListener("input", () => { st.eqShare = +$("eqshare").value; save(); st.panes.forEach(p => !p.pct && eqSoon(p)); eqInfo(); });
+$("eqok").onclick = async () => { const p = cur(); if (!p || !p.eqView) return;
+  const text = `Equal highs / lows: ${st.eqShare.toFixed(2)}% of the chart's height looks right on ${p.c.asset} ${TFNAME[p.c.tf]}, looking at ${wall(p.eqView[0])} to ${wall(p.eqView[1])} (${(p.eqSets || []).length} sets found).`;
+  const r = await fetch("api/note", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: st.mode || "learn", text, asset: p.c.asset, tf: p.c.tf, chart_time: st.until }) });
+  $("eqok").textContent = r.ok ? "✓ Saved as a note" : "not saved"; setTimeout(() => $("eqok").textContent = "✓ This looks right", 2500); if (r.ok) loadNotes(); };
+
 // ---- live: ask the server to keep the shown instruments fresh, and re-read their candles every few seconds
 async function liveBeat() {
   const body = { on: st.live && st.until == null, assets: [...new Set(st.cfg.map(c => c.asset))] };
@@ -608,7 +641,7 @@ document.addEventListener("keydown", e => {
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
-  build(); side(); watch(); loadNotes(); pollMode(); if (st.live) liveBeat().then(status);
+  build(); side(); watch(); loadNotes(); pollMode(); if (st.live) liveBeat().then(status); eqAll();
 })();
 </script>
 </body>
