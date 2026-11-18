@@ -46,6 +46,9 @@ higher timeframes." Settled when he closed the lesson: "FVGs for entries, SIBI /
 creates a BOS and leaves us some value (OB, breakers, FVGs). For now just FVGs is enough to work on." Order blocks
 and breakers are not in v2 yet.
 
+How it is seen: "notice how price is moving at a specific pace, it's almost a steady pace, and suddenly it just
+shoots aggressively. It doesn't mean anything if it's not in an area of interest or a place we are watching."
+
 ## The trading range
 
 - It runs from the low the move began from to the high where the first pullback began (for a move up), wick to wick.
@@ -78,6 +81,10 @@ and breakers are not in v2 yet.
 - The rest is split over the liquidity left to reach, and the split is the trader's call: "you can do an even split
   or a favoured split." Even: with two further targets, the remaining 20% is split evenly between them. "Or if you
   feel it should be different it's okay."
+- **Against the bias:** the "whole trade comes off at TP 1, but if there is very close-by liq you can leave the 20%
+  for that small piece; it's your call to decide." "Grab what's close by and not too far off, what's nearby."
+  - His example, an illustration only: on the trade he was showing, his second target would have been an old high
+    sitting just past the first target. A gap further up was also "some form of liq", and "I wouldn't try reach" it.
 
 ## The timeframe is the key
 
@@ -129,6 +136,4 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 ## Open questions for him
 
 - The three names he said he would show me (trendline, gap, liquidity void).
-- How "quick" and "rapid" are judged for a displacement (by eye, like "very close" for equal highs?).
-- Whether the first target also takes 80% when the idea is against the bias, or the whole trade comes off there.
 - This lesson has not been shown back on a chart I had not seen.
