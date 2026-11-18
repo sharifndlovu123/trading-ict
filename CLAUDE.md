@@ -27,7 +27,9 @@ Claude to read the market his way.
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD`, open
   `http://127.0.0.1:8776/?asset=UK100&tf=1D`. Claude's marks: `v2/chart/marks.json`; what he draws and saves:
   `v2/chart/saves.jsonl`; the notes he writes in its Notes panel (learn / hunt): `v2/chart/notes.jsonl`. One chart
-  serves both learning and hunting. Fresh candles: `uv run python v2/chart/fetch.py <ASSET>` (free data, needs Node.js).
+  serves both learning and hunting. **Live** is a switch on the page: while on, the instruments shown are
+  refreshed from the free feed about once a minute (it runs a minute or two behind) and kept in `data/bars/`. A whole
+  month by hand: `uv run python v2/chart/fetch.py <ASSET>` (needs Node.js).
 - Tests: `uv run pytest -q v2` (a skip is not a pass).
 - Validate every concept with the `context-check` skill before ticking its box:
   `uv run python .claude/skills/context-check/check.py`, then the reading in its `SKILL.md`.

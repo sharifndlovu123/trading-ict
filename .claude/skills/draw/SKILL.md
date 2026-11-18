@@ -45,7 +45,10 @@ The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
   read on the right, replay along the bottom. **Replay** takes every chart back to a moment and shows nothing after it:
   use it to show a concept back on a chart without seeing what came next. If the page is down:
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD` (only port 8776 may listen on
-  the network). Fresh candles: `uv run python v2/chart/fetch.py <NAME>`, then press refresh on the page.
+  the network). Fresh candles: the **● Live** switch on the page keeps the instruments shown up to date (about a
+  minute behind) while it is on; it is his switch, so ask before relying on it. By hand:
+  `uv run python v2/chart/fetch.py <NAME>`, then press refresh. Candle files only go as far as the last time an
+  instrument was live or fetched: say how recent the data is whenever you read a chart.
 - **The mode:** `v2/chart/mode.json` (`learn`, `hunt` or empty). The page shows it at the top left with a coloured
   strip; the pipelines set it.
 - **His notes:** he writes in the **Notes** tab of the right panel; each is saved under the current mode; each is appended to

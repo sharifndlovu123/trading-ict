@@ -95,3 +95,18 @@ def test_the_mode_is_learn_hunt_or_nothing_and_says_who_set_it(tmp_path):
         server.set_mode(f, "backtest", "Claude", now=80.0)
     f.write_text("not json")
     assert server.get_mode(f)["mode"] == ""                                         # a broken file never shows a wrong mode
+
+
+def test_live_downloads_only_while_switched_on_and_a_page_is_asking():
+    st = {"on": False, "assets": [], "beat": 0.0, "fetched": {}, "added": {}, "error": ""}
+    assert server.live_due(st, now=1000.0) == []                                    # off: nothing is downloaded
+    got = server.live_set(st, True, ["UK100", "DE40", "UK100", "NOT-AN-INSTRUMENT"], now=1000.0)
+    assert got["on"] and got["assets"] == ["UK100", "DE40"]                         # no repeats, only instruments we have
+    assert server.live_due(st, now=1001.0) == ["UK100", "DE40"]                     # never fetched: both are due
+    st["fetched"] = {"UK100": 1001.0, "DE40": 1001.0}
+    assert server.live_due(st, now=1030.0) == []                                    # fetched half a minute ago: not yet
+    assert server.live_due(st, now=1001.0 + server.LIVE_EVERY) == ["UK100", "DE40"]
+    assert server.live_due(st, now=1000.0 + server.LIVE_IDLE + 1) == []             # the page went away: stop on its own
+    assert server.live_status(st, now=1000.0 + server.LIVE_IDLE + 1)["on"] is False
+    server.live_set(st, False, [], now=2000.0)
+    assert server.live_due(st, now=2001.0) == [] and st["assets"] == []

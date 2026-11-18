@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from candles import cut, resample, to_candles, trading_day  # noqa: E402
-from fetch import month_starts, parse_csv  # noqa: E402
+from fetch import merge_files, month_starts, parse_csv  # noqa: E402
 
 
 def minutes(start, prices):
@@ -98,3 +98,25 @@ def test_taking_time_back_on_a_higher_timeframe_rebuilds_the_forming_day():
     got = cut(df, resample(df, "1D"), "1D", pd.Timestamp("2031-01-07 10:01"))
     assert list(got.index.strftime("%m-%d")) == ["01-06", "01-07"]
     assert got.iloc[-1].close == 106 and got.iloc[-1].high == 106.5 and got.iloc[0].close == 103
+
+
+def utc_minutes(start, closes):
+    idx = pd.date_range(start, periods=len(closes), freq="1min", tz="UTC").rename("timestamp")
+    return pd.DataFrame({"open": closes, "high": [c + 1 for c in closes], "low": [c - 1 for c in closes], "close": closes, "volume": 0.5}, index=idx).astype(float)
+
+
+def test_live_candles_are_folded_into_the_monthly_files(tmp_path, monkeypatch):
+    import fetch
+    monkeypatch.setitem(fetch.FOLDERS, "ANY", "anyfolder")
+    first = utc_minutes("2031-01-31 23:57", [100, 101, 102])                       # the last three minutes of January
+    assert merge_files("ANY", first, root=tmp_path) == 3
+    # the next download overlaps the last minute (it was unfinished: now it closed at 105) and runs into February
+    again = utc_minutes("2031-01-31 23:59", [105, 106, 107])
+    assert merge_files("ANY", again, root=tmp_path) == 2
+    jan = pd.read_parquet(tmp_path / "anyfolder" / "2031-01-bid.parquet")
+    feb = pd.read_parquet(tmp_path / "anyfolder" / "2031-02-bid.parquet")
+    assert list(jan.close) == [100, 101, 105] and list(feb.close) == [106, 107]     # the unfinished minute was replaced, the new month got its own file
+    stamp = (tmp_path / "anyfolder" / "2031-02-bid.parquet").stat().st_mtime_ns
+    assert merge_files("ANY", again, root=tmp_path) == 0                             # the same candles again: nothing new,
+    assert (tmp_path / "anyfolder" / "2031-02-bid.parquet").stat().st_mtime_ns == stamp   # and the file is not rewritten
+    assert merge_files("ANY", again.iloc[0:0], root=tmp_path) == 0

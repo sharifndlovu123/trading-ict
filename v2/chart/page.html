@@ -29,6 +29,7 @@ button, select, input { font:inherit; color:var(--ink); }
 body.learn #mode [data-m="learn"] { background:#2962ff; color:#fff; } body.hunt #mode [data-m="hunt"] { background:#e8590c; color:#fff; }
 body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:var(--ink); }
 #modewho { margin-left:6px; }
+#livebtn.on { color:#2f9e44; } #livebtn.on.bad { color:var(--neg); }
 .tb { background:none; border:0; border-radius:6px; padding:5px 8px; cursor:pointer; height:30px; display:inline-flex; align-items:center; gap:5px; }
 .tb:hover { background:var(--panel2); } .tb.on { color:var(--accent); } .tb.act { background:var(--accent); color:#fff; }
 #sym { font-weight:700; font-size:14px; background:none; border:0; border-radius:6px; padding:5px 4px; cursor:pointer; height:30px; }
@@ -111,6 +112,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   <span class="sep"></span>
   <button class="tb" id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">％ Compare</button>
   <label class="tb" title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> Sync</label>
+  <button class="tb" id="livebtn" title="live candles: while on, the instruments on this page are refreshed from the free feed about once a minute (it runs about a minute behind)">● Live</button>
   <button class="tb" id="replaybtn" title="take the charts back to a moment: nothing after it is shown">⏮ Replay</button>
   <span class="sp"></span>
   <label class="tb" title="show or hide what Claude drew"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
@@ -172,9 +174,9 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 // cfg = the layout: one entry per chart (its instrument, its timeframe, line or candles), in reading order; cols 0 = automatic
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
-             tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap,
+             tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, theme: document.documentElement.dataset.theme })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, live: st.live, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -363,8 +365,10 @@ function align() {                                       // charts on the same t
 async function fill(fit) { if (st.pct) return fillPct(fit); await Promise.all(st.panes.map(p => fillPane(p, fit)));
   if (fit) { const mine = st.panes; setTimeout(() => { if (st.panes === mine) align(); }, 120); } }
 function status() {
-  const t = st.until != null ? st.until : st.newest;
-  $("when").textContent = t == null ? "" : (st.until != null ? `Replay · ${wall(t)} New York · nothing after it is shown` : `Newest candle ${wall(t)} New York`);
+  const t = st.until != null ? st.until : st.newest, L = st.liveInfo;
+  const live = !st.live ? "" : st.until != null ? " · live is paused while replay is on" : L && L.error ? ` · live: the feed did not answer (${L.error.slice(0, 60)}); trying again` : " · live (the free feed runs about a minute behind)";
+  $("when").textContent = t == null ? "" : (st.until != null ? `Replay · ${wall(t)} New York · nothing after it is shown` : `Newest candle ${wall(t)} New York`) + live;
+  $("livebtn").classList.toggle("on", st.live); $("livebtn").classList.toggle("bad", !!(st.live && L && L.error));
   if (document.activeElement !== $("at") && t != null) $("at").value = new Date(t * 1000).toISOString().slice(0, 16);
   $("replaybtn").classList.toggle("on", st.replay || st.until != null); $("replay").classList.toggle("on", st.replay || st.until != null);
 }
@@ -527,6 +531,20 @@ $("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = ne
 async function refresh() { st.cache.clear(); st.claude = {}; await fill(true); watch(); }
 $("refresh").onclick = refresh;
 
+// ---- live: ask the server to keep the shown instruments fresh, and re-read their candles every few seconds
+async function liveBeat() {
+  const body = { on: st.live && st.until == null, assets: [...new Set(st.cfg.map(c => c.asset))] };
+  try { st.liveInfo = await (await fetch("api/live", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json(); } catch (e) { st.liveInfo = { error: "the chart server did not answer" }; }
+}
+let liveBusy = false;
+async function liveTick() {
+  if (!st.live || st.until != null || liveBusy || document.hidden) return;
+  liveBusy = true;
+  try { await liveBeat(); const before = st.newest; st.cache.clear(); await fill(false); if (st.newest !== before) watch(); status(); } finally { liveBusy = false; }
+}
+$("livebtn").onclick = async () => { st.live = !st.live; save(); await liveBeat(); status(); if (st.live) liveTick(); };
+setInterval(liveTick, 15000);
+
 // ---- replay: take the charts back to a moment
 let timer = null;
 async function goTo(t) {                                  // t = New York clock time in seconds; null = the newest candles
@@ -578,7 +596,7 @@ document.addEventListener("keydown", e => {
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
-  build(); side(); watch(); loadNotes(); pollMode();
+  build(); side(); watch(); loadNotes(); pollMode(); if (st.live) liveBeat().then(status);
 })();
 </script>
 </body>

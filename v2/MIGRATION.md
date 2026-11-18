@@ -59,7 +59,7 @@ coming after liquidity.
 | Top-level project settings, readme and ignore file are v2 only | [x] 18 Nov 2026 |
 | Project notes (`CLAUDE.md`) written around v2 | [x] 18 Nov 2026 |
 | Hunts switched off | [x] 18 Nov 2026 |
-| Live candles on the chart (today it reads files; refresh is a download by hand) | [ ] |
+| Live candles on the chart: a switch on the page; while on, the instruments shown are refreshed from the free feed about once a minute and kept in the candle files | [x] 18 Nov 2026 |
 | Hunting again, on v2's eyes and brain | [ ] |
 | The old version's folder deleted, when he says | [ ] |
 
@@ -75,6 +75,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Chart: a Live switch (free feed, about a minute behind; only the instruments on the page; stops by itself when the page is closed) |
 | 18 Nov 2026 | Chart: one colour per kind of mark (Claude's dashed, his solid); a light / dark switch; candles blue and black (light grey for black on the dark page) |
 | 18 Nov 2026 | Chart drawing: snap to a candle's open / high / low / close (toggle, M); double-click locks and unlocks a mark, and a locked one lets clicks through to what is underneath; a block's corners size it both ways |
 | 18 Nov 2026 | Chart: our candle colours; a Notes tab (tall text area) in the right panel; a LEARN / HUNT / OFF mode shared by the page and the pipelines, shown at the top left with a coloured strip |

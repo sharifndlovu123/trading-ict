@@ -18,6 +18,7 @@ import ipaddress
 import json
 import os
 import sys
+import threading
 import time
 
 import pandas as pd
@@ -28,6 +29,7 @@ from urllib.parse import parse_qs, urlparse
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import candles as cd  # noqa: E402
+import fetch  # noqa: E402
 
 MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
 MODES = ("learn", "hunt", "")          # "" = no session
@@ -138,6 +140,45 @@ def list_notes(path: Path, last: int = 200) -> list[dict]:
     return [r for r in rows if "delete" not in r and r["id"] not in gone][::-1][:last]
 
 
+# ---- live: while it is switched on, the instruments on the page are refreshed from the free feed about once a minute
+LIVE = {"on": False, "assets": [], "beat": 0.0, "fetched": {}, "added": {}, "error": ""}
+LIVE_EVERY, LIVE_IDLE = 55, 180          # seconds between downloads of one instrument; stop when no page has asked for this long
+
+
+def live_set(state: dict, on: bool, assets: list, now: float) -> dict:
+    """The page switches live on or off and says which instruments it is showing. Each call is also a heartbeat."""
+    state["on"] = bool(on)
+    state["assets"] = [a for a in dict.fromkeys(assets) if a in cd.FOLDERS][:12] if on else []
+    state["beat"] = now
+    if not on:
+        state["error"] = ""
+    return live_status(state, now)
+
+
+def live_due(state: dict, now: float) -> list[str]:
+    """Which instruments should be downloaded now: live is on, a page asked recently, and their last download is old enough."""
+    if not state["on"] or now - state["beat"] > LIVE_IDLE:
+        return []
+    return [a for a in state["assets"] if now - state["fetched"].get(a, 0) >= LIVE_EVERY]
+
+
+def live_status(state: dict, now: float) -> dict:
+    return {"on": state["on"] and now - state["beat"] <= LIVE_IDLE, "assets": state["assets"], "error": state["error"],
+            "ago": {a: int(now - t) for a, t in state["fetched"].items() if a in state["assets"]}}
+
+
+def live_loop() -> None:
+    while True:
+        for asset in live_due(LIVE, time.time()):
+            try:
+                LIVE["added"][asset] = fetch.merge_files(asset, fetch.fetch_recent(asset))
+                LIVE["error"] = ""
+            except Exception as e:                               # the feed is free and sometimes fails: say so on the page and try again next round
+                LIVE["error"] = f"{asset}: {str(e)[:160]}"
+            LIVE["fetched"][asset] = time.time()
+        time.sleep(3)
+
+
 def frames(asset: str):
     """The instrument's 1-minute candles, re-read only when a file changed."""
     files = sorted((cd.DATA / cd.FOLDERS[asset]).glob("*-bid.parquet"))
@@ -217,6 +258,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(list_notes(NOTES))
             elif u.path == "/api/mode":
                 self._json(get_mode(MODE))
+            elif u.path == "/api/live":
+                self._json(live_status(LIVE, time.time()))
             else:
                 self._send(404, b"not found", "text/plain")
         except FileNotFoundError as e:
@@ -247,11 +290,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self._ok():
             return
         path = urlparse(self.path).path
-        if path not in ("/api/save", "/api/note", "/api/mode"):
+        if path not in ("/api/save", "/api/note", "/api/mode", "/api/live"):
             return self._send(404, b"not found", "text/plain")
         body = self._body()
         if body is None:
             return
+        if path == "/api/live":
+            return self._json(live_set(LIVE, bool(body.get("on")), [str(a) for a in body.get("assets", []) if isinstance(a, str)], time.time()))
         if path == "/api/mode":
             try:
                 return self._json(set_mode(MODE, str(body.get("mode", "")), "Sharif", time.time()))
@@ -290,6 +335,7 @@ def main() -> None:
             raise SystemExit(f"{a.password_env} is not set (environment or .env)")
     if a.host not in ("127.0.0.1", "localhost", "::1") and not Handler.password:
         raise SystemExit("refusing to listen on the network without a password: add --password-env")
+    threading.Thread(target=live_loop, daemon=True).start()
     print(f"chart on http://{a.host}:{a.port}/  ({'password set for other devices' if Handler.password else 'this machine only'})", flush=True)
     ThreadingHTTPServer((a.host, a.port), Handler).serve_forever()
 
