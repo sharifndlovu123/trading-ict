@@ -63,6 +63,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 #watch .w { display:flex; gap:8px; padding:6px 12px; cursor:pointer; border-left:2px solid transparent; } #watch .w:hover { background:var(--panel2); }
 #watch .w.on { border-left-color:var(--accent); background:var(--panel2); } #watch .w b { flex:1; font-weight:600; }
 #read { padding:0 12px 12px; } #read ul { margin:0; padding-left:18px; } #read li { margin-bottom:6px; }
+#read h4 { margin:12px 0 4px; font-size:11px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.05em; }
 #read .chips { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; } #read .chip { color:#fff; font-weight:700; border-radius:5px; padding:1px 8px; }
 #read .lg { display:flex; gap:10px; padding:5px 0; border-top:1px solid var(--line); } #read .lg b { width:26px; flex:none; }
 #read .lg div { display:flex; flex-wrap:wrap; gap:3px 12px; } #read .lg span.done { opacity:.45; } #read .lg .sw { margin-right:5px; }
@@ -459,7 +460,8 @@ function side() {
   const BIAS = { bull: "#2f9e44", bear: "#e03131", range: "#7b8794" }, b = d.bias || {};
   const bias = TFS.slice().reverse().filter(t => b[t]).map(t => `<span class="chip" style="background:${BIAS[b[t]] || "#7b8794"}" title="${esc(b[t])}">${TFNAME[t]}</span>`).join("");
   $("read").innerHTML = (bias ? `<div class="chips">${bias}<span class="dim" style="align-self:center;margin-left:4px">green bull · red bear · grey range</span></div>` : "") +
-    ((d.read || []).length ? `<ul>${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : (bias ? "" : '<div class="dim">Nothing written for this instrument.</div>'));
+    [["Interesting", d.interesting || d.read], ["Considering", d.considering]].map(([h, xs]) => (xs || []).length ? `<h4>${h}</h4><ul>${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("") ||
+    (bias ? "" : '<div class="dim">Nothing written for this instrument.</div>');
   $("notekind").innerHTML = st.mode ? `This note is saved as a <b class="${st.mode}">${st.mode.toUpperCase()}</b> note.` : 'No session is running: the note is saved as a <b class="learn">LEARN</b> note. Switch the mode at the top left.';
   $("notectx").textContent = `Saved with: ${a} · ${TFNAME[c.tf]} · ${st.until != null ? "replay " + wall(st.until) : "newest candles"}`;
 }

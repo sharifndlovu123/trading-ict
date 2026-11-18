@@ -29,8 +29,10 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 - **Marks only, no text on the chart.** Words go in the read beside the chart, in the speak skill's wording.
 - **Keep the read short.** The bias is not written as a sentence: set `bias` in `marks.json`
   (`{"1M": "bull", "1W": "bear", …}` with bull, bear or range) and the page shows one chip per timeframe, coloured
-  green, red or grey ("just state the tf and color"). After that, a handful of one-line points in `read`: what is
-  interesting above and below. No reasons, history or caveats: if he wants the why, he asks. (He, 18 Nov 2026: "it's a
+  green, red or grey ("just state the tf and color"). Under the chips come two short lists, in this order (his words:
+  "next subset below the tf should be your interesting points, after that what you're currently considering"):
+  `interesting` (what is interesting on the chart, above and below) and `considering` (what Claude is weighing right
+  now, each a "might", never a prediction). One line per point, two or three points each. No reasons, history or caveats: if he wants the why, he asks. (He, 18 Nov 2026: "it's a
   lot of context I have to read every time… the chart's content should already help me see what's going on.")
 
 ## Where the marks go
