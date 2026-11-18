@@ -179,7 +179,8 @@ const GROUPS = [["╱", "Lines", ["trendline", "displacement", "fake push"]],
                 ["—", "Levels", ["buyside", "sellside", "EQH", "EQL", "BOS", "level behind", "level ahead"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
                 ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "liquidity void", "NWOG", "NDOG"]],
-                ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]]];
+                ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
+                ["⇕", "Range", ["trading range"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
 const KEEP = "charts-v2";
 const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"); } catch (e) { return {}; } })();
@@ -299,7 +300,7 @@ const shows = (m, tf) => TFS.indexOf(m.tf || "1h") >= TFS.indexOf(tf);       // 
 function underMarks(c) {                                 // Claude's marks for this chart; in replay, nothing from after that moment
   const doc = st.claude[c.asset]; if (!doc || !$("ovon").checked) return [];
   return (doc.marks || []).filter(m => shows(m, c.tf) && (st.until == null || m.t0 == null || m.t0 <= st.until)).map(m => ({ ...m,
-    t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
+    t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: m.kind === "trading range" || TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
     color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") + (m.tf ? " " + m.tf : "") }));       // Claude's labels always carry the timeframe: the read refers to marks by that name
 }
 function activate(p) { if (st.active === p) return; st.active = p; setTimeout(eqInfo, 0); st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
