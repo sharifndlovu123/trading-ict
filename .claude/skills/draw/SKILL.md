@@ -51,6 +51,10 @@ The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
 - **His notes:** he writes in the **Notes** tab of the right panel; each is saved under the current mode; each is appended to
   `v2/chart/notes.jsonl` with the instrument, the timeframe and the time the chart was showing. He prefers this to
   writing on the chart ("writing on the chart gets too messy"). Read them; never edit them.
+- **Colours:** every kind of mark has its own colour (`KIND_COLOR` in `v2/chart/marks.js`), the same whoever drew it.
+  Claude's marks are dashed and labelled "C ·"; his are solid and labelled "S ·". Use his kind names ("EQL",
+  "buyside", "BISI", "order block", "level behind"…) in a mark's `kind` so it takes that colour; a free label takes
+  the colour of the kind it names.
 - **His tools:** snap (the magnet, M) puts a point exactly on a candle's open, high, low or close; double-click locks
   or unlocks a mark; a block's corners size it both ways. A mark of his may carry `locked: true`: it means only that he
   fixed it in place.

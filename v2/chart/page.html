@@ -7,10 +7,11 @@
 <style>
 /* Laid out like TradingView (Sharif, 18 Nov 2026: "I'm very used to their UI"): symbol and interval along the top,
    drawing tools down the left, a watchlist and details on the right, replay along the bottom. */
-:root { --bg:#131722; --panel:#1e222d; --panel2:#2a2e39; --ink:#d1d4dc; --ink2:#787b86; --line:#2a2e39; --grid:#1c2030; --pos:#26a69a; --neg:#ef5350;
-  --up:#3987e5; --down:#d95926; --accent:#2962ff; --area:#9c7bea; --bs:#5b9cf6; --ss:#f7936f; --mine:#f2b84b; --claude:#22d3ee; }
-@media (prefers-color-scheme: light) { :root { --bg:#ffffff; --panel:#ffffff; --panel2:#f0f3fa; --ink:#131722; --ink2:#6a6d78; --line:#e0e3eb; --grid:#f0f3fa; --up:#2a78d6; --down:#eb6834;
-  --area:#7e57c2; --bs:#1e53e5; --ss:#d1512d; --mine:#b77400; --claude:#0e8fa3; } }
+:root, :root[data-theme="dark"] { --bg:#131722; --panel:#1e222d; --panel2:#2a2e39; --ink:#d1d4dc; --ink2:#787b86; --line:#2a2e39; --grid:#1c2030; --pos:#26a69a; --neg:#ef5350;
+  --up:#2f80ed; --down:#c9ced6; --accent:#2962ff; --mine:#f2b84b; --claude:#22d3ee; color-scheme:dark; }
+/* candles are blue (up) and black (down). On the dark page black would vanish, so there the down candles are light grey. */
+:root[data-theme="light"] { --bg:#ffffff; --panel:#ffffff; --panel2:#eef1f8; --ink:#131722; --ink2:#6a6d78; --line:#dfe2ea; --grid:#f1f3f8; --pos:#089981; --neg:#d32f2f;
+  --up:#2962ff; --down:#111111; --accent:#2962ff; --mine:#b77400; --claude:#0e8fa3; color-scheme:light; }
 * { box-sizing:border-box; }
 html, body { height:100%; }
 body { margin:0; background:var(--line); color:var(--ink); font:13px/1.4 -apple-system,"Trebuchet MS",Roboto,"Segoe UI",sans-serif; display:flex; flex-direction:column; gap:1px; overflow:hidden; }
@@ -41,7 +42,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 #fly { position:absolute; left:50px; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:190px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
 #fly h4 { margin:2px 8px 4px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
 #fly .it { display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:5px; cursor:pointer; } #fly .it:hover { background:var(--panel2); } #fly .it.on { color:var(--accent); }
-#fly .it .k { margin-left:auto; color:var(--ink2); font-size:11px; }
+#fly .it .k { margin-left:auto; color:var(--ink2); font-size:11px; } #fly .it .sw { width:12px; height:12px; border-radius:3px; margin:0; flex:none; }
 #grid { flex:1; min-width:0; display:grid; gap:1px; background:var(--line); }
 #side { width:300px; flex:none; background:var(--panel); overflow:auto; display:none; }
 #side.on { display:flex; flex-direction:column; }
@@ -74,8 +75,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 /* bottom bar */
 #bottom { background:var(--panel); height:34px; flex:none; display:flex; align-items:center; gap:4px; padding:0 8px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; }
 #bottom .sp { flex:1; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
-#at { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:2px 6px; height:26px; color-scheme:dark; }
-@media (prefers-color-scheme: light) { #at { color-scheme:light; } }
+#at { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:2px 6px; height:26px; }
 #menu { position:absolute; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:210px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
 #menu h4 { margin:4px 8px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
 #menu .it { padding:6px 8px; border-radius:5px; cursor:pointer; } #menu .it:hover { background:var(--panel2); }
@@ -89,6 +89,10 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 .noteedit button { background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:2px 9px; cursor:pointer; }
 .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
 </style>
+<script>   // the page's theme, before anything is drawn: what he chose last, else what the device prefers
+  (function () { let t = null; try { t = JSON.parse(localStorage.getItem("charts-v2") || "{}").theme; } catch (e) {}
+    document.documentElement.dataset.theme = t || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); })();
+</script>
 <script src="marks.js"></script>
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
 </head>
@@ -110,6 +114,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   <button class="tb" id="replaybtn" title="take the charts back to a moment: nothing after it is shown">⏮ Replay</button>
   <span class="sp"></span>
   <label class="tb" title="show or hide what Claude drew"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
+  <button class="tb" id="theme" title="light or dark page"></button>
   <button class="tb" id="refresh" title="read the candles and the marks again (Shift+R). Alt+R re-centres the charts">↻</button>
   <button class="tb" id="fsbtn" title="the chart you last touched on the whole screen (Shift+F)">⛶</button>
   <button class="tb" id="readbtn" title="the side panel: watchlist, your notes, Claude's read (W)">☰</button>
@@ -169,7 +174,7 @@ const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap,
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -237,7 +242,7 @@ function fly(i, btn) {                                   // a tool's fly-out, li
   if (f.style.display === "block" && f.dataset.g == i) { f.style.display = "none"; return; }
   const keys = { trendline: "Alt+T", [st.lastKind.level || "BOS"]: "Alt+H", [st.lastKind.vline || "→ bull"]: "Alt+V" };
   f.dataset.g = i; f.style.display = "block"; f.style.top = Math.min(btn.getBoundingClientRect().top, innerHeight - 40 - g[2].length * 31) + "px";
-  f.innerHTML = `<h4>${g[1]}</h4>` + g[2].map(k => `<div class="it ${st.place && st.place.kind === k ? "on" : ""}" data-k="${esc(k)}">${esc(k)}<span class="k">${keys[k] || ""}</span></div>`).join("");
+  f.innerHTML = `<h4>${g[1]}</h4>` + g[2].map(k => `<div class="it ${st.place && st.place.kind === k ? "on" : ""}" data-k="${esc(k)}"><span class="sw" style="background:${markColor(k, "#888")}"></span>${esc(k)}<span class="k">${keys[k] || ""}</span></div>`).join("");
   f.querySelectorAll(".it").forEach(el => el.onclick = () => { f.style.display = "none"; const k = KIND[el.dataset.k]; setPlace(st.place && st.place.kind === k.kind ? null : k); });
 }
 document.addEventListener("pointerdown", e => { if (!e.target.closest("#fly") && !e.target.closest("#tools")) $("fly").style.display = "none";
@@ -278,7 +283,7 @@ function underMarks(c) {                                 // Claude's marks for t
   const doc = st.claude[c.asset]; if (!doc || !$("ovon").checked) return [];
   return (doc.marks || []).filter(m => shows(m, c.tf) && (st.until == null || m.t0 == null || m.t0 <= st.until)).map(m => ({ ...m,
     t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
-    color: css("--claude"), label: (m.by || "C") + " · " + (m.kind || "") }));
+    color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") }));
 }
 function activate(p) { if (st.active === p) return; st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
 function build() {
@@ -512,6 +517,9 @@ $("layoutbtn").onclick = e => {                           // how many charts, ho
   m.querySelectorAll("[data-s]").forEach(el => el.onclick = () => { st.cfg = sets[el.dataset.s](); st.cols = 0; st.solo = null; st.pct = false; save(); m.style.display = "none"; build(); });
 };
 $("pct").onclick = () => { st.pct = !st.pct; build(); };
+function theme() { const t = document.documentElement.dataset.theme; $("theme").textContent = t === "light" ? "☾ Dark" : "☀ Light"; }
+$("theme").onclick = () => { const d = document.documentElement; d.dataset.theme = d.dataset.theme === "light" ? "dark" : "light"; save(); theme(); build(); };     // the charts are rebuilt in the new colours
+theme();
 $("readbtn").onclick = () => { st.side = !st.side; save(); side(); };
 $("fsbtn").onclick = () => full(cur());
 $("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());

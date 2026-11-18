@@ -30,6 +30,28 @@ const MARK_PALETTE = [
   ["area", "zone", ["gap", "liquidity void", "NWOG", "NDOG"]],
 ];
 
+// One colour per kind of mark, so a chart with several kinds on it can be read at a glance. The same kind has the same
+// colour whoever drew it (Claude's are dashed and labelled "C ·"). Chosen to stand out against blue and black candles
+// on a light page and on a dark one.
+const KIND_COLOR = {
+  "buyside": "#2f80ed", "EQH": "#00a3c4", "sellside": "#f2711c", "EQL": "#d99a00",
+  "BOS": "#9b51e0", "level behind": "#e03131", "level ahead": "#2f9e44", "→ bull": "#2f9e44", "→ bear": "#e03131",
+  "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
+  "BISI": "#0ca678", "SIBI": "#c2255c", "IFVG": "#7950f2", "VI": "#c930c9", "BPR": "#1c7ed6",
+  "order block": "#4c6ef5", "breaker": "#d6336c", "mitigation block": "#0b7285", "rejection block": "#a8641a",
+  "gap": "#74b816", "liquidity void": "#5c7080", "NWOG": "#e8890c", "NDOG": "#b8860b",
+};
+// a mark whose label is free text (Claude's often are) takes the colour of the kind it names
+const KIND_WORDS = [["EQH", "EQH"], ["EQL", "EQL"], ["BISI", "BISI"], ["SIBI", "SIBI"], ["IFVG", "IFVG"], ["NWOG", "NWOG"], ["NDOG", "NDOG"], ["BPR", "BPR"],
+  ["order block", "order block"], ["breaker", "breaker"], ["level behind", "level behind"], ["level ahead", "level ahead"], ["BOS", "BOS"], ["bull", "→ bull"], ["bear", "→ bear"],
+  ["buyside", "buyside"], ["PDH", "buyside"], ["PWH", "buyside"], ["high", "buyside"], ["sellside", "sellside"], ["PDL", "sellside"], ["PWL", "sellside"], ["low", "sellside"],
+  ["VI", "VI"], ["gap", "gap"], ["displacement", "displacement"]];
+function markColor(kind, fallback) {
+  if (KIND_COLOR[kind]) return KIND_COLOR[kind];
+  const k = String(kind || ""); for (const [word, as] of KIND_WORDS) if (new RegExp("(^|[^a-z])" + word + "([^a-z]|$)", "i").test(k)) return KIND_COLOR[as];
+  return fallback;
+}
+
 function marksLayer(chart, series, el, o) {
   const STUB = 36;                                    // an open mark stops this far past the last candle, not at the right edge
   let grab = false, place = null, sel = null, held = null, dirty = 1, sig = "";
@@ -62,7 +84,7 @@ function marksLayer(chart, series, el, o) {
   const pOfY = y => { const p = series.coordinateToPrice(y); return p == null ? null : +p.toPrecision(7); };
   const xLast = () => { const a = T(); return a.length ? xOf(a[a.length - 1]) : null; };
   const xEnd = m => m.t1 != null ? xOf(m.t1) : (xLast() == null ? null : xLast() + STUB);
-  const col = m => o.color(m.side === "buyside" ? "--bs" : m.side === "sellside" ? "--ss" : m.side === "area" ? "--area" : "--mine");
+  const col = m => markColor(m.kind, o.color("--mine"));
   const name = m => "S · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") + (m.locked ? " 🔒" : "");
   // snap: the nearest candle to the mouse, and of its open / high / low / close the one closest to the mouse
   let hover = null;                                    // where the snapped point is, while placing or dragging (drawn as a ring)
@@ -109,8 +131,10 @@ function marksLayer(chart, series, el, o) {
   function tag(g, text, x, y, color, bold) {
     g.font = (bold ? "bold 12px" : "11px") + " ui-monospace, Menlo, monospace";
     const w = g.measureText(text).width;
-    g.fillStyle = "rgba(0,0,0,.72)"; g.fillRect(x - 3, y - 8, w + 6, 16); g.fillStyle = color; g.fillText(text, x, y);
+    const light = document.documentElement.dataset.theme === "light";         // a label sits on a small plate so it reads over candles, on either page colour
+    g.fillStyle = light ? "rgba(255,255,255,.9)" : "rgba(0,0,0,.72)"; g.fillRect(x - 3, y - 8, w + 6, 16); g.fillStyle = color; g.fillText(text, x, y);
   }
+  const lab = (g, text, x, y, color, right) => { g.font = "11px ui-monospace, Menlo, monospace"; tag(g, text, right ? x - g.measureText(text).width : x, y, color, false); };
   function paint() {
     const W = ts.width(), H = el.clientHeight - ts.height(), r = devicePixelRatio || 1;
     if (cv.width !== Math.round(el.clientWidth * r) || cv.height !== Math.round(el.clientHeight * r)) {
@@ -123,14 +147,15 @@ function marksLayer(chart, series, el, o) {
     for (const u of (o.under ? o.under() : [])) {       // someone else's marks: read-only, never picked up, drawn as strongly as his own
       const x0 = u.t0 == null ? 0 : xOf(u.t0), xl = xLast();
       const x1 = u.t1 == null ? (xl == null ? W : Math.min(W, xl + STUB)) : xOf(u.t1); if (x0 == null || x1 == null) continue;
-      g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 2; g.setLineDash([]);
+      const dash = u.dash || [];                           // someone else's marks are dashed, so whose is whose shows without reading the label
+      g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 2; g.setLineDash(dash);
       let tx = Math.max(x0, 0) + 4, ty;
       if (u.shape === "vline") {
         g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, H); g.stroke(); g.setLineDash([]); tx = x0 + 6; ty = 14;
       } else if (u.shape === "line") {
         const y0 = yOf(u.p0), y1 = yOf(u.p1); if (y0 == null || y1 == null) continue;
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); if (MOVES.includes(u.kind)) arrowHead(g, x0, y0, x1, y1);
-        tx = (x0 + x1) / 2 + 6; ty = (y0 + y1) / 2;
+        g.setLineDash(dash); tx = (x0 + x1) / 2 + 6; ty = (y0 + y1) / 2;
       } else if (u.shape === "zone") {
         const a = yOf(u.top), b = yOf(u.bottom); if (a == null || b == null) continue;
         if (!u.nofill) { g.globalAlpha = .22; g.fillRect(x0, a, x1 - x0, b - a); g.globalAlpha = 1; }   // a far higher timeframe's zone: edges only
@@ -139,37 +164,37 @@ function marksLayer(chart, series, el, o) {
         const y = yOf(u.price); if (y == null) continue;
         g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); ty = y - 9;
       }
-      tag(g, u.label, tx, ty, u.color, true);
+      g.setLineDash([]); tag(g, u.label, tx, ty, u.color, true);
     }
     o.list().forEach((m, i) => {
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m), on = sel === i;
       if (x0 == null || x1 == null) return;
-      g.strokeStyle = g.fillStyle = col(m); g.lineWidth = on ? 3 : 2; g.setLineDash(m.shape === "zone" ? [5, 4] : []);
+      g.strokeStyle = g.fillStyle = col(m); g.lineWidth = on ? 3 : 2; g.setLineDash([]);
       g.font = "11px ui-monospace, Menlo, monospace";
       const handles = [];
       if (m.shape === "vline") {
         g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, H); g.stroke(); g.setLineDash([]);
-        g.fillText(name(m), x0 + 6, 30); handles.push([x0, 30]);
+        lab(g, name(m), x0 + 6, 30, col(m)); handles.push([x0, 30]);
       } else if (m.shape === "line") {
         const y0 = yOf(m.p0), y1 = yOf(m.p1); if (y0 == null || y1 == null) return;
         if (m.kind === "fake push") g.setLineDash([6, 4]);
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
         if (MOVES.includes(m.kind)) arrowHead(g, x0, y0, x1, y1);
-        g.fillText(name(m), Math.min(x1, W) + 4, y1); handles.push([x0, y0], [x1, y1]);
+        lab(g, name(m), Math.min(x1, W - 90) + 6, y1, col(m)); handles.push([x0, y0], [x1, y1]);
       } else if (m.shape === "zone") {
         const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) return;
         g.globalAlpha = on ? .28 : .14; g.fillRect(x0, a, x1 - x0, b - a); g.globalAlpha = 1;
         g.beginPath(); g.moveTo(x0, a); g.lineTo(x1, a); g.moveTo(x0, b); g.lineTo(x1, b); g.stroke(); g.setLineDash([]);
-        g.textAlign = "right"; g.fillText(name(m), Math.min(x1, W) - 4, Math.min(a, b) - 7); g.textAlign = "left";
+        lab(g, name(m), Math.max(x0, 0) + 4, Math.min(a, b) - 9, col(m));
         handles.push([x0, a], [x1, a], [x0, b], [x1, b]);
       } else {
         const y = yOf(m.price); if (y == null) return;
         g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
         g.beginPath(); g.arc(x0, y, on ? 4 : 2.5, 0, 7); g.fill();
-        g.textAlign = "right"; g.fillText(name(m), Math.min(x1, W) - 4, y + (m.side === "sellside" ? 8 : -8)); g.textAlign = "left";
+        lab(g, name(m), Math.min(x1, W) - 4, y + (m.side === "sellside" ? 10 : -10), col(m), true);
         handles.push([x0, y], [x1, y]);
       }
-      if (on) { g.setLineDash([]); g.fillStyle = o.color("--panel");
+      g.strokeStyle = col(m); if (on) { g.setLineDash([]); g.fillStyle = o.color("--panel");
         for (const [x, y] of handles) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); } }
     });
     if (hover && (place || held)) {                     // the snapped point: a ring on the exact price
