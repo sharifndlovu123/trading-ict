@@ -12,7 +12,14 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 
 1. **Relative to now.** "Draw it based on what you see right now." Mark what matters for where price is at this
    moment. Something that was liquidity for an earlier price is not drawn.
-2. **From the weekly down.** The higher timeframe first, then lower. It is far from price sometimes, and still first.
+2. **From the monthly down, and every timeframe gets its own marks.** Monthly first, then weekly, daily, lower. Do not
+   only read a higher timeframe: draw on it. (He, 18 Nov 2026, after I marked nothing on the monthly: "when marking
+   you're starting from the top to the bottom, BUT it is relative to now, so what's happening in our current time, but
+   relative to tf this xx is close so mark it.")
+   - **"Close to price" is judged on each timeframe's own scale.** An area a hundred points away is close on the
+     monthly and far on the hourly. On each timeframe ask: from where price is now, what on *this* timeframe is close?
+   - The higher timeframe's marks are what the lower ones sit inside: say so in the read (an hourly low inside a
+     monthly imbalance is the point, not a detail).
 3. **Original liquidity before alt-liquidity.** Pools of stops first; imbalances second.
 4. **Only what is in the brain.** Draw with concepts that are in `v2/concepts/`, and nothing else.
 5. **Keep it readable.** Few marks. If the chart is busy, the read is not clear yet.
