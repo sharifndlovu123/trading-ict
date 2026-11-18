@@ -74,7 +74,7 @@ reading from the weekly down, the hint to bias, and original liquidity before al
 top-down process (the eyes), which is built later.
 
 ## Open
-- Taught live earlier in the week but only in v1 notes, to be re-confirmed before they enter: liquidity created
+- Taught live earlier in the week but not yet re-confirmed for v2: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the
   candles that judge it.
 - "Very close by" as a measure: left to the caller for now; to be settled when the eyes are built and he can see what it picks.

@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 V2 = ROOT / "v2"
 PLAIN = {0, 1, 2, 3, -1}                                   # counting numbers a three-candle rule needs
-V1 = ("ict_engine", "v1", "research", "hunt_scan", "hunt_watch", "live_recipe", "live_snapshot", "read_build")
+OUTSIDE = ("ict_engine", "v1", "research", "hunt_scan", "hunt_watch", "live_recipe", "live_snapshot", "read_build")   # module names of the old version: never imported
 REAL = ("today.json", "out/live", "dukascopy", ".parquet", "reports/", "data/bars", "overlay.json")
 TF = re.compile(r"""["'](1m|5m|15m|30m|1h|4h|1D|1W|1M|daily|weekly|monthly)["']""")
 ASSET = re.compile(r"\b(US100|US500|US30|NQ|ES|YM|XAUUSD|XAGUSD|DXY|EURUSD|UK100|DE40|US2000|FTSE|DAX|gold|silver)\b")
@@ -126,12 +126,12 @@ def check(folder: Path, migration_text: str | None = None) -> tuple[list[str], l
         f2, j2, o2 = check_links(text)
         fail, judge, ok = fail + f2, judge + j2, ok + o2
 
-    # 2. tools: no v1, no example values, every number accounted for
+    # 2. tools: nothing from outside v2, no example values, every number accounted for
     lesson_numbers = numbers(text)
     for t in tools:
         src = t.read_text()
-        hit = [v for v in V1 if re.search(rf"^\s*(from|import)\s+{v}\b", src, re.M)]
-        (fail if hit else ok).append(f"{t.name}: imports v1 ({', '.join(hit)})" if hit else f"{t.name}: reads nothing from v1")
+        hit = [v for v in OUTSIDE if re.search(rf"^\s*(from|import)\s+{v}\b", src, re.M)]
+        (fail if hit else ok).append(f"{t.name}: imports from outside v2 ({', '.join(hit)})" if hit else f"{t.name}: reads nothing from outside v2")
         code = "\n".join(line.split("#")[0] for line in re.sub(r'"""(?:.|\n)*?"""', "", src).splitlines())    # code only, no docstrings or comments
         for rx, what in ((TF, "a named timeframe"), (ASSET, "an instrument's name"), (DATE, "a calendar date")):
             m = rx.search(code)

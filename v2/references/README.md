@@ -1,6 +1,6 @@
 # v2 references
 
-Cleaned copies of the source notes (17 Nov 2026). The originals in `references/` are v1 and were not changed.
+Cleaned copies of the source notes (17 Nov 2026). The originals were not changed and are not read from here.
 
 ## What is here (`personal/`, kept out of git like the originals)
 | File | What it is |
@@ -18,9 +18,9 @@ and review-log mentions, data-feed caveats. Nothing else was reworded. Sources w
 third-party stay in the files they were in, with their labels).
 
 ## Left out of v2 on purpose
-`framework.md`, `models.md`, `patterns.md` (summaries written as engine rules), `pipeline.md` (how the v1 engine
-runs), `orderflow.md` and `microstructure/`. Sharif: "we will have to fix them through our words." The four PDFs stay
-in `references/` (they are sources, not notes; read them from there).
+The summaries written as engine rules (framework, models, patterns), the description of how the old engine ran,
+the order-flow notes and the microstructure library. Sharif: "we will have to fix them through our words." The ICT
+PDFs have not been brought into v2 yet; that is his call.
 
 ## Still to judge with Sharif
 - The rulings' "Ruling:" lines and the live executions' "Model resemblance" lines are conclusions drawn from the

@@ -11,9 +11,8 @@ dist/
 build/
 *.egg-info/
 
-# --- Market data (re-downloadable: `python -m ict_engine.data.dukascopy fetch ...`) ---
+# --- Market data (re-downloadable) ---
 /data/
-/v1/data
 .dukascopy-cache/
 download/
 *.parquet
@@ -22,19 +21,7 @@ download/
 # --- Generated outputs (day packs, reports, viewer builds) ---------------------
 out/
 reports/
-viewer/node_modules/
-viewer/dist/
 
-# --- Not for a public repo ----------------------------------------------------
-# Third-party copyrighted ICT study material (PDFs) — keep locally only.
-v1/references/*.pdf
-v1/references/**/*.pdf
-v1/references/**/*.epub
-v1/references/microstructure/books/
-v1/references/microstructure/papers/
-v1/references/microstructure/.index/
-# Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
-v1/references/personal/
 
 # --- Secrets / local config -----------------------------------------------------
 .env
@@ -50,8 +37,10 @@ v1/references/personal/
 .DS_Store
 Thumbs.db
 
-# Economic calendar (public release dates, small; needed by tests)
-!v1/ict_engine/news/us_calendar.csv
 
 # v2 copies of the private notes (same reason as references/personal/).
 v2/references/personal/
+
+# The v2 chart: working state, not content.
+v2/chart/marks.json
+v2/chart/saves.jsonl

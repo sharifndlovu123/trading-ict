@@ -4,18 +4,16 @@ Everything in this folder is the first version of the project. Sharif retired it
 off of exact defined targets and values which don't help at all", rules were fitted to his examples, and nobody
 knows how deep that goes. **Nothing here is a source for v2** (see `../v2/README.md`). Hunts are off.
 
-It still runs, for looking things up:
+It is self-contained (18 Nov 2026): its own project settings (`pyproject.toml`), environment, pages (`viewer/`),
+skills (`.claude/skills/`) and ignore file. Nothing outside this folder reads it, runs it or points into it, and it
+can be deleted without breaking anything else. Only `data` and `.env` here are links to the top-level ones.
+
+If something in it must be looked up or run:
 - Work from this folder: `cd v1`, then the commands below as written (paths such as `research/scripts/...`,
-  `out/...`, `reports/...`, `tests/...` are relative to `v1/`).
-- `data`, `viewer` and `.env` here are links to the top-level ones.
-- Tests: `uv run pytest -q -rs` from the top level runs v1's tests and v2's.
-- The chart page (used only for teaching marks now): `cd v1 && uv run python research/scripts/liqmap_server.py
-  --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD --port 8776 --data out/live --page viewer/live.html
-  --answers reports/reviews/live.jsonl`. Fresh candles: `cd v1 && uv run python research/scripts/live_recipe.py
-  --assets US100 US500 US30 XAUUSD XAGUSD DXY UK100 DE40` (started by hand when a lesson needs them).
+  `out/...`, `reports/...`, `tests/...` are relative to this folder). `uv sync` here builds its own environment.
+- Tests: `cd v1 && uv run pytest -q -rs` (656 passed on 18 Nov 2026).
 - His saved reviews in `reports/reviews/*.jsonl` are read-only.
-- The v1 skills (trade-review, pattern-finder, pd-array-audit, change-gate, pipelines, microstructure-library) are in
-  `.claude/skills/` inside this folder. They describe v1's process and are not to be used for v2 work.
+- The original project readme is `PROJECT.md`.
 
 What follows is the old project description, unchanged except for this header. Read it as a description of v1.
 

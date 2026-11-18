@@ -1,4 +1,4 @@
-"""v2 tests import only from v2 (never from v1's ict_engine or research/scripts). Each concept folder is put on the
+"""v2 tests import only from v2. Each concept folder is put on the
 path, so a test imports its own eyes file by name (`from bias_eyes import ...`)."""
 import sys
 from pathlib import Path

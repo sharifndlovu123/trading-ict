@@ -1,0 +1,18 @@
+# v1's own ignores (paths are relative to this folder). The top-level .gitignore covers the general ones.
+/data
+/.venv/
+viewer/node_modules/
+viewer/dist/
+
+# Third-party copyrighted ICT study material (PDFs): keep locally only.
+references/*.pdf
+references/**/*.pdf
+references/**/*.epub
+references/microstructure/books/
+references/microstructure/papers/
+references/microstructure/.index/
+# Personal notes, Notion copies, chart screenshots (carry personal handles), research logs.
+references/personal/
+
+# Economic calendar (public release dates, small; needed by tests)
+!ict_engine/news/us_calendar.csv

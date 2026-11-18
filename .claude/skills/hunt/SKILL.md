@@ -35,7 +35,7 @@ whether he wants them on. Run nothing else.** Only Sharif switches hunting on; w
   and properly implement it into the brain."
 - **It never goes past the stage he has set.** The stage is in `v2/hunts/README.md`. Claude does not move itself up.
 - **It never states what price is doing.** See **speak**.
-- **It never uses v1.** No v1 playbook, watcher, prep, scan or rule.
+- **It uses only what is in v2.** No playbook, watcher, prep, scan or rule from before v2.
 
 If he starts teaching in the middle of a hunt: say the hunt is paused. What he says is noted and held like any
 correction, unless he says "learn", which starts the learn pipeline.

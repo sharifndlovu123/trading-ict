@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chart</title>
+<style>
+  :root { --bg:#16181c; --panel:#1d2026; --line:#2c3038; --ink:#e7e9ee; --dim:#8b93a1; --claude:#35c6d9; --his:#f2b84b; --up:#3b8eea; --down:#e2612e; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); }
+  h1 { font-size:16px; margin:0 10px 0 0; }
+  button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; }
+  button.on { background:var(--up); border-color:var(--up); color:#fff; }
+  button.tool.on { background:var(--his); border-color:var(--his); color:#111; }
+  .dim { color:var(--dim); }
+  main { display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:12px; padding:12px 14px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  #wrap { position:relative; height:72vh; min-height:420px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  #chart, #over { position:absolute; inset:0; }
+  #over { pointer-events:none; z-index:5; }   /* above the chart's own layers, or the marks are hidden */
+  #over.armed { pointer-events:auto; cursor:crosshair; }
+  aside > div { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+  aside h2 { font-size:14px; margin:0 0 6px; }
+  aside ul { margin:0; padding-left:18px; }
+  aside li { margin-bottom:6px; }
+  .row { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+  .key { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
+  textarea { width:100%; min-height:56px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px; font:inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Chart</h1>
+  <span id="assets" class="row" style="margin:0"></span>
+  <span id="tfs" class="row" style="margin:0"></span>
+  <button id="reload" title="read the candle files and the marks again">refresh</button>
+  <span id="status" class="dim"></span>
+</header>
+<main>
+  <section>
+    <div id="wrap"><div id="chart"></div><canvas id="over"></canvas></div>
+    <div class="row">
+      <span class="dim">Your marks:</span><span id="tools" class="row" style="margin:0"></span>
+      <button id="undo">undo last</button><button id="clear">clear mine</button><button id="save">save my marks</button>
+      <span id="saved" class="dim"></span>
+    </div>
+    <div class="dim">Pick a mark, then click the chart (a level or a line) or drag (a zone). Right-click one of yours to remove it. New York time. Candles are read from files: refresh after new ones are fetched.</div>
+    <textarea id="note" placeholder="A note to save with your marks (optional)"></textarea>
+  </section>
+  <aside>
+    <div><h2>Claude's read <span id="at" class="dim"></span></h2><ul id="read"><li class="dim">nothing yet</li></ul></div>
+    <div><h2>On the chart</h2>
+      <div><span class="key" style="background:var(--claude)"></span>Claude's marks (labels start "C ·")</div>
+      <div><span class="key" style="background:var(--his)"></span>Yours (labels start "S ·")</div>
+      <div class="dim" style="margin-top:6px">A mark shows on its own timeframe and the lower ones.</div>
+    </div>
+  </aside>
+</main>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+<script>
+const $ = id => document.getElementById(id);
+const RANK = { "1M":7, "1W":6, "1D":5, "4h":4, "1h":3, "15m":2, "5m":1, "1m":0 };
+// what Sharif can place: [label, shape]. Kept to the words v2 has so far.
+const TOOLS = [["buyside","level"],["sellside","level"],["EQH","zone"],["EQL","zone"],["BOS","level"],["level behind","level"],["level ahead","level"],
+               ["BISI","zone"],["SIBI","zone"],["IFVG","zone"],["VI","zone"],["NDOG","zone"],["NWOG","zone"],["→ bull","vline"],["→ bear","vline"],["note","level"]];
+const q = new URLSearchParams(location.search);
+const st = { asset: q.get("asset"), tf: q.get("tf") || "1D", candles: [], marks: [], mine: [], tool: null, drag: null };
+
+const chart = LightweightCharts.createChart($("chart"), {
+  layout: { background: { color: "#1d2026" }, textColor: "#8b93a1" }, grid: { vertLines: { color: "#262a31" }, horzLines: { color: "#262a31" } },
+  timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 6 }, crosshair: { mode: 0 }, autoSize: true });
+const series = chart.addCandlestickSeries({ upColor: "#3b8eea", downColor: "#e2612e", borderVisible: false, wickUpColor: "#3b8eea", wickDownColor: "#e2612e" });
+const over = $("over"), ctx = over.getContext("2d");
+
+const key = () => `chart-mine-${st.asset}`;
+const loadMine = () => { try { st.mine = JSON.parse(localStorage.getItem(key()) || "[]"); } catch { st.mine = []; } };
+const keepMine = () => { try { localStorage.setItem(key(), JSON.stringify(st.mine)); } catch {} };
+
+function idx(t) {                       // the last candle at or before a time (marks from a higher timeframe fall between candles)
+  const c = st.candles; let lo = 0, hi = c.length - 1, at = 0;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (c[m].time <= t) { at = m; lo = m + 1; } else hi = m - 1; }
+  return at;
+}
+const xOf = t => t == null ? null : chart.timeScale().logicalToCoordinate(idx(t));
+const yOf = p => series.priceToCoordinate(p);
+
+function draw() {
+  const r = $("wrap").getBoundingClientRect(), d = devicePixelRatio || 1;
+  over.width = r.width * d; over.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+  if (!st.candles.length) return;
+  const end = (chart.timeScale().logicalToCoordinate(st.candles.length - 1) ?? r.width) + 24;      // an open mark stops just past the last candle
+  const all = st.marks.map(m => [m, "#35c6d9", "C"]).concat(st.mine.map(m => [m, "#f2b84b", "S"]));
+  ctx.font = "11px ui-monospace, monospace"; ctx.lineWidth = 1.5;
+  for (const [m, col, who] of all) {
+    if (m.tf && RANK[m.tf] < RANK[st.tf]) continue;                                               // only on its own timeframe and the lower ones
+    const x0 = Math.max(0, xOf(m.t0) ?? 0), x1 = m.t1 == null ? end : (xOf(m.t1) ?? end);
+    ctx.strokeStyle = col; ctx.fillStyle = col; let lx = x0, ly = null;
+    if (m.shape === "zone") {
+      const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) continue;
+      ctx.globalAlpha = 0.14; ctx.fillRect(x0, a, x1 - x0, b - a); ctx.globalAlpha = 1; ctx.strokeRect(x0, a, x1 - x0, b - a); ly = a - 5;
+    } else if (m.shape === "vline") {
+      ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x0, 24); ctx.lineTo(x0, r.height - 30); ctx.stroke(); ctx.setLineDash([]); lx = x0 + 5; ly = 36;
+    } else if (m.shape === "line") {
+      const a = yOf(m.p0), b = yOf(m.p1); if (a == null || b == null) continue;
+      ctx.beginPath(); ctx.moveTo(x0, a); ctx.lineTo(x1, b); ctx.stroke(); ly = a - 5;
+    } else {
+      const y = yOf(m.price); if (y == null) continue;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ly = y - 5;
+    }
+    const label = `${who} · ${m.kind || ""}`, w = ctx.measureText(label).width + 8;
+    ctx.fillStyle = "#16181c"; ctx.fillRect(lx, ly - 11, w, 14); ctx.fillStyle = col; ctx.fillText(label, lx + 4, ly);
+  }
+  if (st.drag) { const { x0, y0, x1, y1 } = st.drag; ctx.strokeStyle = "#f2b84b"; ctx.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); }
+}
+
+const pos = e => { const r = over.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+function timeAt(x) { const i = Math.round(chart.timeScale().coordinateToLogical(x) ?? 0); return st.candles[Math.max(0, Math.min(st.candles.length - 1, i))].time; }
+const round = p => +p.toPrecision(7);
+
+over.addEventListener("mousedown", e => {
+  if (!st.tool || e.button !== 0) return;
+  const [x, y] = pos(e);
+  if (st.tool[1] === "zone") { st.drag = { x0: x, y0: y, x1: x, y1: y }; return; }
+  const m = { kind: st.tool[0], shape: st.tool[1], tf: st.tf, t0: timeAt(x), t1: null, by: "S" };
+  if (m.shape === "level") m.price = round(series.coordinateToPrice(y));
+  st.mine.push(m); done();
+});
+over.addEventListener("mousemove", e => { if (st.drag) { [st.drag.x1, st.drag.y1] = pos(e); draw(); } });
+over.addEventListener("mouseup", () => {
+  if (!st.drag) return;
+  const { x0, y0, x1, y1 } = st.drag; st.drag = null;
+  if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 2) {
+    const a = series.coordinateToPrice(y0), b = series.coordinateToPrice(y1);
+    st.mine.push({ kind: st.tool[0], shape: "zone", tf: st.tf, top: round(Math.max(a, b)), bottom: round(Math.min(a, b)), t0: timeAt(Math.min(x0, x1)), t1: timeAt(Math.max(x0, x1)), by: "S" });
+  }
+  done();
+});
+$("wrap").addEventListener("contextmenu", e => {                          // right-click removes the nearest of his marks
+  e.preventDefault(); const [x, y] = pos(e); let best = -1, dist = 14;
+  st.mine.forEach((m, i) => {
+    const ys = m.shape === "zone" ? [yOf(m.top), yOf(m.bottom)] : m.shape === "vline" ? [y] : [yOf(m.price)];
+    const dx = m.shape === "vline" ? Math.abs((xOf(m.t0) ?? -99) - x) : 0;
+    for (const yy of ys) { const dd = Math.max(dx, Math.abs((yy ?? -99) - y)); if (dd < dist) { dist = dd; best = i; } }
+  });
+  if (best >= 0) { st.mine.splice(best, 1); keepMine(); draw(); }
+});
+function done() { arm(null); keepMine(); $("saved").textContent = ""; draw(); }
+function arm(t) { st.tool = t; over.classList.toggle("armed", !!t); [...$("tools").children].forEach(b => b.classList.toggle("on", t && b.textContent === t[0])); }
+
+$("undo").onclick = () => { st.mine.pop(); keepMine(); draw(); };
+$("clear").onclick = () => { st.mine = []; keepMine(); draw(); };
+$("save").onclick = async () => {
+  const r = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ asset: st.asset, tf: st.tf, marks: st.mine, note: $("note").value }) });
+  $("saved").textContent = r.ok ? `saved ${st.mine.length} mark(s) at ${new Date().toLocaleTimeString()}` : "save failed";
+};
+$("reload").onclick = () => load(true);
+
+async function load(keepView) {
+  $("status").textContent = "loading…";
+  const [c, m] = await Promise.all([fetch(`/api/candles?asset=${st.asset}&tf=${st.tf}`).then(r => r.json()), fetch(`/api/marks?asset=${st.asset}`).then(r => r.json())]);
+  if (c.error) { $("status").textContent = c.error; return; }
+  st.candles = c; st.marks = m.marks || []; series.setData(c);
+  if (!keepView) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, c.length - 160), to: c.length + 6 });
+  $("read").innerHTML = (m.read || []).length ? m.read.map(x => `<li>${x.replace(/[&<>]/g, s => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[s]))}</li>`).join("") : '<li class="dim">nothing yet</li>';
+  $("at").textContent = m.at ? `· ${m.at}` : "";
+  const last = c[c.length - 1], t = new Date(last.time * 1000).toISOString().slice(0, 16).replace("T", " ");
+  $("status").textContent = `${st.asset} ${st.tf} · last candle ${t} New York · ${last.close}`;
+  history.replaceState(null, "", `?asset=${st.asset}&tf=${st.tf}`);
+  requestAnimationFrame(draw);
+}
+function tabs(el, names, cur, pick) {
+  el.innerHTML = ""; for (const n of names) { const b = document.createElement("button"); b.textContent = n; b.className = n === cur ? "on" : ""; b.onclick = () => pick(n); el.appendChild(b); }
+}
+async function start() {
+  const a = await fetch("/api/assets").then(r => r.json());
+  if (!a.assets.includes(st.asset)) st.asset = a.assets[0];
+  if (!a.timeframes.includes(st.tf)) st.tf = "1D";
+  const again = () => { tabs($("assets"), a.assets, st.asset, n => { st.asset = n; loadMine(); again(); load(); }); tabs($("tfs"), a.timeframes, st.tf, n => { st.tf = n; again(); load(); }); };
+  for (const t of TOOLS) { const b = document.createElement("button"); b.textContent = t[0]; b.className = "tool"; b.onclick = () => arm(st.tool === t ? null : t); $("tools").appendChild(b); }
+  loadMine(); again(); load();
+  chart.timeScale().subscribeVisibleLogicalRangeChange(draw);
+  new ResizeObserver(draw).observe($("wrap"));
+  setInterval(draw, 400);                                                 // the price scale can move without an event
+}
+start();
+</script>
+</body>
+</html>

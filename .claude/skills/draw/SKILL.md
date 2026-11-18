@@ -14,7 +14,7 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
    moment. Something that was liquidity for an earlier price is not drawn.
 2. **From the weekly down.** The higher timeframe first, then lower. It is far from price sometimes, and still first.
 3. **Original liquidity before alt-liquidity.** Pools of stops first; imbalances second.
-4. **Only what is in the brain.** Draw with concepts that are in `v2/concepts/`. Do not draw from v1's ideas.
+4. **Only what is in the brain.** Draw with concepts that are in `v2/concepts/`, and nothing else.
 5. **Keep it readable.** Few marks. If the chart is busy, the read is not clear yet.
 
 ## How a mark is made
@@ -25,15 +25,24 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 - **Name the timeframe** each mark belongs to; it shows on that timeframe and the lower ones.
 - **Say what it is in the label**, shortly: "EQL", "PWL", "alt: BISI", "level behind".
 
-## Where the marks go (for now)
+## Where the marks go
 
-The chart page is a display borrowed from v1 until v2 has its own. Nothing in v2 reads from it.
+The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
 
-- Marks: `v1/out/live/overlay.json`, per instrument: `marks` (a level: `price`; a zone: `top` and `bottom`; a line:
-  `shape: "trend"` with `p0`, `p1`; each with `kind`, `tf`, `side`, `t0`, `t1`, `watch: false`) and `read` (the lines
-  shown beside the chart).
-- Page: `http://127.0.0.1:8776/?asset=<NAME>&tf=<TF>`. If it is down, start it from `v1/` (see `v1/README.md`); only
-  port 8776 may listen on the network. Start the feed by hand when fresh candles are needed.
+- **Claude's marks:** `v2/chart/marks.json`. Per instrument: `marks` and `read` (the lines shown beside the chart);
+  `at` at the top says when it was written. A mark has `kind` (its short label), `tf`, `t0`, `t1` (null while it is
+  still in play) and a `shape`:
+  - `level`: `price`
+  - `zone`: `top`, `bottom`
+  - `line`: `p0` at `t0` to `p1` at `t1`
+  - `vline`: a vertical line at `t0` (a change of bias, for example)
+- **Times** are New York clock times as epoch seconds, the same as the candles the page serves
+  (`/api/candles?asset=<NAME>&tf=<TF>`), so take `t0` and `t1` from those candles.
+- **Page:** `http://127.0.0.1:8776/?asset=<NAME>&tf=<TF>`. If it is down:
+  `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD` (only port 8776 may listen on
+  the network). Fresh candles: `uv run python v2/chart/fetch.py <NAME>`, then press refresh on the page.
+- **His marks:** he draws with the buttons under the chart and presses save; they are appended to
+  `v2/chart/saves.jsonl`. Read them; never edit them.
 
 ## Before saying the marks are there
 

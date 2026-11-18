@@ -1,8 +1,8 @@
 # v2: the clean rebuild
 
-Everything outside this folder is **v1 and deprecated**, and since 18 Nov 2026 it sits under `../v1/` (Sharif,
-17 Nov 2026: the earlier research was damaged by rules fitted to examples and lessons locked to specific values).
-Everything the brain and the eyes need lives here.
+This is the project. The old version was damaged by rules fitted to examples and lessons locked to specific values
+(Sharif, 17 Nov 2026), so it was sealed off in its own folder and nothing here reads it, runs it or points into it.
+Everything the brain and the eyes need lives in this folder.
 
 ## The folders
 
@@ -21,6 +21,7 @@ v2/
       liquidity.py, alt_liquidity.py     the tools
       test_liquidity.py, test_alt_liquidity.py
   brain/           how lessons are pulled together while price moves (empty until Sharif sets the design)
+  chart/           the chart page: candles and marks, nothing else (server, page, candle reader, downloader, tests)
   hunts/           the hunt stage he has set, and one notes file per hunting day (hunts are off)
   specs/           design documents he approved
   skills_tests/    tests for the skills' own code
@@ -38,7 +39,7 @@ concepts together, and the brain is how lessons are pulled while price moves. Ne
 they need are in. What is built now, concept by concept, is the lesson, its tools and their tests.
 
 ## Rules
-1. v2 never reads v1: no imports from `ict_engine` or `research/scripts`, no v1 notes as a source. (Raw candles are data and may be used.)
+1. v2 stands alone: no imports and no notes from the old version. An old idea enters only by being re-taught or re-checked with Sharif and written here afresh. (Raw candles in `data/bars/` are data and may be used.)
 2. Only what Sharif has confirmed enters, in his words.
 3. A lesson is its why, never a price, a time or a timeframe from an example.
 4. Every claim has tests on hand-built candles. "Tests are included, because they validate what you claim."

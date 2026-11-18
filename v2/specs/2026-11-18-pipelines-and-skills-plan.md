@@ -11,7 +11,7 @@ Claude (he said "approved, build it").
 
 ## Global constraints (from the spec)
 
-- All of it is v2. Nothing is taken from v1's hunting, playbook, watcher, preps or skills.
+- All of it is v2. Nothing is taken from the old version's hunting, playbook, watcher, preps or skills.
 - No skill has two modes. One pipeline runs at a time, and its first line says which.
 - The brain changes only in learn, with Sharif present. A hunt writes notes, never lessons.
 - No hooks or file locks.
@@ -51,8 +51,8 @@ Claude (he said "approved, build it").
 - `.claude/skills/speak/SKILL.md`: "interesting"; never "price is buying / selling"; every statement tied to a
   timeframe and to now; a pattern is "might be"; before / after examples.
 - `.claude/skills/draw/SKILL.md`: relative to now; from the weekly down; original liquidity before alt-liquidity;
-  every mark ends; no text on the chart; the overlay file and its mark shapes; start the page from `v1/` if it is
-  down; look at the page before saying the marks are there.
+  every mark ends; no text on the chart; the marks file and its mark shapes; start the page if it is down; look at
+  the page before saying the marks are there. (The chart was rebuilt in `v2/chart/` the same day.)
 - `.claude/skills/brain-write/SKILL.md`: written only after he says the lesson is done; his words quoted with the date
   and what it was confirmed on; anything of Claude's named as Claude's; the Links table and its two statuses; examples
   kept as illustrations, never as the rule.
@@ -67,7 +67,7 @@ Claude (he said "approved, build it").
 
 ### Task 4: wiring
 - `CLAUDE.md`: a "Pipelines" section (which word starts which), the speaking rule, the renamed check.
-- `v2/README.md`, `v2/MIGRATION.md`: skills table, the new item "chart viewer moved to the root, out of v1" (Sharif,
+- `v2/README.md`, `v2/MIGRATION.md`: skills table, the new item "chart viewer moved out of the old version" (Sharif,
   18 Nov 2026: "at some point"), log line. `pyproject.toml` unchanged (`v2` is already a test path).
 - Memory: `v2-rebuild.md` gains the pipelines, the goal in his words and the speaking rule.
 - Remove the empty leftover folders `v2/engine` and `v2/tests`.

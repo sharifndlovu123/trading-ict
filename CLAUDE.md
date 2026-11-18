@@ -6,9 +6,9 @@ Claude to read the market his way.
 ## Where things stand (read first)
 
 - **v2 is the project.** `v2/` is the clean rebuild, started 17 Nov 2026. All new work goes there.
-- **v1 is deprecated.** `v1/` holds everything built before (`ict_engine`, `tests`, `research`, `reports`,
-  `references`, `out`). Sharif: "v1 is broken because it was built off of exact defined targets and values which
-  don't help at all." It is history, not a source. Its own description is `v1/README.md`.
+- **The old version is sealed off in `v1/`.** Sharif: "v1 is broken because it was built off of exact defined
+  targets and values which don't help at all." **Nothing outside that folder reads it, runs it, imports it or points
+  into it,** and it may be deleted. Do not open it for v2 work. If he asks about something old, ask him first.
 - **Hunts are off** (18 Nov 2026): no London or New York prep, no watcher, no paper trades, no scheduled jobs. Do
   not restart any of it. Hunting returns only on v2 and on his word.
 - **This week's objective** (week of 16 to 20 Nov 2026): "cleaning up our mess." Check with him after that week.
@@ -21,9 +21,12 @@ Claude to read the market his way.
   imbalances as draws).
 - **The eyes** (the top-down process that uses the concepts together) **and the brain** (how lessons are pulled
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
-- `v2/references/`: cleaned copies of the source notes (private, not in git). The ICT PDFs are in `v1/references/`.
-- Tests: `uv run pytest -q v2`. Everything: `uv run pytest -q -rs` (v1's tests too; a skip is not a pass).
-- The six v1 skills are parked in `v1/.claude/skills/`; they are not used for v2 work.
+- `v2/references/`: cleaned copies of the source notes (private, not in git).
+- `v2/chart/`: the chart page (candles and marks only). Start it with
+  `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD`, open
+  `http://127.0.0.1:8776/?asset=UK100&tf=1D`. Claude's marks: `v2/chart/marks.json`; what he draws and saves:
+  `v2/chart/saves.jsonl`. Fresh candles: `uv run python v2/chart/fetch.py <ASSET>` (free data, needs Node.js).
+- Tests: `uv run pytest -q v2` (a skip is not a pass).
 - Validate every concept with the `context-check` skill before ticking its box:
   `uv run python .claude/skills/context-check/check.py`, then the reading in its `SKILL.md`.
 
@@ -48,7 +51,7 @@ pointing them out and drawing them yourself, to the point where you can place li
 selling"; tie every statement to a timeframe and to now ("the weekly is bullish, the hourly is bearish"); a pattern
 is "might be".
 
-## How to work with Sharif (these caused v1's damage; they are not optional)
+## How to work with Sharif (ignoring these is what broke the old version; they are not optional)
 
 1. **Examples are snowflakes.** Learn why he marks something; never carry a price, time, timeframe or instrument
    from his example into a rule, a tool or a test. "If I give you a different chart you'll be confused."
@@ -71,15 +74,16 @@ is "might be".
   "swept" are the same thing. Uneaten stays, however far; eaten is used up.
 - **Imbalance** is the family name (not "FVG"): FVG (BISI, SIBI), IFVG, NDOG, NWOG, volume imbalance. As draws they
   are **alt-liquidity**: second in importance to original liquidity. The opening range gap is dropped.
-- Other ICT shorthand (MSS, BOS, PDH / PDL, PWH / PWL, EQH / EQL, PO3, premium / discount): check the glossary in
-  `v1/references/2022 Content.pdf` before guessing. When sources contradict, ictindex.io decides (it needs a browser).
+- Other ICT shorthand (MSS, BOS, PDH / PDL, PWH / PWL, EQH / EQL, PO3, premium / discount): do not guess. Ask him, or
+  search ICT's own words on ictindex.io (it needs a browser). When sources contradict, ictindex.io decides.
 
 ## Standing rules
 
 - All times are New York time (America/New_York), DST-aware.
 - Secrets live in `.env` (never print, echo or commit them; never ask him to paste one in chat). Free data only.
 - The chart page on port 8776 is the only thing that may listen on the network (with its password); anything else
-  stays on 127.0.0.1. It is kept as a chart for teaching marks: marks only, no text on the chart, every mark ends.
-- His saved reviews (`v1/reports/reviews/*.jsonl`) are read-only. `read1.png` and `read2.png` are his; leave them.
+  stays on 127.0.0.1. Marks only, no text on the chart, every mark ends.
+- What he saves from the chart (`v2/chart/saves.jsonl`) is his: read it, never edit it. `read1.png` and `read2.png`
+  are his; leave them.
 - Commit, do not push, unless he says. Cap 10 workers.
 - Python for the code; `uv sync` for the environment.

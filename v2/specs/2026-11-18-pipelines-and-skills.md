@@ -5,7 +5,7 @@ questions are answered below. Nothing in it is built yet.
 
 ## Why this exists
 
-v1 was damaged because Claude did not keep two kinds of work apart. Sharif would teach on a chart ("notice what
+The first version was damaged because Claude did not keep two kinds of work apart. Sharif would teach on a chart ("notice what
 happened with price at 8:21, it left a FVG") and Claude would carry the example into a rule: that time, that price,
 that timeframe. Lessons became fixed values, tools were tuned to reproduce a day, and the hunting that ran on top of
 them could not be trusted.
@@ -47,7 +47,7 @@ telling me; that's the easiest way to communicate to me."
    It must focus on what's recent and relative to now."
 9. **A backtest pipeline comes later.** "It should be able to run these hunts with old data and once done the data is
    assessed… this time it's not just testing, you're running the hunter through old data and seeing what it produces."
-   v1's backtesting is the reference for showing results over different time periods and different assets.
+   He pointed to how the old version showed results over different time periods and different assets.
 
 ## Goals
 
@@ -75,7 +75,7 @@ telling me; that's the easiest way to communicate to me."
 | | Approach | Trade-off |
 |---|---|---|
 | **A (chosen)** | One pipeline skill per word (learn, hunt, day review, later backtest), each an ordered list of steps, plus small skills each step calls | More files, but the mode is never in doubt: one pipeline runs at a time |
-| B | One "pipelines" skill holding every order, plus the small skills (how v1 did it) | One place to read, but learn and hunt sit side by side in one file, which is how they bled into each other |
+| B | One "pipelines" skill holding every order, plus the small skills (how it was done before) | One place to read, but learn and hunt sit side by side in one file, which is how they bled into each other |
 | C | No pipeline skills: the orders live in the project notes | Simplest, but the notes get heavy again and nothing enforces the order |
 
 Sharif picked A.
@@ -129,8 +129,9 @@ document fixes now, so it can be built later without redesign:
 - It runs **the same hunt pipeline**, not a separate set of rules.
 - At every step the hunter sees only what had happened by then (the chart is cut at "now").
 - The brain is not changed by a backtest. What it surfaces goes to a review with Sharif, like hunt notes.
-- v1's backtesting (`v1/ict_engine/eval/`, `v1/research/scripts/live_snapshot.py`) is looked at for how results were
-  stored and shown per period and per asset. Its fixed rules and tuned values are not carried over.
+- When it is built, Sharif is asked first whether to look at how the old version stored and showed results per
+  period and per asset (his suggestion). Its fixed rules and tuned values are not carried over, and v2 does not
+  depend on it.
 - How much of the hunter is tools and how much is Claude reading the chart is decided when the eyes are designed.
 
 ## The small skills
@@ -178,12 +179,14 @@ guards against (a replica reaching the brain) is one a reader catches and a lock
 
 ## How the draw skill puts marks on the chart
 
-- Marks go in the chart page's overlay file, `v1/out/live/overlay.json`: per instrument, a list of marks (a level,
-  a zone, or a line; each with its timeframe, a side, a start and an end) and the words that go in the card beside
-  the chart. This is the format already used for every teaching mark this week.
+(Changed 18 Nov 2026, the same day, when Sharif asked that nothing outside the old version point into it: the chart
+was rebuilt clean in `v2/chart/`.)
+
+- Marks go in `v2/chart/marks.json`: per instrument, a list of marks (a level, a zone, a line or a vertical line;
+  each with its timeframe, a start and an end) and the words shown beside the chart.
 - After drawing, Claude opens the page and looks at it before saying the marks are there.
-- The page (port 8776) is started from `v1/` when a learn session needs it, and the feed is started by hand when
-  fresh candles are needed. It is used only as a display. No rule, tool or lesson in v2 reads anything from v1.
+- The page (port 8776) is `v2/chart/server.py`. It shows candles and marks and nothing else. What Sharif draws and
+  saves is kept in `v2/chart/saves.jsonl`.
 
 ## Where the speaking rule applies
 
@@ -199,7 +202,7 @@ or a hunt note that states what price "is doing" as a fact.
 - The four hunt stages listed above.
 - `v2-concept-check` is renamed `context-check`.
 - Links live inside each lesson for now, not in a separate brain file.
-- Marks are drawn on the existing chart page (port 8776, served from v1) until v2 has its own.
+- Marks are drawn on v2's own chart page (port 8776, `v2/chart/`).
 - The backtest pipeline is designed in detail only after the eyes exist.
 - Hunt is written now but answers "hunts are off" until he switches them on.
 - A lesson without links is reported, not failed.

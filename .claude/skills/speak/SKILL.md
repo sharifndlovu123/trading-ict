@@ -10,7 +10,7 @@ fixed statement, it's fluid, like when writing the bias. It's relative to what's
 bullish, hourly is bearish."
 
 A market read is never a fact about what price is doing or will do. It is what is interesting on this chart, on this
-timeframe, right now. Fixed statements are how a read hardens into a rule, and that is what broke v1.
+timeframe, right now. Fixed statements are how a read hardens into a rule, and that is what broke the old version.
 
 ## The four habits
 

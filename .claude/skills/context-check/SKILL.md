@@ -5,7 +5,7 @@ description: Check that what entered v2 is the context Sharif taught and not a c
 
 # Context check
 
-Sharif rebuilt this project as v2 because v1 was damaged in one specific way: Claude turned his worked examples into
+Sharif rebuilt this project as v2 because the first version was damaged in one specific way: Claude turned his worked examples into
 rules. A price, a time of day, a timeframe or a fitted margin from one chart became "the rule", and tools and tests
 were tuned to reproduce that chart. His words: "you're still locking in specific values to what you're learning, and
 not taking in context" and "if I give you a different chart you'll be confused."
@@ -22,7 +22,7 @@ uv run python .claude/skills/context-check/check.py 02_liquidity # one
 ```
 
 - `FAIL` lines must be fixed before anything else. They are the give-aways: a value from the lesson's examples in the
-  code or tests, a named timeframe or instrument in a tool, a test that leans on a real day, an import from v1, a tool
+  code or tests, a named timeframe or instrument in a tool, a test that leans on a real day, an import from outside v2, a tool
   without tests, no test across price scales and timeframes, no no-look-ahead test, a lesson without his words,
   a link that carries a clock time, a price, a timeframe or an instrument, a link without a status, a link that
   states what price "is doing".
