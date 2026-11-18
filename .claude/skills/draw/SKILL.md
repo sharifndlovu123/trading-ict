@@ -27,16 +27,11 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 ## How a mark is made
 
 - **Marks only, no text on the chart.** Words go in the read beside the chart, in the speak skill's wording.
-- **Keep the read short.** A handful of one-line points: the bias per timeframe on one line, then what is interesting
-  above and below. The marks already show what is going on; the read only names it. No reasons, history or caveats in
-  the read: if he wants the why, he asks. (He, 18 Nov 2026: "it's a lot of context I have to read every time… keep it
-  as simple as possible; the chart's content should already help me see what's going on.")
-- **Every mark ends.** Give it an end where it stopped mattering (eaten, filled, the week is over). Only what is
-  still in play stays open.
-- **Name the timeframe** each mark belongs to; it shows on that timeframe and the lower ones.
-- **Say what it is in the label**, shortly: "EQL", "PWL", "alt: BISI", "level behind".
-- **Blocks and imbalances show their timeframe beside the name** ("BISI 1M", "order block 4h"): the page adds it from
-  the mark's `tf`, so always set `tf` to the timeframe that made it and do not repeat it in `kind`.
+- **Claude's read is the timeframe and the colour, nothing more.** The page builds it from the marks: the bias per
+  timeframe as coloured chips (set `bias` in `marks.json`: `{"1M": "bull", "1W": "bear", …}` with bull, bear or range)
+  and, under each timeframe, its marks with their colours. So name each mark's `kind` plainly and set its `tf`. Leave
+  `read` empty unless he asks for words. (He, 18 Nov 2026: "it's a lot of context I have to read every time… the
+  chart's content should already help me see what's going on"; then: "just state the tf and color.")
 
 ## Where the marks go
 
