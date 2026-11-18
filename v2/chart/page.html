@@ -63,6 +63,8 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 #watch .w { display:flex; gap:8px; padding:6px 12px; cursor:pointer; border-left:2px solid transparent; } #watch .w:hover { background:var(--panel2); }
 #watch .w.on { border-left-color:var(--accent); background:var(--panel2); } #watch .w b { flex:1; font-weight:600; }
 #read { padding:0 12px 12px; } #read ul { margin:0; padding-left:18px; } #read li { margin-bottom:6px; }
+#read .ref { border:1px solid; border-radius:4px; padding:0 5px; font-weight:700; white-space:nowrap; font-size:12px; }
+#read li { line-height:1.75; }
 #read h4 { margin:12px 0 4px; font-size:11px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.05em; }
 #read .chips { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; } #read .chip { color:#fff; font-weight:700; border-radius:5px; padding:1px 8px; }
 #read .lg { display:flex; gap:10px; padding:5px 0; border-top:1px solid var(--line); } #read .lg b { width:26px; flex:none; }
@@ -289,7 +291,7 @@ function underMarks(c) {                                 // Claude's marks for t
   const doc = st.claude[c.asset]; if (!doc || !$("ovon").checked) return [];
   return (doc.marks || []).filter(m => shows(m, c.tf) && (st.until == null || m.t0 == null || m.t0 <= st.until)).map(m => ({ ...m,
     t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
-    color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") + (m.shape === "zone" && m.tf ? " " + m.tf : "") }));
+    color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") + (m.tf ? " " + m.tf : "") }));       // Claude's labels always carry the timeframe: the read refers to marks by that name
 }
 function activate(p) { if (st.active === p) return; st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
 function build() {
@@ -460,11 +462,13 @@ function side() {
   const BIAS = { bull: "#2f9e44", bear: "#e03131", range: "#7b8794" }, b = d.bias || {};
   const bias = TFS.slice().reverse().filter(t => b[t]).map(t => `<span class="chip" style="background:${BIAS[b[t]] || "#7b8794"}" title="${esc(b[t])}">${TFNAME[t]}</span>`).join("");
   $("read").innerHTML = (bias ? `<div class="chips">${bias}<span class="dim" style="align-self:center;margin-left:4px">green bull · red bear · grey range</span></div>` : "") +
-    [["Interesting", d.interesting || d.read], ["Considering", d.considering]].map(([h, xs]) => (xs || []).length ? `<h4>${h}</h4><ul>${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "").join("") ||
+    [["Interesting", d.interesting || d.read], ["Considering", d.considering]].map(([h, xs]) => (xs || []).length ? `<h4>${h}</h4><ul>${xs.map(x => `<li>${refs(x)}</li>`).join("")}</ul>` : "").join("") ||
     (bias ? "" : '<div class="dim">Nothing written for this instrument.</div>');
   $("notekind").innerHTML = st.mode ? `This note is saved as a <b class="${st.mode}">${st.mode.toUpperCase()}</b> note.` : 'No session is running: the note is saved as a <b class="learn">LEARN</b> note. Switch the mode at the top left.';
   $("notectx").textContent = `Saved with: ${a} · ${TFNAME[c.tf]} · ${st.until != null ? "replay " + wall(st.until) : "newest candles"}`;
 }
+// a mark named in the read as [BISI 1M] is shown as a tag in that mark's colour: the same name and colour as on the chart, no prices to read
+const refs = text => esc(text).replace(/\[([^\]\[]+?) (1M|1W|1D|4h|1h|15m|5m|1m)\]/g, (_, k, tf) => `<span class="ref" style="border-color:${markColor(k, css("--claude"))};color:${markColor(k, css("--claude"))}">${k} ${tf}</span>`);
 // ---- his notes: a place to write, so the chart itself stays clean. One list for learning and for hunts.
 function showNotes() {
   $("notelist").innerHTML = st.written.length ? st.written.map(n => `<div class="nrow"><div class="m"><span class="k ${n.kind}">${n.kind}</span>` +

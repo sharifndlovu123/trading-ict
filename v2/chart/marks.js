@@ -152,7 +152,7 @@ function marksLayer(chart, series, el, o) {
       g.strokeStyle = g.fillStyle = u.color; g.lineWidth = 2; g.setLineDash(dash);
       let tx = Math.max(x0, 0) + 4, ty;
       if (u.shape === "vline") {
-        g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, H); g.stroke(); g.setLineDash([]); tx = x0 + 6; ty = 14;
+        g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, H); g.stroke(); g.setLineDash([]); tx = x0 + 6; ty = 44;      // under the chart's own legend in the corner
       } else if (u.shape === "line") {
         const y0 = yOf(u.p0), y1 = yOf(u.p1); if (y0 == null || y1 == null) continue;
         g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); if (MOVES.includes(u.kind)) arrowHead(g, x0, y0, x1, y1);
@@ -175,7 +175,7 @@ function marksLayer(chart, series, el, o) {
       const handles = [];
       if (m.shape === "vline") {
         g.setLineDash([6, 4]); g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0, H); g.stroke(); g.setLineDash([]);
-        lab(g, name(m), x0 + 6, 30, col(m)); handles.push([x0, 30]);
+        lab(g, name(m), x0 + 6, 62, col(m)); handles.push([x0, 62]);
       } else if (m.shape === "line") {
         const y0 = yOf(m.p0), y1 = yOf(m.p1); if (y0 == null || y1 == null) return;
         if (m.kind === "fake push") g.setLineDash([6, 4]);
