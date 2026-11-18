@@ -40,7 +40,11 @@ against it. That answer sets how far the targets go.
 5. Then the 50% of that range.
 
 **Naming, his preference:** "FVG I'm looking to enter, BISI I'm looking to reach; that's why I like BISI / SIBI on
-higher timeframes." He added that some names may be kept and some thrown later "because it's the same thing".
+higher timeframes." Settled when he closed the lesson: "FVGs for entries, SIBI / BISI for alt-liq."
+
+**Displacement, in his words:** "almost like a quick rapid movement of price, and it sweeps some form of liquidity,
+creates a BOS and leaves us some value (OB, breakers, FVGs). For now just FVGs is enough to work on." Order blocks
+and breakers are not in v2 yet.
 
 ## The trading range
 
@@ -59,11 +63,21 @@ higher timeframes." He added that some names may be kept and some thrown later "
 
 - "We would be looking to buy in this FVG. This is where you would have to decide what timeframe you're currently
   trading on."
-- **Entry:** "a buy limit at either the high of that FVG, or middle, or low."
+- **Entry:** "a buy limit at either the high of that FVG, or middle, or low." Which one "depends on what you're
+  willing to risk; they can help improve return ratios."
 - **Stop:** on the sellside the move left from, exactly on it, "because if it sweeps it we are discouraged."
 - **Targets:** "the trading range high and the buyside" of that same timeframe.
 - For a sell it is the mirror. That sentence is mine: he taught it on a buy, and gave both directions only for the
   halves of the range.
+
+## Runners and partials (his answers when closing the lesson)
+
+- "The most important part is knowing if we can have a runner or not." A runner "is left with bias": only when the
+  idea is with the bias.
+- "We plan to take off partials from our trade as TPs hit. TP 1 is always 80% of the trade."
+- The rest is split over the liquidity left to reach, and the split is the trader's call: "you can do an even split
+  or a favoured split." Even: with two further targets, the remaining 20% is split evenly between them. "Or if you
+  feel it should be different it's okay."
 
 ## The timeframe is the key
 
@@ -109,13 +123,12 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | a displacement has made a break of structure and left a FVG | the trading range of that leg and its 50% | stated by Sharif, 18 Nov 2026 |
 | a FVG sits in the discounted half of the range when looking up (the expensive half when looking down) | an entry there, with the stop on the liquidity the move left from and targets on the same timeframe | stated by Sharif, 18 Nov 2026 |
 | an idea goes against the bias of the timeframe above | the nearer targets only: quick and small | stated by Sharif, 18 Nov 2026 |
-| an idea goes with the bias of the timeframe above | runner targets, or further liquidity to reach | stated by Sharif, 18 Nov 2026 |
+| an idea goes with the bias of the timeframe above | runner targets, or further liquidity to reach: most of the trade off at the first target, the rest split over what is left | stated by Sharif, 18 Nov 2026 |
 | price turns on the timeframe being traded | the same sequence building one or two timeframes down, as an earlier approach | noticed by Claude, unconfirmed |
 
 ## Open questions for him
 
-- The naming he wants kept and thrown ("FVG" against "BISI / SIBI"; the three names he said he would show me).
-- What displacement is, as its own concept: here it was pointed at, not defined.
-- Whether the entry choice (high, middle or low of the FVG) depends on anything.
-- Partials and where a runner is left when the idea is with the bias.
+- The three names he said he would show me (trendline, gap, liquidity void).
+- How "quick" and "rapid" are judged for a displacement (by eye, like "very close" for equal highs?).
+- Whether the first target also takes 80% when the idea is against the bias, or the whole trade comes off there.
 - This lesson has not been shown back on a chart I had not seen.
