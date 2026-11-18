@@ -135,5 +135,6 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 
 ## Open questions for him
 
-- The three names he said he would show me (trendline, gap, liquidity void).
+- Gap and trendline: held for next time (his word, 18 Nov 2026). Liquidity void is deleted: "skip liquidity void, in
+  fact delete it."
 - This lesson has not been shown back on a chart I had not seen.

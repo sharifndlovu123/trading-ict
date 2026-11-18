@@ -178,7 +178,7 @@ const COLORS = ["#2962ff", "#ff9800", "#26a69a", "#e91e63", "#9c27b0", "#ffeb3b"
 const GROUPS = [["╱", "Lines", ["trendline", "displacement", "fake push"]],
                 ["—", "Levels", ["buyside", "sellside", "EQH", "EQL", "BOS", "level behind", "level ahead"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
-                ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "liquidity void", "NWOG", "NDOG"]],
+                ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "NWOG", "NDOG"]],
                 ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
                 ["⇕", "Range", ["trading range", "50%"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
