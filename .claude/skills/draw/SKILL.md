@@ -27,6 +27,10 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 ## How a mark is made
 
 - **Marks only, no text on the chart.** Words go in the read beside the chart, in the speak skill's wording.
+- **Keep the read short.** A handful of one-line points: the bias per timeframe on one line, then what is interesting
+  above and below. The marks already show what is going on; the read only names it. No reasons, history or caveats in
+  the read: if he wants the why, he asks. (He, 18 Nov 2026: "it's a lot of context I have to read every time… keep it
+  as simple as possible; the chart's content should already help me see what's going on.")
 - **Every mark ends.** Give it an end where it stopped mattering (eaten, filled, the week is over). Only what is
   still in play stays open.
 - **Name the timeframe** each mark belongs to; it shows on that timeframe and the lower ones.
