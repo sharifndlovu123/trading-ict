@@ -27,11 +27,11 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 ## How a mark is made
 
 - **Marks only, no text on the chart.** Words go in the read beside the chart, in the speak skill's wording.
-- **Claude's read is the timeframe and the colour, nothing more.** The page builds it from the marks: the bias per
-  timeframe as coloured chips (set `bias` in `marks.json`: `{"1M": "bull", "1W": "bear", …}` with bull, bear or range)
-  and, under each timeframe, its marks with their colours. So name each mark's `kind` plainly and set its `tf`. Leave
-  `read` empty unless he asks for words. (He, 18 Nov 2026: "it's a lot of context I have to read every time… the
-  chart's content should already help me see what's going on"; then: "just state the tf and color.")
+- **Keep the read short.** The bias is not written as a sentence: set `bias` in `marks.json`
+  (`{"1M": "bull", "1W": "bear", …}` with bull, bear or range) and the page shows one chip per timeframe, coloured
+  green, red or grey ("just state the tf and color"). After that, a handful of one-line points in `read`: what is
+  interesting above and below. No reasons, history or caveats: if he wants the why, he asks. (He, 18 Nov 2026: "it's a
+  lot of context I have to read every time… the chart's content should already help me see what's going on.")
 
 ## Where the marks go
 

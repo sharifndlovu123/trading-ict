@@ -455,14 +455,11 @@ function side() {
     `<span class="num">${px == null ? "" : px.toFixed(dp(px))}</span><span class="num ${ch >= 0 ? "up" : "dn"}" style="width:58px;text-align:right">${ch == null ? "" : (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%"}</span></div>`).join("");
   $("watch").querySelectorAll(".w").forEach(el => el.onclick = () => setAsset(el.dataset.a));
   $("readh").innerHTML = `${esc(a)} <span style="text-transform:none;letter-spacing:0">${esc(d.at || "")}</span>`;
-  // Claude's read is kept to the timeframe and the colour: the bias per timeframe, then each mark by timeframe with its colour
+  // Claude's read: the bias per timeframe as coloured chips (timeframe + colour, no sentence), then a few short lines
   const BIAS = { bull: "#2f9e44", bear: "#e03131", range: "#7b8794" }, b = d.bias || {};
-  const bias = TFS.slice().reverse().filter(t => b[t]).map(t => `<span class="chip" style="background:${BIAS[b[t]] || "#7b8794"}">${TFNAME[t]} ${esc(b[t])}</span>`).join("");
-  const rows = TFS.slice().reverse().map(t => { const ms = (d.marks || []).filter(m => (m.tf || "") === t); if (!ms.length) return "";
-    return `<div class="lg"><b>${TFNAME[t]}</b><div>${ms.map(m => `<span class="${m.t1 != null ? "done" : ""}"><span class="sw" style="background:${markColor(m.kind, css("--claude"))}"></span>${esc(m.kind)}</span>`).join("")}</div></div>`; }).join("");
-  $("read").innerHTML = (bias ? `<div class="chips">${bias}</div>` : "") + (rows || '<div class="dim">Nothing marked on this instrument.</div>') +
-    ((d.read || []).length ? `<ul style="margin-top:10px">${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "") +
-    `<div class="dim" style="margin-top:10px">Claude's marks are dashed and start "C ·". Greyed here = it has ended (eaten, filled or broken).</div>`;
+  const bias = TFS.slice().reverse().filter(t => b[t]).map(t => `<span class="chip" style="background:${BIAS[b[t]] || "#7b8794"}" title="${esc(b[t])}">${TFNAME[t]}</span>`).join("");
+  $("read").innerHTML = (bias ? `<div class="chips">${bias}<span class="dim" style="align-self:center;margin-left:4px">green bull · red bear · grey range</span></div>` : "") +
+    ((d.read || []).length ? `<ul>${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : (bias ? "" : '<div class="dim">Nothing written for this instrument.</div>'));
   $("notekind").innerHTML = st.mode ? `This note is saved as a <b class="${st.mode}">${st.mode.toUpperCase()}</b> note.` : 'No session is running: the note is saved as a <b class="learn">LEARN</b> note. Switch the mode at the top left.';
   $("notectx").textContent = `Saved with: ${a} · ${TFNAME[c.tf]} · ${st.until != null ? "replay " + wall(st.until) : "newest candles"}`;
 }
