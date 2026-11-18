@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hmac
+import ipaddress
 import json
 import os
 import sys
@@ -56,6 +57,33 @@ def allowed(client: str, header: str | None, password: str | None) -> bool:
     return hmac.compare_digest(given, password)
 
 
+def host_ok(host: str | None, extra: tuple[str, ...] = ()) -> bool:
+    """The page is reached by an address (127.0.0.1, 192.168.x.x) or as localhost. Any other name in the Host header
+    is refused, so a web site cannot point its own name at this machine and talk to the page (DNS rebinding)."""
+    if not host:
+        return False
+    name = host.rsplit(":", 1)[0] if host.count(":") == 1 else host.strip("[]").split("]")[0]
+    if name.lower() in ("localhost",) + tuple(x.lower() for x in extra):
+        return True
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        return False
+
+
+def same_origin(origin: str | None, host: str | None) -> bool:
+    """A save must come from the page itself. A browser sends Origin with a cross-site request; if it is there, it
+    must be this page's own address. (No Origin: not a cross-site browser request.)"""
+    if not origin:
+        return True
+    u = urlparse(origin)
+    return u.scheme in ("http", "https") and u.netloc.lower() == (host or "").lower()
+
+
+MAX_SAVE = 512 * 1024      # bytes: a save is a handful of marks and a note
+
+
 def frames(asset: str):
     """The instrument's 1-minute candles, re-read only when a file changed."""
     files = sorted((cd.DATA / cd.FOLDERS[asset]).glob("*-bid.parquet"))
@@ -79,6 +107,7 @@ def marks_for(asset: str) -> dict:
 
 class Handler(BaseHTTPRequestHandler):
     password: str | None = None
+    hosts: tuple[str, ...] = ()
 
     def log_message(self, *a):                                   # quiet
         pass
@@ -97,6 +126,9 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(obj).encode())
 
     def _ok(self) -> bool:
+        if not host_ok(self.headers.get("Host"), self.hosts):
+            self._send(403, b"unexpected host name", "text/plain")
+            return False
         if allowed(self.client_address[0], self.headers.get("Authorization"), self.password):
             return True
         self._send(401, b"password needed", "text/plain")
@@ -128,8 +160,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         if urlparse(self.path).path != "/api/save":
             return self._send(404, b"not found", "text/plain")
+        # only the page itself may save: a JSON request (which another site cannot send without asking first) from this origin
+        if (self.headers.get("Content-Type") or "").split(";")[0].strip().lower() != "application/json":
+            return self._json({"error": "a save must be JSON"}, 415)
+        if not same_origin(self.headers.get("Origin"), self.headers.get("Host")):
+            return self._json({"error": "a save must come from the chart page"}, 403)
+        size = int(self.headers.get("Content-Length") or 0)
+        if size <= 0 or size > MAX_SAVE:
+            return self._json({"error": "bad save size"}, 413)
         try:
-            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0))
+            body = json.loads(self.rfile.read(size))
             row = {"saved": int(time.time()), "asset": str(body["asset"]), "tf": str(body.get("tf", "")),
                    "marks": list(body.get("marks", [])), "note": str(body.get("note", ""))}
         except Exception:
@@ -143,8 +183,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="The v2 chart page")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8776)
+    ap.add_argument("--allow-host", action="append", default=[], help="a host name this page may be opened under, besides addresses and localhost")
     ap.add_argument("--password-env", help="name of a variable (environment or .env) holding the password other devices must give")
     a = ap.parse_args()
+    Handler.hosts = tuple(a.allow_host)
     if a.password_env:
         Handler.password = read_env(HERE.parents[1] / ".env", a.password_env)
         if not Handler.password:

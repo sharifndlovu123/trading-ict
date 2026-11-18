@@ -42,3 +42,18 @@ def test_an_instrument_with_no_marks_gets_an_empty_chart(tmp_path, monkeypatch):
     got = server.marks_for("ANY")
     assert got["at"] == "now" and got["marks"][0]["price"] == 1 and got["read"] == ["one line"]
     assert server.marks_for("OTHER")["marks"] == []
+
+
+def test_the_page_is_only_served_under_an_address_or_localhost():
+    assert server.host_ok("127.0.0.1:8776") and server.host_ok("192.168.1.20:8776") and server.host_ok("localhost:8776") and server.host_ok("[::1]:8776")
+    assert not server.host_ok("evil.example:8776") and not server.host_ok(None) and not server.host_ok("")
+    assert server.host_ok("desk.local:8776", extra=("desk.local",))               # a name he allowed when starting it
+
+
+def test_a_save_must_come_from_the_page_itself():
+    assert server.same_origin(None, "127.0.0.1:8776")                              # not a cross-site browser request
+    assert server.same_origin("http://127.0.0.1:8776", "127.0.0.1:8776")
+    assert server.same_origin("http://192.168.1.20:8776", "192.168.1.20:8776")
+    assert not server.same_origin("https://evil.example", "127.0.0.1:8776")
+    assert not server.same_origin("http://127.0.0.1:9999", "127.0.0.1:8776")       # another page on this machine
+    assert not server.same_origin("null", "127.0.0.1:8776")
