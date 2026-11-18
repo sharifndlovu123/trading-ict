@@ -65,6 +65,8 @@ coming after liquidity.
 | The old version's folder deleted, when he says | [ ] |
 
 ## Waiting on Sharif
+- [ ] Lesson 03 shown back on a chart I had not seen (gold, 18 Nov 2026, marks on the chart page): paused by him for the night; his corrections come first next session. The chart is left in LEARN mode for it
+- [ ] Gap and trendline: his to show next time
 - [ ] The first links for bias and liquidity (only he can state them)
 - [ ] The three open bias questions
 - [ ] The brain's pulling design
