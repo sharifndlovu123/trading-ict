@@ -167,9 +167,9 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 // cfg = the layout: one entry per chart (its instrument, its timeframe, line or candles), in reading order; cols 0 = automatic
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
-             tab: keep.tab || "watch", mode: "", written: [],
+             tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap,
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -190,7 +190,7 @@ async function getClaude(asset) { try { st.claude[asset] = await (await fetch("a
 
 // ---- his marks: one set of tools for every chart
 function marksChanged() {
-  keepMine(); setPlace(null);                              // one placement per pick
+  keepMine(); if (st.place) setPlace(null); else tools();  // one placement per pick
   st.panes.forEach(p => p.layer && p.layer.redraw());      // the same instrument may be on two charts
   count("not saved yet");
 }
@@ -203,17 +203,24 @@ function setPlace(p) { st.place = p; if (p) { st.grab = false; st.noteTool = fal
 function setGrab(on) { st.grab = on; st.place = null; st.noteTool = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(on))); tools(); }
 function setNoteTool(on) { st.noteTool = on; if (on) { st.place = null; st.grab = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(false))); }
   st.panes.forEach(q => q.box && (q.box.style.cursor = on ? "crosshair" : "")); tools(); }
+const shownMarks = () => [...new Set(st.cfg.map(c => c.asset))].flatMap(a => myMarks(a));
+const allLocked = () => { const m = shownMarks(); return m.length > 0 && m.every(x => x.locked); };
+function toggleSnap() { st.snap = !st.snap; save(); tools(); }
 function tools() {                                       // the toolbar down the left
   const on = g => st.place && g[2].includes(st.place.kind);
   $("tools").innerHTML = `<button class="tl ${!st.place && !st.grab && !st.noteTool ? "on" : ""}" id="t-cur" title="cursor (Esc)">✛</button>` +
     `<button class="tl ${st.grab ? "on" : ""}" id="t-grab" title="grab (G): the charts hold still; press near any of your marks to move it">✋</button><span class="ln"></span>` +
     GROUPS.map((g, i) => `<button class="tl ${on(g) ? "on" : ""}" data-g="${i}" title="${g[1]}">${g[0]}</button>`).join("") +
-    `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button>` +
+    `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button><span class="ln"></span>` +
+    `<button class="tl ${st.snap ? "on" : ""}" id="t-snap" title="snap (M): a point you place or drag jumps to the nearest candle's open, high, low or close">🧲</button>` +
+    `<button class="tl ${allLocked() ? "on" : ""}" id="t-lock" title="lock every mark of mine on these charts, or unlock them all. One mark: double-click it to lock, double-click again to unlock">🔒</button>` +
     `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
     `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
   $("t-cur").onclick = () => { setPlace(null); setGrab(false); setNoteTool(false); };
   $("t-grab").onclick = () => setGrab(!st.grab);
   $("t-note").onclick = () => setNoteTool(!st.noteTool);
+  $("t-snap").onclick = toggleSnap;
+  $("t-lock").onclick = () => { const on = !allLocked(); shownMarks().forEach(m => m.locked = on); keepMine(); st.panes.forEach(p => p.layer && (p.layer.deselect(), p.layer.redraw())); tools(); };
   $("tools").querySelectorAll("[data-g]").forEach(b => b.onclick = e => { e.stopPropagation(); fly(+b.dataset.g, b); });
   $("t-clear").onclick = () => { const as = [...new Set(st.cfg.map(c => c.asset))], n = as.reduce((s, a) => s + myMarks(a).length + myNotes(a).length, 0);
     if (n && confirm(`Remove your ${n} marks and notes from ${as.join(", ")}? Claude's marks stay, and what you already saved stays on file.`)) { as.forEach(a => { st.marks[a] = []; st.notes[a] = []; }); marksChanged(); } };
@@ -287,7 +294,8 @@ function build() {
     const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
     const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const p = { c, el, box, infoEl: el.firstChild, chart, series, lineS, times: [], data: [] };
-    p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c), times: () => p.times, tfName: () => c.tf, color: css, changed: marksChanged });
+    p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c), times: () => p.times, candles: () => p.data, snap: () => st.snap,
+      tfName: () => c.tf, color: css, changed: marksChanged });
     notesFor(p);
     for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, () => activate(p), { passive: true });
     el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
@@ -549,6 +557,7 @@ document.addEventListener("keydown", e => {
   else if (k === "l") $("ctype").click();
   else if (k === "g") setGrab(!st.grab);
   else if (k === "n") setNoteTool(!st.noteTool);
+  else if (k === "m") toggleSnap();
   else if (k === "w") $("readbtn").click();
   else if (k === "escape") { setPlace(null); setGrab(false); setNoteTool(false); $("fly").style.display = "none"; $("menu").style.display = "none"; }
 });

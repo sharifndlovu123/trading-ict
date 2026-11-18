@@ -51,6 +51,9 @@ The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
 - **His notes:** he writes in the **Notes** tab of the right panel; each is saved under the current mode; each is appended to
   `v2/chart/notes.jsonl` with the instrument, the timeframe and the time the chart was showing. He prefers this to
   writing on the chart ("writing on the chart gets too messy"). Read them; never edit them.
+- **His tools:** snap (the magnet, M) puts a point exactly on a candle's open, high, low or close; double-click locks
+  or unlocks a mark; a block's corners size it both ways. A mark of his may carry `locked: true`: it means only that he
+  fixed it in place.
 - **His marks:** he draws with the tools on the left and presses save; marks and notes are appended to
   `v2/chart/saves.jsonl` (with `chart_time` when the chart was in replay). Read them; never edit them.
 

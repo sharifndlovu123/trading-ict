@@ -5,11 +5,17 @@
 //     under()     read-only marks drawn beneath his (Claude's): the same shapes plus {color, label, nofill}
 //     changed()   called after any add / move / delete
 //     times()     the candle times (seconds) of this chart, ascending
+//     candles()   this chart's candles (same order as times()), for snapping
+//     snap()      true while snap is on: a point being placed or dragged jumps to the nearest candle's open, high, low
+//                 or close, whichever is closest to the mouse, so a mark sits exactly on a price the chart printed
 //     tfName()    this chart's timeframe, stamped on a new mark
 //     color(v)    resolves a CSS variable (--bs --ss --area --mine --panel)
 // Pick a type, then click (a level or a vertical line runs from there) or drag (a zone or a line needs a drag).
 // The type switches off after one placement. Click a mark to select it; drag its body or its ends; Delete / Backspace
 // or right-click removes it; Esc deselects; G = grab (the chart holds still and marks are easy to pick up).
+// Double-click a mark to lock it, and again to unlock it. A locked mark can no longer be picked up, moved or removed,
+// and a press goes through it to whatever lies underneath. A selected mark also shows a small bar (lock / delete);
+// Shift+click picks up a locked mark. A block's corner handles size it both ways at once; its edges one way.
 const MOVES = ["displacement", "fake push"];   // a move: an arrow at its end; a fake push is dashed
 const arrowHead = (g, x0, y0, x1, y1) => { const a = Math.atan2(y1 - y0, x1 - x0), L = 10; g.setLineDash([]); g.beginPath();
   for (const s of [-0.45, 0.45]) { g.moveTo(x1, y1); g.lineTo(x1 - L * Math.cos(a + s), y1 - L * Math.sin(a + s)); } g.stroke(); };
@@ -57,7 +63,18 @@ function marksLayer(chart, series, el, o) {
   const xLast = () => { const a = T(); return a.length ? xOf(a[a.length - 1]) : null; };
   const xEnd = m => m.t1 != null ? xOf(m.t1) : (xLast() == null ? null : xLast() + STUB);
   const col = m => o.color(m.side === "buyside" ? "--bs" : m.side === "sellside" ? "--ss" : m.side === "area" ? "--area" : "--mine");
-  const name = m => "S · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "");
+  const name = m => "S · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") + (m.locked ? " 🔒" : "");
+  // snap: the nearest candle to the mouse, and of its open / high / low / close the one closest to the mouse
+  let hover = null;                                    // where the snapped point is, while placing or dragging (drawn as a ring)
+  function snapAt(px, py) {
+    const a = T(), cs = o.candles ? o.candles() : null; if (!o.snap || !o.snap() || !cs || !a.length) return null;
+    const g = ts.coordinateToLogical(px), k = clampI(g == null ? 0 : g), c = cs[k]; if (!c) return null;
+    let best = null;
+    for (const v of [c.open, c.high, c.low, c.close]) { const y = yOf(v); if (y != null && (!best || Math.abs(y - py) < best.d)) best = { d: Math.abs(y - py), p: v, y }; }
+    const x = ts.logicalToCoordinate(k);
+    return best && x != null ? { t: a[k], p: best.p, x, y: best.y } : null;
+  }
+  const point = (px, py) => { const sn = snapAt(px, py); hover = sn; return sn ? [sn.p, sn.t] : [pOfY(py), tOfX(px)]; };
 
   function setGrab(on) {
     grab = on; place = null;
@@ -76,6 +93,19 @@ function marksLayer(chart, series, el, o) {
   cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:3";
   if (getComputedStyle(el).position === "static") el.style.position = "relative";
   el.appendChild(cv);
+  const bar = document.createElement("div");           // the small bar for the selected mark: lock / unlock, delete
+  bar.style.cssText = "position:absolute;top:30px;left:50%;transform:translateX(-50%);z-index:7;display:none;gap:4px;padding:3px;border-radius:7px;background:rgba(20,22,28,.92);border:1px solid rgba(128,128,128,.4)";
+  bar.innerHTML = '<button data-a="lock" style="cursor:pointer;border:0;border-radius:5px;padding:3px 9px;background:none;color:#e7e9ee;font:inherit"></button><button data-a="del" title="remove (Delete)" style="cursor:pointer;border:0;border-radius:5px;padding:3px 9px;background:none;color:#e7e9ee;font:inherit">🗑 Delete</button>';
+  el.appendChild(bar);
+  for (const ev of ["pointerdown", "mousedown", "click"]) bar.addEventListener(ev, e => e.stopPropagation());     // a press on the bar is not a press on the chart
+  bar.querySelector('[data-a="lock"]').addEventListener("click", () => { const m = o.list()[sel]; if (!m) return; m.locked = !m.locked; if (m.locked) sel = null; redraw(); o.changed(); });
+  bar.querySelector('[data-a="del"]').addEventListener("click", () => { if (sel == null) return; o.list().splice(sel, 1); sel = null; redraw(); o.changed(); });
+  function showBar() {
+    const m = sel != null ? o.list()[sel] : null;
+    bar.style.display = m && !held ? "flex" : "none";
+    if (m) { const b = bar.querySelector('[data-a="lock"]'); b.textContent = m.locked ? "🔓 Unlock" : "🔒 Lock"; b.title = m.locked ? "let this mark be moved again" : "fix this mark in place: clicks go through it to what is underneath (Shift+click picks it up again)";
+      bar.querySelector('[data-a="del"]').style.display = m.locked ? "none" : ""; }
+  }
   function tag(g, text, x, y, color, bold) {
     g.font = (bold ? "bold 12px" : "11px") + " ui-monospace, Menlo, monospace";
     const w = g.measureText(text).width;
@@ -140,24 +170,29 @@ function marksLayer(chart, series, el, o) {
         handles.push([x0, y], [x1, y]);
       }
       if (on) { g.setLineDash([]); g.fillStyle = o.color("--panel");
-        for (const [x, y] of handles) { g.fillRect(x - 4, y - 4, 8, 8); g.strokeRect(x - 4, y - 4, 8, 8); } }
+        for (const [x, y] of handles) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); } }
     });
-    g.restore();
+    if (hover && (place || held)) {                     // the snapped point: a ring on the exact price
+      g.setLineDash([]); g.lineWidth = 2; g.strokeStyle = o.color("--mine"); g.beginPath(); g.arc(hover.x, hover.y, 6, 0, 7); g.stroke();
+      g.fillStyle = o.color("--mine"); g.beginPath(); g.arc(hover.x, hover.y, 2, 0, 7); g.fill();
+    }
+    g.restore(); showBar();
   }
   let alive = true;
   (function loop() { if (!alive) return; try { tick(); } catch (e) { /* chart not ready yet */ } requestAnimationFrame(loop); })();
   function tick() {
     const lr = ts.getVisibleLogicalRange();
-    const s = [dirty, lr && lr.from, lr && lr.to, yOf(100), yOf(101), el.clientWidth, el.clientHeight, o.list().length].join("|");
+    const s = [dirty, lr && lr.from, lr && lr.to, yOf(100), yOf(101), el.clientWidth, el.clientHeight, o.list().length, hover && hover.x, hover && hover.y, !!place].join("|");
     if (s !== sig) { sig = s; paint(); }
   }
   const redraw = () => { dirty++; };
 
   // ---- hit test + interaction
-  function hit(px, py) {
+  function hit(px, py, locked) {                      // locked: also pick up locked marks (Shift+click)
     let best = null;
     const take = (i, part, d) => { if (!best || d < best.d) best = { i, part, d }; };
     o.list().forEach((m, i) => {
+      if (m.locked && !locked) return;                  // a locked mark lets the press through to what is underneath
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m);
       if (x0 == null || x1 == null) return;
       if (m.shape === "vline") { if (Math.abs(px - x0) <= G()) take(i, "body", Math.abs(px - x0)); return; }
@@ -171,10 +206,12 @@ function marksLayer(chart, series, el, o) {
         if (d <= G()) take(i, "body", d);
       } else if (m.shape === "zone") {
         const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) return;
-        if (end && py >= a - G() && py <= b + G()) take(i, end, 0);
+        const edge = Math.abs(py - a) <= G() + 2 ? "top" : Math.abs(py - b) <= G() + 2 ? "bottom" : null;
+        if (end && edge) take(i, "c:" + end + ":" + edge, -1);                    // a corner: sizes the block both ways at once
+        else if (end && py >= a - G() && py <= b + G()) take(i, end, 0);
         else if (Math.abs(py - a) <= G()) take(i, "top", Math.abs(py - a));
         else if (Math.abs(py - b) <= G()) take(i, "bottom", Math.abs(py - b));
-        else if (py > a && py < b) take(i, "inside", G());
+        else if (py > a && py < b) take(i, "inside", G() + Math.min(1, Math.abs((x1 - x0) * (b - a)) / 1e7));      // of two blocks on top of each other, the smaller is picked up
       } else {
         const y = yOf(m.price); if (y == null || Math.abs(py - y) > G()) return;
         take(i, end || "body", Math.abs(py - y));
@@ -187,9 +224,11 @@ function marksLayer(chart, series, el, o) {
   const freeze = on => { if (!place && !grab) chart.applyOptions({ handleScroll: !on, handleScale: !on }); };
   const r2 = v => +v.toPrecision(7);
   const down = e => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || bar.contains(e.target)) return;
     const pt = pos(e); if (!inPane(pt)) return;
-    const [px, py] = pt, h = hit(px, py), p = pOfY(py), t = tOfX(px), L = o.list();
+    const [px, py] = pt, h = place ? null : hit(px, py, e.shiftKey), L = o.list();
+    const [p, t] = h ? [pOfY(py), tOfX(px)] : point(px, py);
+    if (h && L[h.i].locked) { sel = h.i; redraw(); e.preventDefault(); e.stopImmediatePropagation(); return; }     // picked up to unlock, not to move
     if (h) {
       sel = h.i; held = { i: h.i, part: h.part, p0: p, t0: t, x0: px, y0: py, moved: false, orig: { ...L[h.i] } };
     } else if (place && p != null && t != null) {
@@ -206,10 +245,20 @@ function marksLayer(chart, series, el, o) {
   };
   const move = e => {
     const [px, py] = pos(e);
-    if (!held) { if (!place && inPane([px, py]) && hit(px, py)) el.style.cursor = "move"; else if (!place && el.style.cursor === "move") el.style.cursor = grab ? "grab" : ""; return; }
+    if (!held) {
+      if (place && inPane([px, py])) { point(px, py); redraw(); } else if (hover) { hover = null; redraw(); }
+      if (!place) {                                       // the pointer shows what a press here would do
+        const h = inPane([px, py]) ? hit(px, py) : null, mk = h && o.list()[h.i], shown = ["move", "ns-resize", "ew-resize", "nwse-resize", "nesw-resize"].includes(el.style.cursor);
+        const want = !h ? null : h.part.startsWith("c:") ? (["c:start:top", "c:end:bottom"].includes(h.part) ? "nwse-resize" : "nesw-resize")
+          : ["top", "bottom"].includes(h.part) || (mk.shape === "level" && h.part === "body") ? "ns-resize" : ["start", "end"].includes(h.part) && mk.shape !== "line" ? "ew-resize" : "move";
+        if (want) el.style.cursor = want; else if (shown) el.style.cursor = grab ? "grab" : "";
+      }
+      return; }
     if (Math.hypot(px - held.x0, py - held.y0) > 3) held.moved = true;
     if (!held.moved) return;
-    const p = pOfY(py), t = tOfX(px); if (p == null || t == null) return;
+    const whole = ["inside", "body"].includes(held.part) && o.list()[held.i].shape !== "level";       // a whole mark being carried keeps its shape: no snapping
+    let p, t; if (whole) { p = pOfY(py); t = tOfX(px); hover = null; } else [p, t] = point(px, py);
+    if (p == null || t == null) return;
     const m = o.list()[held.i], q = held.orig, dp = r2(p - held.p0), dt = t - held.t0;
     if (m.shape === "vline") m.t0 = t;
     else if (m.shape === "line") {
@@ -217,6 +266,11 @@ function marksLayer(chart, series, el, o) {
       else { m.p0 = r2(q.p0 + dp); m.p1 = r2(q.p1 + dp); m.t0 = q.t0 + dt; if (q.t1 != null) m.t1 = q.t1 + dt; }
     } else if (held.part === "end") m.t1 = t;
     else if (held.part === "start") m.t0 = t;
+    else if (held.part.startsWith("c:")) {                                        // a corner handle: that side's time and that edge's price follow the mouse
+      const [, side, edge] = held.part.split(":");
+      if (side === "start") m.t0 = t; else m.t1 = t;
+      m[edge] = p;
+    }
     else if (held.part === "corner") { m.top = Math.max(q.top, p); m.bottom = Math.min(q.bottom, p); m.t1 = t; }
     else if (held.part === "top") m.top = p;
     else if (held.part === "bottom") m.bottom = p;
@@ -238,18 +292,26 @@ function marksLayer(chart, series, el, o) {
     if (k && k.shape === "vline") k.t1 = null;
     if (k && k.t0 != null && k.t1 != null && k.t1 < k.t0) { [k.t0, k.t1] = [k.t1, k.t0]; if (k.shape === "line") [k.p0, k.p1] = [k.p1, k.p0]; }
     if (k && k.shape === "zone" && k.top < k.bottom) [k.top, k.bottom] = [k.bottom, k.top];
-    held = null; freeze(false);
+    held = null; hover = null; freeze(false);
     redraw(); o.changed();                                                        // the page ends the placement: one placement per pick
   };
-  const menu = e => { const [px, py] = pos(e), h = hit(px, py); if (h) { e.preventDefault(); o.list().splice(h.i, 1); sel = null; redraw(); o.changed(); } };
+  const menu = e => { const [px, py] = pos(e), h = hit(px, py); if (h) { e.preventDefault(); o.list().splice(h.i, 1); sel = null; redraw(); o.changed(); }
+    else if (hit(px, py, true)) e.preventDefault(); };      // a locked mark is not removed by a right-click
   const key = e => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
-    if ((e.key === "Delete" || e.key === "Backspace") && sel != null) { e.preventDefault(); o.list().splice(sel, 1); sel = null; redraw(); o.changed(); }
+    if ((e.key === "Delete" || e.key === "Backspace") && sel != null && !(o.list()[sel] || {}).locked) { e.preventDefault(); o.list().splice(sel, 1); sel = null; redraw(); o.changed(); }
     else if (e.key === "Escape") { sel = null; redraw(); }
   };
   el.addEventListener("pointerdown", down, true);
-  el.addEventListener("mousedown", e => { if (held) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  el.addEventListener("mousedown", e => { if (held && !bar.contains(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  // double-click a mark to lock it; double-click a locked mark to unlock it
+  el.addEventListener("dblclick", e => {
+    if (bar.contains(e.target)) return;
+    const [px, py] = pos(e), h = hit(px, py, true); if (!h) return;
+    const m = o.list()[h.i]; m.locked = !m.locked; sel = m.locked ? null : h.i;
+    e.preventDefault(); e.stopImmediatePropagation(); redraw(); o.changed();
+  }, true);
   el.addEventListener("contextmenu", menu); document.addEventListener("keydown", key);
   const destroy = () => { alive = false; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); document.removeEventListener("keydown", key); };
   return { redraw, setPlace, setGrab, grabbing: () => grab, deselect: () => { sel = null; redraw(); }, destroy };
