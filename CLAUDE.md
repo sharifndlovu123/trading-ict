@@ -26,7 +26,8 @@ Claude to read the market his way.
   the chart, linked crosshair, line mode, % compare, replay = take time back). Candles and marks only. Start it with
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD`, open
   `http://127.0.0.1:8776/?asset=UK100&tf=1D`. Claude's marks: `v2/chart/marks.json`; what he draws and saves:
-  `v2/chart/saves.jsonl`. Fresh candles: `uv run python v2/chart/fetch.py <ASSET>` (free data, needs Node.js).
+  `v2/chart/saves.jsonl`; the notes he writes in its Notes panel (learn / hunt): `v2/chart/notes.jsonl`. One chart
+  serves both learning and hunting. Fresh candles: `uv run python v2/chart/fetch.py <ASSET>` (free data, needs Node.js).
 - Tests: `uv run pytest -q v2` (a skip is not a pass).
 - Validate every concept with the `context-check` skill before ticking its box:
   `uv run python .claude/skills/context-check/check.py`, then the reading in its `SKILL.md`.
@@ -84,7 +85,7 @@ is "might be".
 - Secrets live in `.env` (never print, echo or commit them; never ask him to paste one in chat). Free data only.
 - The chart page on port 8776 is the only thing that may listen on the network (with its password); anything else
   stays on 127.0.0.1. Marks only, no text on the chart, every mark ends.
-- What he saves from the chart (`v2/chart/saves.jsonl`) is his: read it, never edit it. `read1.png` and `read2.png`
+- What he saves from the chart (`v2/chart/saves.jsonl`, `v2/chart/notes.jsonl`) is his: read it, never edit it. `read1.png` and `read2.png`
   are his; leave them.
 - Commit, do not push, unless he says. Cap 10 workers.
 - Python for the code; `uv sync` for the environment.

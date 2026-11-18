@@ -14,7 +14,7 @@ Sharif: "then at the end of the trading day we discuss it further and properly i
 
 | # | Step | Who |
 |---|---|---|
-| 1 | Open today's notes, `v2/hunts/YYYY-MM-DD.md`. Go through them together, one at a time, in the order they happened | both |
+| 1 | Open today's notes, `v2/hunts/YYYY-MM-DD.md`, and his own "hunt" notes from the chart's Notes panel (`v2/chart/notes.jsonl`). Go through them together, one at a time, in the order they happened | both |
 | 2 | For each one, he says which it is: **a lesson**, **more context for a lesson already in the brain**, or **only about that day** | Sharif |
 | 3 | "A lesson" or "more context": take it through the **learn** pipeline from step 5 (he says it is done, then **brain-write**, links, tools and tests if needed, **context-check**). "Only about that day": it stays in the notes, marked so | Claude |
 

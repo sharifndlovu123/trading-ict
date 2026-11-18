@@ -8,8 +8,8 @@
 /* Laid out like TradingView (Sharif, 18 Nov 2026: "I'm very used to their UI"): symbol and interval along the top,
    drawing tools down the left, a watchlist and details on the right, replay along the bottom. */
 :root { --bg:#131722; --panel:#1e222d; --panel2:#2a2e39; --ink:#d1d4dc; --ink2:#787b86; --line:#2a2e39; --grid:#1c2030; --pos:#26a69a; --neg:#ef5350;
-  --up:#26a69a; --down:#ef5350; --accent:#2962ff; --area:#9c7bea; --bs:#5b9cf6; --ss:#f7936f; --mine:#f2b84b; --claude:#22d3ee; }
-@media (prefers-color-scheme: light) { :root { --bg:#ffffff; --panel:#ffffff; --panel2:#f0f3fa; --ink:#131722; --ink2:#6a6d78; --line:#e0e3eb; --grid:#f0f3fa;
+  --up:#3987e5; --down:#d95926; --accent:#2962ff; --area:#9c7bea; --bs:#5b9cf6; --ss:#f7936f; --mine:#f2b84b; --claude:#22d3ee; }
+@media (prefers-color-scheme: light) { :root { --bg:#ffffff; --panel:#ffffff; --panel2:#f0f3fa; --ink:#131722; --ink2:#6a6d78; --line:#e0e3eb; --grid:#f0f3fa; --up:#2a78d6; --down:#eb6834;
   --area:#7e57c2; --bs:#1e53e5; --ss:#d1512d; --mine:#b77400; --claude:#0e8fa3; } }
 * { box-sizing:border-box; }
 html, body { height:100%; }
@@ -36,7 +36,20 @@ button, select, input { font:inherit; color:var(--ink); }
 #fly .it .k { margin-left:auto; color:var(--ink2); font-size:11px; }
 #grid { flex:1; min-width:0; display:grid; gap:1px; background:var(--line); }
 #side { width:300px; flex:none; background:var(--panel); overflow:auto; display:none; }
-#side.on { display:block; }
+#side.on { display:flex; flex-direction:column; }
+#tabs { display:flex; border-bottom:1px solid var(--line); flex:none; }
+#tabs button { flex:1; background:none; border:0; border-bottom:2px solid transparent; padding:9px 4px; cursor:pointer; color:var(--ink2); font-weight:600; }
+#tabs button:hover { color:var(--ink); } #tabs button.on { color:var(--ink); border-bottom-color:var(--accent); }
+.tab { display:none; flex:1; min-height:0; overflow:auto; } .tab.on { display:block; }
+#tab-notes.on { display:flex; flex-direction:column; padding:10px 12px; gap:8px; overflow:auto; }
+#kinds { display:flex; gap:4px; } #kinds button { flex:1; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px; cursor:pointer; }
+#kinds button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+#notetext { width:100%; height:450px; min-height:150px; max-height:80vh; flex:none; resize:vertical; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; line-height:1.45; }
+#noteadd { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:7px; cursor:pointer; font-weight:600; }
+#notelist { flex:none; margin:0 -12px; }
+.nrow { padding:8px 12px; border-top:1px solid var(--line); white-space:pre-wrap; } .nrow .m { display:flex; gap:6px; align-items:center; margin-bottom:3px; font-size:11px; color:var(--ink2); }
+.nrow .k { border-radius:4px; padding:0 6px; font-weight:700; color:#fff; } .nrow .k.learn { background:#2962ff; } .nrow .k.hunt { background:#c2410c; }
+.nrow .x { margin-left:auto; background:none; border:0; color:var(--ink2); cursor:pointer; } .nrow .x:hover { color:var(--neg); }
 #side h3 { margin:0; padding:10px 12px 6px; font-size:12px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
 #watch .w { display:flex; gap:8px; padding:6px 12px; cursor:pointer; border-left:2px solid transparent; } #watch .w:hover { background:var(--panel2); }
 #watch .w.on { border-left-color:var(--accent); background:var(--panel2); } #watch .w b { flex:1; font-weight:600; }
@@ -89,12 +102,23 @@ button, select, input { font:inherit; color:var(--ink); }
   <label class="tb" title="show or hide what Claude drew"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
   <button class="tb" id="refresh" title="read the candles and the marks again (Shift+R). Alt+R re-centres the charts">↻</button>
   <button class="tb" id="fsbtn" title="the chart you last touched on the whole screen (Shift+F)">⛶</button>
-  <button class="tb" id="readbtn" title="the watchlist and Claude's read (W)">☰</button>
+  <button class="tb" id="readbtn" title="the side panel: watchlist, your notes, Claude's read (W)">☰</button>
 </div>
 <div id="mid">
   <div id="tools"></div>
   <div id="grid"></div>
-  <aside id="side"><h3>Watchlist</h3><div id="watch"></div><h3 id="readh">Claude's read</h3><div id="read"></div></aside>
+  <aside id="side">
+    <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="read">Claude's read</button></div>
+    <div class="tab" id="tab-watch"><div id="watch"></div></div>
+    <div class="tab" id="tab-notes">
+      <div id="kinds"><button data-kind="learn" title="a note while you are teaching">Learn</button><button data-kind="hunt" title="a note or correction during a hunt">Hunt</button></div>
+      <textarea id="notetext" placeholder="Write your note here. It is saved with the instrument, the timeframe and the time the chart was showing."></textarea>
+      <button id="noteadd" title="Ctrl+Enter">Save note</button>
+      <div id="notectx" class="dim"></div>
+      <div id="notelist"></div>
+    </div>
+    <div class="tab" id="tab-read"><h3 id="readh">Claude's read</h3><div id="read"></div></div>
+  </aside>
 </div>
 <div id="bottom">
   <span id="replay">
@@ -132,8 +156,9 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 // cfg = the layout: one entry per chart (its instrument, its timeframe, line or candles), in reading order; cols 0 = automatic
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
+             tab: keep.tab || "watch", kind: keep.kind || "learn", written: [],
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, kind: st.kind })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -302,14 +327,17 @@ async function fillPane(p, fit, newAsset) {
   status(); if (p === cur()) side();
 }
 function recentre(p) {                                   // the newest candles in view, price scale back to automatic (Alt+R)
-  p.chart.applyOptions({ rightPriceScale: { autoScale: true } }); p.chart.priceScale("right").applyOptions({ autoScale: true });
-  const mate = st.panes.find(q => q !== p && !q.pct && q.c.tf === p.c.tf && q.times.length && q.fitted);
-  const n = p.times.length; let r = { from: Math.max(0, n - SHOW[p.c.tf]), to: n + 8 };
-  if (mate && $("sync").checked) { const m = mate.chart.timeScale().getVisibleLogicalRange(); if (m) r = { from: iOf(p.times, tOf(mate.times, m.from)), to: iOf(p.times, tOf(mate.times, m.to)) }; }
+  p.chart.priceScale("right").applyOptions({ autoScale: true });
+  const n = p.times.length, r = { from: Math.max(0, n - SHOW[p.c.tf]), to: n + 8 };
   p.chart.timeScale().setVisibleLogicalRange(r); p.fitted = true;
   requestAnimationFrame(() => requestAnimationFrame(() => { if (!p.dead) p.chart.timeScale().setVisibleLogicalRange(r); }));      // again once the chart has its final width
 }
-function fill(fit) { if (st.pct) return fillPct(fit); st.panes.forEach(p => { if (fit) p.fitted = false; }); return Promise.all(st.panes.map(p => fillPane(p, fit))); }
+function align() {                                       // charts on the same timeframe line up on the first of them (instruments have different candle counts)
+  if (!$("sync").checked || st.pct) return;
+  const seen = new Set(); for (const p of st.panes) if (p.times.length && !seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); }
+}
+async function fill(fit) { if (st.pct) return fillPct(fit); await Promise.all(st.panes.map(p => fillPane(p, fit)));
+  if (fit) { const mine = st.panes; setTimeout(() => { if (st.panes === mine) align(); }, 120); } }
 function status() {
   const t = st.until != null ? st.until : st.newest;
   $("when").textContent = t == null ? "" : (st.until != null ? `Replay · ${wall(t)} New York · nothing after it is shown` : `Newest candle ${wall(t)} New York`);
@@ -389,18 +417,46 @@ async function watch() {
 function side() {
   $("side").classList.toggle("on", st.side); $("readbtn").classList.toggle("on", st.side);
   if (!st.side) return;
-  const a = curCfg().asset, d = st.claude[a] || {}, n = (d.marks || []).length;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === st.tab));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.id === "tab-" + st.tab));
+  const c = curCfg(), a = c.asset, d = st.claude[a] || {}, n = (d.marks || []).length;
   $("watch").innerHTML = (st.rows || st.assets.map(x => [x, null, null])).map(([x, px, ch]) => `<div class="w ${x === a ? "on" : ""}" data-a="${x}"><b>${x}</b>` +
     `<span class="num">${px == null ? "" : px.toFixed(dp(px))}</span><span class="num ${ch >= 0 ? "up" : "dn"}" style="width:58px;text-align:right">${ch == null ? "" : (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%"}</span></div>`).join("");
   $("watch").querySelectorAll(".w").forEach(el => el.onclick = () => setAsset(el.dataset.a));
-  $("readh").innerHTML = `Claude's read · ${esc(a)} <span style="text-transform:none;letter-spacing:0">${esc(d.at || "")}</span>`;
+  $("readh").innerHTML = `${esc(a)} <span style="text-transform:none;letter-spacing:0">${esc(d.at || "")}</span>`;
   $("read").innerHTML = ((d.read || []).length ? `<ul>${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="dim">Nothing written for this instrument.</div>') +
     `<div class="dim" style="margin-top:10px">${n} mark${n === 1 ? "" : "s"} of Claude's on this instrument (labels start "C ·"). Yours start "S ·".</div>`;
+  document.querySelectorAll("#kinds button").forEach(b => b.classList.toggle("on", b.dataset.kind === st.kind));
+  $("notectx").textContent = `Saved with: ${a} · ${TFNAME[c.tf]} · ${st.until != null ? "replay " + wall(st.until) : "newest candles"}`;
 }
+// ---- his notes: a place to write, so the chart itself stays clean. One list for learning and for hunts.
+function showNotes() {
+  $("notelist").innerHTML = st.written.length ? st.written.map(n => `<div class="nrow"><div class="m"><span class="k ${n.kind}">${n.kind}</span>` +
+    `<span>${new Date(n.saved * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span><span>${esc(n.asset)} ${esc(TFNAME[n.tf] || n.tf)}${n.chart_time ? " · chart at " + wall(n.chart_time) : ""}</span>` +
+    `<button class="x" data-id="${n.id}" title="remove this note">✕</button></div>${esc(n.text)}</div>`).join("") : '<div class="dim" style="padding:8px 12px">No notes yet.</div>';
+  $("notelist").querySelectorAll(".x").forEach(b => b.onclick = async () => { if (!confirm("Remove this note?")) return;
+    await fetch("api/note", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delete: b.dataset.id }) }); loadNotes(); });
+}
+async function loadNotes() { try { st.written = await (await fetch("api/notes")).json(); } catch (e) { st.written = []; } showNotes(); }
+async function addNote() {
+  const text = $("notetext").value.trim(); if (!text) return;
+  const c = curCfg(), r = await fetch("api/note", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: st.kind, text, asset: c.asset, tf: c.tf, chart_time: st.until }) });
+  if (!r.ok) { alert("the note was not saved"); return; }
+  $("notetext").value = ""; try { localStorage.removeItem(KEEP + "-draft"); } catch (e) {} loadNotes();
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => { st.tab = b.dataset.tab; save(); side(); if (st.tab === "notes") $("notetext").focus(); });
+document.querySelectorAll("#kinds button").forEach(b => b.onclick = () => { st.kind = b.dataset.kind; save(); side(); });
+$("noteadd").onclick = addNote;
+$("notetext").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addNote(); } e.stopPropagation(); });
+$("notetext").addEventListener("input", () => { try { localStorage.setItem(KEEP + "-draft", $("notetext").value); } catch (e) {} });     // a draft survives a reload
+try { $("notetext").value = localStorage.getItem(KEEP + "-draft") || ""; } catch (e) {}
 
 // ---- the top bar: it acts on the chart last touched
-function setAsset(a) { const p = cur(); if (!p || !p.c) return; p.c.asset = a; save(); fillPane(p, true, true); topbar(); side(); }
-function setTf(tf) { const p = cur(); if (!p || !p.c) return; p.c.tf = tf; save(); fillPane(p, true); topbar(); }
+const joinMates = p => setTimeout(() => { const m = st.panes.find(q => q !== p && !q.pct && q.c.tf === p.c.tf && q.times.length);      // a changed chart joins the others on its timeframe
+  if (m && $("sync").checked && !p.dead) { const r = m.chart.timeScale().getVisibleLogicalRange(); if (r) p.chart.timeScale().setVisibleLogicalRange({ from: iOf(p.times, tOf(m.times, r.from)), to: iOf(p.times, tOf(m.times, r.to)) }); } }, 120);
+async function setAsset(a) { const p = cur(); if (!p || !p.c) return; p.c.asset = a; save(); topbar(); side(); await fillPane(p, true, true); joinMates(p); }
+async function setTf(tf) { const p = cur(); if (!p || !p.c) return; p.c.tf = tf; save(); topbar(); await fillPane(p, true); joinMates(p); }
 function topbar() {
   const c = curCfg();
   $("sym").innerHTML = st.assets.map(n => `<option ${n === c.asset ? "selected" : ""}>${n}</option>`).join("");
@@ -440,7 +496,7 @@ $("refresh").onclick = refresh;
 let timer = null;
 async function goTo(t) {                                  // t = New York clock time in seconds; null = the newest candles
   if (t != null && st.newest != null && t >= st.newest) t = null;
-  st.until = t; st.cache.clear(); await fill(false); status(); watch(); return t != null;
+  st.until = t; st.cache.clear(); await fill(false); status(); watch(); side(); return t != null;
 }
 function step(k) {
   const tf = curCfg().tf, d = k === "D" ? 86400 : k === "-D" ? -86400 : +k * STEP[tf];
@@ -462,11 +518,12 @@ document.addEventListener("keydown", e => {
     if (k === "t") { e.preventDefault(); setPlace(KIND.trendline); }
     else if (k === "h") { e.preventDefault(); setPlace(KIND[st.lastKind.level || "BOS"]); }
     else if (k === "v") { e.preventDefault(); setPlace(KIND[st.lastKind.vline || "→ bull"]); }
-    else if (k === "r") { e.preventDefault(); st.panes.forEach(p => { if (!p.pct && p.times.length) { p.fitted = false; } }); st.panes.forEach(p => !p.pct && p.times.length && recentre(p)); }
+    else if (k === "r") { e.preventDefault(); st.panes.forEach(p => !p.pct && p.times.length && recentre(p)); setTimeout(align, 120); }
     return;
   }
   if (e.ctrlKey || e.metaKey) return;
   if (e.shiftKey && k === "f") full(cur());
+  else if (e.shiftKey && k === "n") { e.preventDefault(); st.side = true; st.tab = "notes"; save(); side(); $("notetext").focus(); }
   else if (e.shiftKey && k === "l") allLine();
   else if (e.shiftKey && k === "r") refresh();
   else if (e.shiftKey) return;
@@ -485,7 +542,7 @@ document.addEventListener("keydown", e => {
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
-  build(); side(); watch();
+  build(); side(); watch(); loadNotes();
 })();
 </script>
 </body>

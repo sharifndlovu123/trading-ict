@@ -46,6 +46,9 @@ The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
   use it to show a concept back on a chart without seeing what came next. If the page is down:
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD` (only port 8776 may listen on
   the network). Fresh candles: `uv run python v2/chart/fetch.py <NAME>`, then press refresh on the page.
+- **His notes:** he writes in the **Notes** tab of the right panel, as "learn" or "hunt"; each is appended to
+  `v2/chart/notes.jsonl` with the instrument, the timeframe and the time the chart was showing. He prefers this to
+  writing on the chart ("writing on the chart gets too messy"). Read them; never edit them.
 - **His marks:** he draws with the tools on the left and presses save; marks and notes are appended to
   `v2/chart/saves.jsonl` (with `chart_time` when the chart was in replay). Read them; never edit them.
 

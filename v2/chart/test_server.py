@@ -57,3 +57,25 @@ def test_a_save_must_come_from_the_page_itself():
     assert not server.same_origin("https://evil.example", "127.0.0.1:8776")
     assert not server.same_origin("http://127.0.0.1:9999", "127.0.0.1:8776")       # another page on this machine
     assert not server.same_origin("null", "127.0.0.1:8776")
+
+
+def test_his_notes_are_kept_newest_first_with_what_the_chart_showed(tmp_path):
+    f = tmp_path / "notes.jsonl"
+    assert server.list_notes(f) == []
+    a = server.add_note(f, {"kind": "learn", "text": "  first note  ", "asset": "ANY", "tf": "1D", "chart_time": 123}, now=1000.0)
+    b = server.add_note(f, {"kind": "hunt", "text": "second note", "asset": "ANY", "tf": "1h"}, now=2000.0)
+    assert a["text"] == "first note" and a["kind"] == "learn" and a["chart_time"] == 123 and b["chart_time"] is None
+    assert [n["text"] for n in server.list_notes(f)] == ["second note", "first note"]
+    assert server.add_note(f, {"kind": "something else", "text": "x"}, now=3000.0)["kind"] == "learn"      # only learn or hunt
+
+
+def test_an_empty_note_is_refused_and_a_removed_note_is_not_listed(tmp_path):
+    import pytest
+    f = tmp_path / "notes.jsonl"
+    with pytest.raises(ValueError):
+        server.add_note(f, {"kind": "hunt", "text": "   "}, now=1.0)
+    a = server.add_note(f, {"kind": "hunt", "text": "keep"}, now=1.0)
+    b = server.add_note(f, {"kind": "hunt", "text": "drop"}, now=2.0)
+    server.remove_note(f, b["id"], now=3.0)
+    assert [n["id"] for n in server.list_notes(f)] == [a["id"]]
+    assert len(f.read_text().splitlines()) == 3                                     # nothing is rewritten: the removal is one more line

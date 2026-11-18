@@ -25,7 +25,7 @@ whether he wants them on. Run nothing else.** Only Sharif switches hunting on; w
 | 2 | Read top-down using the concepts in `v2/concepts/`, and only those. *The eyes are not built yet: until they are, this is a hand read with the concepts' tools as a second opinion* | Claude |
 | 3 | Draw what is interesting, relative to now (skills: **draw**, **speak**) | Claude |
 | 4 | Say what the brain brings to mind from the lessons' links: "this might be this". *Pulling is not built yet: until it is, read the Links tables by hand and use only links stated by Sharif* | Claude |
-| 5 | He corrects: "this is missing", "do this, don't do this", or better context. Write each correction in today's notes, `v2/hunts/YYYY-MM-DD.md`, in his words, with the chart it was about | both |
+| 5 | He corrects: "this is missing", "do this, don't do this", or better context, in the chat or in the chart's **Notes** panel (kind "hunt"; read `v2/chart/notes.jsonl`). Write each correction in today's notes, `v2/hunts/YYYY-MM-DD.md`, in his words, with the chart it was about | both |
 | 6 | When the hunt ends, leave the notes for the **day-review** | Claude |
 
 ## What a hunt never does

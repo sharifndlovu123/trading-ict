@@ -6,7 +6,7 @@
 Then http://127.0.0.1:8776/?asset=UK100&tf=1D
 
 A display and nothing else. Claude's marks are read from `marks.json` beside this file; what Sharif draws and saves
-is appended to `saves.jsonl`. Candles come from `data/bars/` (refresh them with `fetch.py`).
+is appended to `saves.jsonl`, and the notes he writes in the side panel (learn or hunt) to `notes.jsonl`. Candles come from `data/bars/` (refresh them with `fetch.py`).
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import candles as cd  # noqa: E402
 
-MARKS, SAVES, PAGE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html"
+MARKS, SAVES, PAGE, NOTES = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl"
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
@@ -85,6 +85,34 @@ def same_origin(origin: str | None, host: str | None) -> bool:
 
 
 MAX_SAVE = 512 * 1024      # bytes: a save is a handful of marks and a note
+
+
+def add_note(path: Path, body: dict, now: float) -> dict:
+    """Append one of Sharif's notes from the side panel: {"kind": "learn" | "hunt", "text", "asset", "tf", "chart_time"}.
+    Returns the stored row. A note is never edited; removing one appends {"delete": id}."""
+    text = str(body.get("text", "")).strip()
+    if not text:
+        raise ValueError("an empty note")
+    kind = body.get("kind") if body.get("kind") in ("learn", "hunt") else "learn"
+    row = {"id": f"{int(now * 1000):x}", "saved": int(now), "kind": kind, "text": text[:20000], "asset": str(body.get("asset", ""))[:20],
+           "tf": str(body.get("tf", ""))[:4], "chart_time": body.get("chart_time") if isinstance(body.get("chart_time"), int) else None}
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+    return row
+
+
+def remove_note(path: Path, note_id: str, now: float) -> None:
+    with path.open("a") as f:
+        f.write(json.dumps({"delete": str(note_id)[:40], "saved": int(now)}) + "\n")
+
+
+def list_notes(path: Path, last: int = 200) -> list[dict]:
+    """His notes, newest first, without the removed ones."""
+    if not path.exists():
+        return []
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    gone = {r["delete"] for r in rows if "delete" in r}
+    return [r for r in rows if "delete" not in r and r["id"] not in gone][::-1][:last]
 
 
 def frames(asset: str):
@@ -162,26 +190,52 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(candles(q["asset"], q["tf"], until))
             elif u.path == "/api/marks":
                 self._json(marks_for(q.get("asset", "")))
+            elif u.path == "/api/notes":
+                self._json(list_notes(NOTES))
             else:
                 self._send(404, b"not found", "text/plain")
         except FileNotFoundError as e:
             self._json({"error": str(e)}, 404)
 
+    def _body(self):
+        """The JSON body of a write, or None after answering why not. Only the page itself may write: a JSON request
+        (which another site cannot send without asking first) from this origin, of a sane size."""
+        if (self.headers.get("Content-Type") or "").split(";")[0].strip().lower() != "application/json":
+            self._json({"error": "a save must be JSON"}, 415)
+        elif not same_origin(self.headers.get("Origin"), self.headers.get("Host")):
+            self._json({"error": "a save must come from the chart page"}, 403)
+        else:
+            size = int(self.headers.get("Content-Length") or 0)
+            if size <= 0 or size > MAX_SAVE:
+                self._json({"error": "bad save size"}, 413)
+            else:
+                try:
+                    body = json.loads(self.rfile.read(size))
+                    if isinstance(body, dict):
+                        return body
+                except Exception:
+                    pass
+                self._json({"error": "bad save"}, 400)
+        return None
+
     def do_POST(self):
         if not self._ok():
             return
-        if urlparse(self.path).path != "/api/save":
+        path = urlparse(self.path).path
+        if path not in ("/api/save", "/api/note"):
             return self._send(404, b"not found", "text/plain")
-        # only the page itself may save: a JSON request (which another site cannot send without asking first) from this origin
-        if (self.headers.get("Content-Type") or "").split(";")[0].strip().lower() != "application/json":
-            return self._json({"error": "a save must be JSON"}, 415)
-        if not same_origin(self.headers.get("Origin"), self.headers.get("Host")):
-            return self._json({"error": "a save must come from the chart page"}, 403)
-        size = int(self.headers.get("Content-Length") or 0)
-        if size <= 0 or size > MAX_SAVE:
-            return self._json({"error": "bad save size"}, 413)
+        body = self._body()
+        if body is None:
+            return
+        if path == "/api/note":
+            try:
+                if body.get("delete"):
+                    remove_note(NOTES, body["delete"], time.time())
+                    return self._json({"removed": True})
+                return self._json(add_note(NOTES, body, time.time()))
+            except ValueError as e:
+                return self._json({"error": str(e)}, 400)
         try:
-            body = json.loads(self.rfile.read(size))
             row = {"saved": int(time.time()), "asset": str(body["asset"]), "tf": str(body.get("tf", "")),
                    "marks": list(body.get("marks", [])), "notes": list(body.get("notes", [])), "note": str(body.get("note", "")),
                    "chart_time": body.get("chart_time")}

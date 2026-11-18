@@ -20,7 +20,7 @@ them.
 | 1 | Name the concept. Say what already in the brain it might link to | Claude |
 | 2 | He explains on a chart, or Claude asks one question at a time and he defines. **Nothing is written while he is still teaching** | Sharif |
 | 3 | Show it back on a chart Claude has not seen, by drawing (skills: **draw**, **speak**). Give the read first, then the reasons | Claude |
-| 4 | He corrects. Repeat 3 and 4 until he says it is right | Sharif |
+| 4 | He corrects, in the chat, with his own marks on the chart (`v2/chart/saves.jsonl`) or in the chart's **Notes** panel (kind "learn"; `v2/chart/notes.jsonl`). Read all three. Repeat 3 and 4 until he says it is right | Sharif |
 | 5 | He says the lesson is done. Only then write it (skill: **brain-write**) | Claude |
 | 6 | Write the links: what brings this to mind, what to look for next. His are confirmed; Claude's are marked unconfirmed | Claude |
 | 7 | If it is something found on a chart: its tools and their tests, on hand-built candles | Claude |
