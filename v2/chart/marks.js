@@ -29,6 +29,7 @@ const MARK_PALETTE = [
   ["area", "zone", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "order block", "breaker", "mitigation block", "rejection block"]],
   ["area", "zone", ["gap", "liquidity void", "NWOG", "NDOG"]],
   ["", "zone", ["trading range"]],
+  ["", "level", ["50%"]],
 ];
 
 // One colour per kind of mark, so a chart with several kinds on it can be read at a glance. The same kind has the same
@@ -40,7 +41,7 @@ const KIND_COLOR = {
   "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
   "FVG": "#e8a200", "BISI": "#0ca678", "SIBI": "#c2255c", "IFVG": "#7950f2", "VI": "#c930c9", "BPR": "#1c7ed6",
   "order block": "#4c6ef5", "breaker": "#d6336c", "mitigation block": "#0b7285", "rejection block": "#a8641a",
-  "trading range": "#8d99ae", "gap": "#74b816", "liquidity void": "#5c7080", "NWOG": "#e8890c", "NDOG": "#b8860b",
+  "trading range": "#8d99ae", "50%": "#8d99ae", "gap": "#74b816", "liquidity void": "#5c7080", "NWOG": "#e8890c", "NDOG": "#b8860b",
 };
 // a mark whose label is free text (Claude's often are) takes the colour of the kind it names
 const KIND_WORDS = [["EQH", "EQH"], ["EQL", "EQL"], ["IFVG", "IFVG"], ["FVG", "FVG"], ["BISI", "BISI"], ["SIBI", "SIBI"], ["IFVG", "IFVG"], ["NWOG", "NWOG"], ["NDOG", "NDOG"], ["BPR", "BPR"],

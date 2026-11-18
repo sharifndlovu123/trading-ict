@@ -180,7 +180,7 @@ const GROUPS = [["╱", "Lines", ["trendline", "displacement", "fake push"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
                 ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "liquidity void", "NWOG", "NDOG"]],
                 ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
-                ["⇕", "Range", ["trading range"]]];
+                ["⇕", "Range", ["trading range", "50%"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
 const KEEP = "charts-v2";
 const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"); } catch (e) { return {}; } })();
