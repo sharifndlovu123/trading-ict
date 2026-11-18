@@ -2,188 +2,491 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chart</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charts</title>
 <style>
-  :root { --bg:#16181c; --panel:#1d2026; --line:#2c3038; --ink:#e7e9ee; --dim:#8b93a1; --claude:#35c6d9; --his:#f2b84b; --up:#3b8eea; --down:#e2612e; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
-  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); }
-  h1 { font-size:16px; margin:0 10px 0 0; }
-  button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; }
-  button.on { background:var(--up); border-color:var(--up); color:#fff; }
-  button.tool.on { background:var(--his); border-color:var(--his); color:#111; }
-  .dim { color:var(--dim); }
-  main { display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:12px; padding:12px 14px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  #wrap { position:relative; height:72vh; min-height:420px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  #chart, #over { position:absolute; inset:0; }
-  #over { pointer-events:none; z-index:5; }   /* above the chart's own layers, or the marks are hidden */
-  #over.armed { pointer-events:auto; cursor:crosshair; }
-  aside > div { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:12px; }
-  aside h2 { font-size:14px; margin:0 0 6px; }
-  aside ul { margin:0; padding-left:18px; }
-  aside li { margin-bottom:6px; }
-  .row { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
-  .key { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
-  textarea { width:100%; min-height:56px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px; font:inherit; }
+/* Laid out like TradingView (Sharif, 18 Nov 2026: "I'm very used to their UI"): symbol and interval along the top,
+   drawing tools down the left, a watchlist and details on the right, replay along the bottom. */
+:root { --bg:#131722; --panel:#1e222d; --panel2:#2a2e39; --ink:#d1d4dc; --ink2:#787b86; --line:#2a2e39; --grid:#1c2030; --pos:#26a69a; --neg:#ef5350;
+  --up:#26a69a; --down:#ef5350; --accent:#2962ff; --area:#9c7bea; --bs:#5b9cf6; --ss:#f7936f; --mine:#f2b84b; --claude:#22d3ee; }
+@media (prefers-color-scheme: light) { :root { --bg:#ffffff; --panel:#ffffff; --panel2:#f0f3fa; --ink:#131722; --ink2:#6a6d78; --line:#e0e3eb; --grid:#f0f3fa;
+  --area:#7e57c2; --bs:#1e53e5; --ss:#d1512d; --mine:#b77400; --claude:#0e8fa3; } }
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:var(--line); color:var(--ink); font:13px/1.4 -apple-system,"Trebuchet MS",Roboto,"Segoe UI",sans-serif; display:flex; flex-direction:column; gap:1px; overflow:hidden; }
+button, select, input { font:inherit; color:var(--ink); }
+.dim { color:var(--ink2); } .num { font-variant-numeric:tabular-nums; } .up { color:var(--pos); } .dn { color:var(--neg); }
+/* top bar */
+#top { background:var(--panel); height:40px; display:flex; align-items:center; padding:0 6px; gap:2px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; flex:none; }
+#top .sep { width:1px; height:22px; background:var(--line); margin:0 5px; flex:none; }
+#top .sp { flex:1; }
+.tb { background:none; border:0; border-radius:6px; padding:5px 8px; cursor:pointer; height:30px; display:inline-flex; align-items:center; gap:5px; }
+.tb:hover { background:var(--panel2); } .tb.on { color:var(--accent); } .tb.act { background:var(--accent); color:#fff; }
+#sym { font-weight:700; font-size:14px; background:none; border:0; border-radius:6px; padding:5px 4px; cursor:pointer; height:30px; }
+#sym:hover { background:var(--panel2); } #sym option { background:var(--panel); color:var(--ink); }
+/* middle */
+#mid { flex:1; min-height:0; display:flex; gap:1px; }
+#tools { background:var(--panel); width:46px; flex:none; display:flex; flex-direction:column; align-items:center; padding:6px 0; gap:2px; position:relative; }
+#tools .tl { width:34px; height:34px; border:0; border-radius:6px; background:none; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+#tools .tl:hover { background:var(--panel2); } #tools .tl.on { color:var(--accent); background:var(--panel2); }
+#tools .gap { flex:1; } #tools .ln { width:26px; height:1px; background:var(--line); margin:4px 0; }
+#fly { position:absolute; left:50px; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:190px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
+#fly h4 { margin:2px 8px 4px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
+#fly .it { display:flex; gap:8px; align-items:center; padding:6px 8px; border-radius:5px; cursor:pointer; } #fly .it:hover { background:var(--panel2); } #fly .it.on { color:var(--accent); }
+#fly .it .k { margin-left:auto; color:var(--ink2); font-size:11px; }
+#grid { flex:1; min-width:0; display:grid; gap:1px; background:var(--line); }
+#side { width:300px; flex:none; background:var(--panel); overflow:auto; display:none; }
+#side.on { display:block; }
+#side h3 { margin:0; padding:10px 12px 6px; font-size:12px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
+#watch .w { display:flex; gap:8px; padding:6px 12px; cursor:pointer; border-left:2px solid transparent; } #watch .w:hover { background:var(--panel2); }
+#watch .w.on { border-left-color:var(--accent); background:var(--panel2); } #watch .w b { flex:1; font-weight:600; }
+#read { padding:0 12px 12px; } #read ul { margin:0; padding-left:18px; } #read li { margin-bottom:6px; }
+@media (max-width: 900px) { #side { position:absolute; right:0; top:41px; bottom:35px; z-index:20; border-left:1px solid var(--line); } }
+/* a chart */
+.pane { background:var(--bg); display:flex; flex-direction:column; min-width:0; min-height:140px; position:relative; }
+.pane.active { box-shadow:inset 0 0 0 1px var(--accent); }
+.pane .c { flex:1; min-height:0; position:relative; }
+.legend { position:absolute; left:8px; top:6px; z-index:5; display:flex; gap:8px; align-items:baseline; pointer-events:none; white-space:nowrap; max-width:calc(100% - 90px); overflow:hidden; }
+.legend b { font-size:14px; } .legend .tf { color:var(--ink2); }
+.pbtn { position:absolute; right:62px; top:4px; z-index:6; display:none; gap:2px; } .pane:hover .pbtn { display:flex; }
+.pbtn button { background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:0 7px; height:22px; cursor:pointer; }
+.pbtn button:hover { background:var(--panel2); }
+/* bottom bar */
+#bottom { background:var(--panel); height:34px; flex:none; display:flex; align-items:center; gap:4px; padding:0 8px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; }
+#bottom .sp { flex:1; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
+#at { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:2px 6px; height:26px; color-scheme:dark; }
+@media (prefers-color-scheme: light) { #at { color-scheme:light; } }
+#menu { position:absolute; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:210px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
+#menu h4 { margin:4px 8px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
+#menu .it { padding:6px 8px; border-radius:5px; cursor:pointer; } #menu .it:hover { background:var(--panel2); }
+/* notes written on the chart */
+.cnote { position:absolute; z-index:4; transform:translate(6px,-50%); max-width:240px; padding:2px 7px; border-radius:4px; font-size:12px; line-height:1.35;
+  background:var(--mine); color:#1b1400; cursor:pointer; white-space:pre-wrap; }
+.cnote.claude { background:var(--claude); color:#04252b; cursor:default; }
+.noteedit { position:absolute; z-index:8; display:none; width:270px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px; box-shadow:0 8px 28px rgba(0,0,0,.45); }
+.noteedit textarea { width:100%; min-height:64px; font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:5px; }
+.noteedit .row { display:flex; gap:6px; align-items:center; margin-top:6px; }
+.noteedit button { background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:2px 9px; cursor:pointer; }
+.sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
 </style>
+<script src="marks.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
 </head>
 <body>
-<header>
-  <h1>Chart</h1>
-  <span id="assets" class="row" style="margin:0"></span>
-  <span id="tfs" class="row" style="margin:0"></span>
-  <button id="reload" title="read the candle files and the marks again">refresh</button>
-  <span id="status" class="dim"></span>
-</header>
-<main>
-  <section>
-    <div id="wrap"><div id="chart"></div><canvas id="over"></canvas></div>
-    <div class="row">
-      <span class="dim">Your marks:</span><span id="tools" class="row" style="margin:0"></span>
-      <button id="undo">undo last</button><button id="clear">clear mine</button><button id="save">save my marks</button>
-      <span id="saved" class="dim"></span>
-    </div>
-    <div class="dim">Pick a mark, then click the chart (a level or a line) or drag (a zone). Right-click one of yours to remove it. New York time. Candles are read from files: refresh after new ones are fetched.</div>
-    <textarea id="note" placeholder="A note to save with your marks (optional)"></textarea>
-  </section>
-  <aside>
-    <div><h2>Claude's read <span id="at" class="dim"></span></h2><ul id="read"><li class="dim">nothing yet</li></ul></div>
-    <div><h2>On the chart</h2>
-      <div><span class="key" style="background:var(--claude)"></span>Claude's marks (labels start "C ·")</div>
-      <div><span class="key" style="background:var(--his)"></span>Yours (labels start "S ·")</div>
-      <div class="dim" style="margin-top:6px">A mark shows on its own timeframe and the lower ones.</div>
-    </div>
-  </aside>
-</main>
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js" integrity="sha384-JZigAjwiaZtkUbA44CWkPaT3iBb/mU5pO6QOANp+OqHd4q+1+7MG1kzp2OOP9ZfP" crossorigin="anonymous"></script>
+<div id="top">
+  <select id="sym" title="the instrument of the chart you last touched"></select>
+  <span class="sep"></span>
+  <span id="tfs" style="display:flex;gap:1px"></span>
+  <span class="sep"></span>
+  <button class="tb" id="ctype" title="candles or a line of the closes (L); the whole layout: Shift+L"></button>
+  <button class="tb" id="layoutbtn" title="how many charts and how they are arranged">▦ Layout</button>
+  <button class="tb" id="add" title="one more chart, the same as the one you last touched">＋</button>
+  <span class="sep"></span>
+  <button class="tb" id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">％ Compare</button>
+  <label class="tb" title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> Sync</label>
+  <button class="tb" id="replaybtn" title="take the charts back to a moment: nothing after it is shown">⏮ Replay</button>
+  <span class="sp"></span>
+  <label class="tb" title="show or hide what Claude drew"><input type="checkbox" id="ovon" checked autocomplete="off"> Claude's marks</label>
+  <button class="tb" id="refresh" title="read the candles and the marks again (Shift+R). Alt+R re-centres the charts">↻</button>
+  <button class="tb" id="fsbtn" title="the chart you last touched on the whole screen (Shift+F)">⛶</button>
+  <button class="tb" id="readbtn" title="the watchlist and Claude's read (W)">☰</button>
+</div>
+<div id="mid">
+  <div id="tools"></div>
+  <div id="grid"></div>
+  <aside id="side"><h3>Watchlist</h3><div id="watch"></div><h3 id="readh">Claude's read</h3><div id="read"></div></aside>
+</div>
+<div id="bottom">
+  <span id="replay">
+    <button class="tb" data-step="-D" title="one day back">⏪</button><button class="tb" data-step="-1" title="one candle back (the chart you last touched)">◀</button>
+    <input type="datetime-local" id="at" title="a New York date and time; the charts show nothing after it">
+    <button class="tb" data-step="1" title="one candle forward">▶</button><button class="tb" data-step="D" title="one day forward">⏩</button>
+    <button class="tb" id="play" title="one candle every second">▶ Play</button>
+    <button class="tb" id="now" title="leave replay: back to the newest candles">✕ Exit replay</button>
+  </span>
+  <span id="when" class="dim"></span>
+  <span class="sp"></span>
+  <span id="marksn" class="dim"></span>
+</div>
+<div id="fly"></div><div id="menu"></div>
 <script>
 const $ = id => document.getElementById(id);
-const RANK = { "1M":7, "1W":6, "1D":5, "4h":4, "1h":3, "15m":2, "5m":1, "1m":0 };
-// what Sharif can place: [label, shape]. Kept to the words v2 has so far.
-const TOOLS = [["buyside","level"],["sellside","level"],["EQH","zone"],["EQL","zone"],["BOS","level"],["level behind","level"],["level ahead","level"],
-               ["BISI","zone"],["SIBI","zone"],["IFVG","zone"],["VI","zone"],["NDOG","zone"],["NWOG","zone"],["→ bull","vline"],["→ bear","vline"],["note","level"]];
-const q = new URLSearchParams(location.search);
-const st = { asset: q.get("asset"), tf: q.get("tf") || "1D", candles: [], marks: [], mine: [], tool: null, drag: null };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TFS = ["1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M"];
+const TFNAME = { "1m": "1m", "5m": "5m", "15m": "15m", "1h": "1h", "4h": "4h", "1D": "D", "1W": "W", "1M": "M" };
+const STEP = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1D": 86400, "1W": 604800, "1M": 2592000 };
+const SHOW = { "1m": 150, "5m": 150, "15m": 110, "1h": 120, "4h": 120, "1D": 130, "1W": 110, "1M": 90 };
+const SETS = { Indices: ["US100", "US500", "US30"], Europe: ["DE40", "UK100"], Metals: ["XAUUSD", "XAGUSD"] };       // charts that are read together
+const CLEAR = "rgba(0,0,0,0)";
+const COLORS = ["#2962ff", "#ff9800", "#26a69a", "#e91e63", "#9c27b0", "#ffeb3b", "#00bcd4", "#8bc34a", "#795548", "#607d8b"];
+// the tools down the left side: [icon, name, the kinds in its fly-out]
+const GROUPS = [["╱", "Lines", ["trendline", "displacement", "fake push"]],
+                ["—", "Levels", ["buyside", "sellside", "EQH", "EQL", "BOS", "level behind", "level ahead"]],
+                ["┆", "Change of bias", ["→ bull", "→ bear"]],
+                ["▭", "Imbalances", ["BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "liquidity void", "NWOG", "NDOG"]],
+                ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]]];
+const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
+const KEEP = "charts-v2";
+const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"); } catch (e) { return {}; } })();
+// cfg = the layout: one entry per chart (its instrument, its timeframe, line or candles), in reading order; cols 0 = automatic
+const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
+             marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
+             lastKind: keep.lastKind || {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind })); } catch (e) {} };
+function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
+const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
+const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
+const dp = v => Math.abs(v) < 20 ? 4 : Math.abs(v) < 500 ? 3 : 2;
+const wall = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
+const cur = () => st.active || st.panes.find(p => !p.pct) || null;          // the chart the top bar acts on: the one last touched
+const curCfg = () => (cur() && cur().c) || st.cfg[0];
 
-const chart = LightweightCharts.createChart($("chart"), {
-  layout: { background: { color: "#1d2026" }, textColor: "#8b93a1" }, grid: { vertLines: { color: "#262a31" }, horzLines: { color: "#262a31" } },
-  timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 6 }, crosshair: { mode: 0 }, autoSize: true });
-const series = chart.addCandlestickSeries({ upColor: "#3b8eea", downColor: "#e2612e", borderVisible: false, wickUpColor: "#3b8eea", wickDownColor: "#e2612e" });
-const over = $("over"), ctx = over.getContext("2d");
-
-const key = () => `chart-mine-${st.asset}`;
-const loadMine = () => { try { st.mine = JSON.parse(localStorage.getItem(key()) || "[]"); } catch { st.mine = []; } };
-const keepMine = () => { try { localStorage.setItem(key(), JSON.stringify(st.mine)); } catch {} };
-
-function idx(t) {                       // the last candle at or before a time (marks from a higher timeframe fall between candles)
-  const c = st.candles; let lo = 0, hi = c.length - 1, at = 0;
-  while (lo <= hi) { const m = (lo + hi) >> 1; if (c[m].time <= t) { at = m; lo = m + 1; } else hi = m - 1; }
-  return at;
+// ---- data
+async function getCandles(asset, tf) {
+  const k = `${asset}|${tf}|${st.until ?? ""}`;
+  if (!st.cache.has(k)) st.cache.set(k, fetch(`api/candles?asset=${asset}&tf=${tf}${st.until != null ? "&until=" + st.until : ""}`).then(r => r.json()));
+  const d = await st.cache.get(k);
+  if (d.last != null) st.newest = Math.max(st.newest || 0, d.last);
+  return d.candles || [];
 }
-const xOf = t => t == null ? null : chart.timeScale().logicalToCoordinate(idx(t));
-const yOf = p => series.priceToCoordinate(p);
+async function getClaude(asset) { try { st.claude[asset] = await (await fetch("api/marks?asset=" + asset)).json(); } catch (e) { st.claude[asset] = { marks: [], read: [] }; } }
 
-function draw() {
-  const r = $("wrap").getBoundingClientRect(), d = devicePixelRatio || 1;
-  over.width = r.width * d; over.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
-  if (!st.candles.length) return;
-  const end = (chart.timeScale().logicalToCoordinate(st.candles.length - 1) ?? r.width) + 24;      // an open mark stops just past the last candle
-  const all = st.marks.map(m => [m, "#35c6d9", "C"]).concat(st.mine.map(m => [m, "#f2b84b", "S"]));
-  ctx.font = "11px ui-monospace, monospace"; ctx.lineWidth = 1.5;
-  for (const [m, col, who] of all) {
-    if (m.tf && RANK[m.tf] < RANK[st.tf]) continue;                                               // only on its own timeframe and the lower ones
-    const x0 = Math.max(0, xOf(m.t0) ?? 0), x1 = m.t1 == null ? end : (xOf(m.t1) ?? end);
-    ctx.strokeStyle = col; ctx.fillStyle = col; let lx = x0, ly = null;
-    if (m.shape === "zone") {
-      const a = yOf(m.top), b = yOf(m.bottom); if (a == null || b == null) continue;
-      ctx.globalAlpha = 0.14; ctx.fillRect(x0, a, x1 - x0, b - a); ctx.globalAlpha = 1; ctx.strokeRect(x0, a, x1 - x0, b - a); ly = a - 5;
-    } else if (m.shape === "vline") {
-      ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x0, 24); ctx.lineTo(x0, r.height - 30); ctx.stroke(); ctx.setLineDash([]); lx = x0 + 5; ly = 36;
-    } else if (m.shape === "line") {
-      const a = yOf(m.p0), b = yOf(m.p1); if (a == null || b == null) continue;
-      ctx.beginPath(); ctx.moveTo(x0, a); ctx.lineTo(x1, b); ctx.stroke(); ly = a - 5;
-    } else {
-      const y = yOf(m.price); if (y == null) continue;
-      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ly = y - 5;
-    }
-    const label = `${who} · ${m.kind || ""}`, w = ctx.measureText(label).width + 8;
-    ctx.fillStyle = "#16181c"; ctx.fillRect(lx, ly - 11, w, 14); ctx.fillStyle = col; ctx.fillText(label, lx + 4, ly);
-  }
-  if (st.drag) { const { x0, y0, x1, y1 } = st.drag; ctx.strokeStyle = "#f2b84b"; ctx.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); }
+// ---- his marks: one set of tools for every chart
+function marksChanged() {
+  keepMine(); setPlace(null);                              // one placement per pick
+  st.panes.forEach(p => p.layer && p.layer.redraw());      // the same instrument may be on two charts
+  count("not saved yet");
 }
+function count(tail) {
+  const shown = [...new Set(st.cfg.map(c => c.asset))], n = shown.reduce((s, a) => s + myMarks(a).length + myNotes(a).length, 0);
+  $("marksn").textContent = n ? `${n} of mine on these charts · ${tail}` : "";
+}
+function setPlace(p) { st.place = p; if (p) { st.grab = false; st.noteTool = false; st.lastKind[p.shape] = p.kind; save(); }
+  st.panes.forEach(q => { if (q.layer) { q.layer.setGrab(false); q.layer.setPlace(p); } if (q.box && !p) q.box.style.cursor = ""; }); tools(); }
+function setGrab(on) { st.grab = on; st.place = null; st.noteTool = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(on))); tools(); }
+function setNoteTool(on) { st.noteTool = on; if (on) { st.place = null; st.grab = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(false))); }
+  st.panes.forEach(q => q.box && (q.box.style.cursor = on ? "crosshair" : "")); tools(); }
+function tools() {                                       // the toolbar down the left
+  const on = g => st.place && g[2].includes(st.place.kind);
+  $("tools").innerHTML = `<button class="tl ${!st.place && !st.grab && !st.noteTool ? "on" : ""}" id="t-cur" title="cursor (Esc)">✛</button>` +
+    `<button class="tl ${st.grab ? "on" : ""}" id="t-grab" title="grab (G): the charts hold still; press near any of your marks to move it">✋</button><span class="ln"></span>` +
+    GROUPS.map((g, i) => `<button class="tl ${on(g) ? "on" : ""}" data-g="${i}" title="${g[1]}">${g[0]}</button>`).join("") +
+    `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button>` +
+    `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
+    `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
+  $("t-cur").onclick = () => { setPlace(null); setGrab(false); setNoteTool(false); };
+  $("t-grab").onclick = () => setGrab(!st.grab);
+  $("t-note").onclick = () => setNoteTool(!st.noteTool);
+  $("tools").querySelectorAll("[data-g]").forEach(b => b.onclick = e => { e.stopPropagation(); fly(+b.dataset.g, b); });
+  $("t-clear").onclick = () => { const as = [...new Set(st.cfg.map(c => c.asset))], n = as.reduce((s, a) => s + myMarks(a).length + myNotes(a).length, 0);
+    if (n && confirm(`Remove your ${n} marks and notes from ${as.join(", ")}? Claude's marks stay, and what you already saved stays on file.`)) { as.forEach(a => { st.marks[a] = []; st.notes[a] = []; }); marksChanged(); } };
+  $("t-save").onclick = async () => { let n = 0;
+    for (const a of [...new Set(st.cfg.map(c => c.asset))]) { if (!myMarks(a).length && !myNotes(a).length) continue;
+      const r = await fetch("api/save", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ asset: a, tf: (st.cfg.find(c => c.asset === a) || {}).tf || "", marks: myMarks(a), notes: myNotes(a), chart_time: st.until }) });
+      if (!r.ok) { alert("save failed for " + a); return; } n++; }
+    count(n ? `saved ✓ (${n} instrument${n === 1 ? "" : "s"})` : "nothing to save"); };
+  count("in this browser");
+}
+function fly(i, btn) {                                   // a tool's fly-out, like the drawing menus
+  const f = $("fly"), g = GROUPS[i];
+  if (f.style.display === "block" && f.dataset.g == i) { f.style.display = "none"; return; }
+  const keys = { trendline: "Alt+T", [st.lastKind.level || "BOS"]: "Alt+H", [st.lastKind.vline || "→ bull"]: "Alt+V" };
+  f.dataset.g = i; f.style.display = "block"; f.style.top = Math.min(btn.getBoundingClientRect().top, innerHeight - 40 - g[2].length * 31) + "px";
+  f.innerHTML = `<h4>${g[1]}</h4>` + g[2].map(k => `<div class="it ${st.place && st.place.kind === k ? "on" : ""}" data-k="${esc(k)}">${esc(k)}<span class="k">${keys[k] || ""}</span></div>`).join("");
+  f.querySelectorAll(".it").forEach(el => el.onclick = () => { f.style.display = "none"; const k = KIND[el.dataset.k]; setPlace(st.place && st.place.kind === k.kind ? null : k); });
+}
+document.addEventListener("pointerdown", e => { if (!e.target.closest("#fly") && !e.target.closest("#tools")) $("fly").style.display = "none";
+  if (!e.target.closest("#menu") && !e.target.closest("#layoutbtn")) $("menu").style.display = "none"; });
 
-const pos = e => { const r = over.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-function timeAt(x) { const i = Math.round(chart.timeScale().coordinateToLogical(x) ?? 0); return st.candles[Math.max(0, Math.min(st.candles.length - 1, i))].time; }
-const round = p => +p.toPrecision(7);
+// candle number <-> time on one chart (counts differ between instruments, so charts are linked by time)
+function iOf(a, t) { const n = a.length; if (!n) return 0; const s1 = n > 1 ? a[n - 1] - a[n - 2] : 1, s0 = n > 1 ? a[1] - a[0] : 1;
+  if (t <= a[0]) return (t - a[0]) / s0; if (t >= a[n - 1]) return n - 1 + (t - a[n - 1]) / s1;
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m] <= t) lo = m; else hi = m; }
+  return lo + (t - a[lo]) / (a[hi] - a[lo]); }
+function tOf(a, l) { const n = a.length; if (!n) return 0; const s1 = n > 1 ? a[n - 1] - a[n - 2] : 1, s0 = n > 1 ? a[1] - a[0] : 1;
+  if (l <= 0) return a[0] + l * s0; if (l >= n - 1) return a[n - 1] + (l - n + 1) * s1;
+  const i = Math.floor(l); return a[i] + (l - i) * (a[i + 1] - a[i]); }
+const atOrBefore = (p, t) => { const a = p.times; if (!a.length || t < a[0]) return null; let lo = 0, hi = a.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (a[m] <= t) lo = m; else hi = m - 1; } return p.data[lo]; };
 
-over.addEventListener("mousedown", e => {
-  if (!st.tool || e.button !== 0) return;
-  const [x, y] = pos(e);
-  if (st.tool[1] === "zone") { st.drag = { x0: x, y0: y, x1: x, y1: y }; return; }
-  const m = { kind: st.tool[0], shape: st.tool[1], tf: st.tf, t0: timeAt(x), t1: null, by: "S" };
-  if (m.shape === "level") m.price = round(series.coordinateToPrice(y));
-  st.mine.push(m); done();
-});
-over.addEventListener("mousemove", e => { if (st.drag) { [st.drag.x1, st.drag.y1] = pos(e); draw(); } });
-over.addEventListener("mouseup", () => {
-  if (!st.drag) return;
-  const { x0, y0, x1, y1 } = st.drag; st.drag = null;
-  if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 2) {
-    const a = series.coordinateToPrice(y0), b = series.coordinateToPrice(y1);
-    st.mine.push({ kind: st.tool[0], shape: "zone", tf: st.tf, top: round(Math.max(a, b)), bottom: round(Math.min(a, b)), t0: timeAt(Math.min(x0, x1)), t1: timeAt(Math.max(x0, x1)), by: "S" });
-  }
-  done();
-});
-$("wrap").addEventListener("contextmenu", e => {                          // right-click removes the nearest of his marks
-  e.preventDefault(); const [x, y] = pos(e); let best = -1, dist = 14;
-  st.mine.forEach((m, i) => {
-    const ys = m.shape === "zone" ? [yOf(m.top), yOf(m.bottom)] : m.shape === "vline" ? [y] : [yOf(m.price)];
-    const dx = m.shape === "vline" ? Math.abs((xOf(m.t0) ?? -99) - x) : 0;
-    for (const yy of ys) { const dd = Math.max(dx, Math.abs((yy ?? -99) - y)); if (dd < dist) { dist = dd; best = i; } }
+function mkChart(el) {
+  return LightweightCharts.createChart(el, { autoSize: true,
+    layout: { background: { color: "transparent" }, textColor: css("--ink2"), fontFamily: getComputedStyle(document.body).fontFamily },
+    grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } }, crosshair: { mode: 0 },
+    timeScale: { timeVisible: true, secondsVisible: false, borderColor: css("--line"), rightOffset: 8 }, rightPriceScale: { borderColor: css("--line") } });
+}
+function head(p, c) {                                    // the legend in the chart's corner: instrument, interval, the candle under the crosshair, the day's change
+  if (!p.data || !p.data.length) { p.infoEl.innerHTML = `<b>${esc(p.c.asset)}</b><span class="tf">${TFNAME[p.c.tf]}</span><span class="dim">no candles</span>`; return; }
+  const k = c || p.data[p.data.length - 1], last = p.data[p.data.length - 1].close, f = v => v.toFixed(dp(last)), cl = k.close >= k.open ? "up" : "dn";
+  const ch = p.dayOpen ? 100 * (last - p.dayOpen) / p.dayOpen : null;
+  p.infoEl.innerHTML = `<b>${esc(p.c.asset)}</b><span class="tf">${TFNAME[p.c.tf]}</span>` +
+    `<span class="num ${cl}">O ${f(k.open)} H ${f(k.high)} L ${f(k.low)} C ${f(k.close)}</span>` +
+    (ch == null ? "" : `<span class="num ${ch >= 0 ? "up" : "dn"}" title="since the trading day opened">${ch >= 0 ? "+" : ""}${ch.toFixed(2)}%</span>`);
+}
+function layout() {
+  const n = st.solo != null ? 1 : st.panes.length, cols = st.solo != null ? 1 : st.cols || (n <= 3 ? n : Math.ceil(Math.sqrt(n)));
+  $("grid").style.gridTemplateColumns = `repeat(${Math.max(Math.min(cols, n), 1)}, minmax(0, 1fr))`; $("grid").style.gridAutoRows = "minmax(0, 1fr)";
+  st.panes.forEach((p, i) => p.el.style.display = st.solo != null && st.solo !== i ? "none" : "");
+}
+const shows = (m, tf) => TFS.indexOf(m.tf || "1h") >= TFS.indexOf(tf);       // a mark shows on its own timeframe and the lower ones
+function underMarks(c) {                                 // Claude's marks for this chart; in replay, nothing from after that moment
+  const doc = st.claude[c.asset]; if (!doc || !$("ovon").checked) return [];
+  return (doc.marks || []).filter(m => shows(m, c.tf) && (st.until == null || m.t0 == null || m.t0 <= st.until)).map(m => ({ ...m,
+    t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
+    color: css("--claude"), label: (m.by || "C") + " · " + (m.kind || "") }));
+}
+function activate(p) { if (st.active === p) return; st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
+function build() {
+  for (const p of st.panes) { if (p.layer) p.layer.destroy(); p.dead = true; p.chart.remove(); }
+  st.panes = []; st.active = null; if (st.solo != null && st.solo >= st.cfg.length) st.solo = null;
+  const g = $("grid"); g.innerHTML = "";
+  if (st.pct) { tools(); topbar(); return buildPct(g); }
+  st.cfg.forEach((c, i) => {
+    const el = document.createElement("div"); el.className = "pane";
+    el.innerHTML = `<div class="legend"></div><div class="pbtn"><button class="solo" title="this chart alone on the page; again: all back">⤢</button><button class="x" title="remove this chart">✕</button></div><div class="c"></div>`;
+    g.appendChild(el);
+    const box = el.lastChild, chart = mkChart(box);
+    const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
+    const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const p = { c, el, box, infoEl: el.firstChild, chart, series, lineS, times: [], data: [] };
+    p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c), times: () => p.times, tfName: () => c.tf, color: css, changed: marksChanged });
+    notesFor(p);
+    for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, () => activate(p), { passive: true });
+    el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
+    el.querySelector(".solo").onclick = () => { st.solo = st.solo === i ? null : i; layout(); };
+    el.querySelector(".x").onclick = () => { if (st.cfg.length > 1) { st.cfg.splice(i, 1); st.solo = null; save(); build(); } };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { if (st.active === p && $("sync").checked) follow(p); });
+    chart.subscribeCrosshairMove(prm => {
+      if (st.active !== p) return;
+      const t = prm.time; head(p, t != null ? atOrBefore(p, t) : null);
+      if (!$("sync").checked) return;
+      for (const q of st.panes) if (q !== p) {            // the same moment on every chart, whatever its timeframe
+        const k = t != null ? atOrBefore(q, t) : null;
+        if (k) q.chart.setCrosshairPosition(k.close, k.time, q.series); else q.chart.clearCrosshairPosition();
+        head(q, k);
+      }
+    });
+    chart.subscribeClick(prm => {                          // writing on the chart
+      if (!st.noteTool || !prm.point || !p.times.length) return;
+      const t = prm.time != null ? prm.time : p.times[p.times.length - 1], price = series.coordinateToPrice(prm.point.y); if (price == null) return;
+      setNoteTool(false);
+      openEditor(p, { uid: Math.random().toString(36).slice(2, 8), t, price: +price.toPrecision(7), tf: c.tf, text: "" }, prm.point.x, prm.point.y, true);
+    });
+    st.panes.push(p);
   });
-  if (best >= 0) { st.mine.splice(best, 1); keepMine(); draw(); }
-});
-function done() { arm(null); keepMine(); $("saved").textContent = ""; draw(); }
-function arm(t) { st.tool = t; over.classList.toggle("armed", !!t); [...$("tools").children].forEach(b => b.classList.toggle("on", t && b.textContent === t[0])); }
+  st.active = st.panes[0]; st.panes.forEach(q => q.el.classList.toggle("active", q === st.active && st.panes.length > 1));
+  tools(); topbar(); layout(); fill(true);
+}
+function full(p) { if (document.fullscreenElement) document.exitFullscreen(); else if (p && p.el.requestFullscreen) p.el.requestFullscreen().catch(() => {}); }
+// charts on the same timeframe show the same stretch of time as chart p (a 1h and a 5m chart keep their own zoom)
+function follow(p) {
+  const r = p.chart.timeScale().getVisibleLogicalRange(); if (!r || !p.times.length) return;
+  const t0 = tOf(p.times, r.from), t1 = tOf(p.times, r.to);
+  for (const q of st.panes) if (q !== p && q.c.tf === p.c.tf && q.times.length) q.chart.timeScale().setVisibleLogicalRange({ from: iOf(q.times, t0), to: iOf(q.times, t1) });
+}
+async function fillPane(p, fit, newAsset) {
+  const c = p.c, asset = c.asset, tf = c.tf;
+  const [data, day] = await Promise.all([getCandles(asset, tf), getCandles(asset, "1D"), (newAsset || !st.claude[asset]) ? getClaude(asset) : null]);
+  if (p.dead || c.asset !== asset || c.tf !== tf) return;
+  p.data = data; p.times = data.map(x => x.time); p.dayOpen = day.length ? day[day.length - 1].open : null;
+  const last = data.length ? data[data.length - 1].close : 0;
+  p.series.applyOptions({ priceFormat: { type: "price", precision: dp(last), minMove: +(10 ** -dp(last)).toFixed(dp(last)) } });
+  p.series.setData(data);
+  // line chart: the candles stay underneath, invisible, so the marks keep their place
+  p.series.applyOptions(c.line ? { upColor: CLEAR, downColor: CLEAR, wickUpColor: CLEAR, wickDownColor: CLEAR } : { upColor: css("--up"), downColor: css("--down"), wickUpColor: css("--up"), wickDownColor: css("--down") });
+  p.lineS.setData(c.line ? data.map(x => ({ time: x.time, value: x.close })) : []);
+  head(p); p.layer.redraw(); if (p === cur()) topbar();
+  if (fit && p.times.length) recentre(p);
+  status(); if (p === cur()) side();
+}
+function recentre(p) {                                   // the newest candles in view, price scale back to automatic (Alt+R)
+  p.chart.applyOptions({ rightPriceScale: { autoScale: true } }); p.chart.priceScale("right").applyOptions({ autoScale: true });
+  const mate = st.panes.find(q => q !== p && !q.pct && q.c.tf === p.c.tf && q.times.length && q.fitted);
+  const n = p.times.length; let r = { from: Math.max(0, n - SHOW[p.c.tf]), to: n + 8 };
+  if (mate && $("sync").checked) { const m = mate.chart.timeScale().getVisibleLogicalRange(); if (m) r = { from: iOf(p.times, tOf(mate.times, m.from)), to: iOf(p.times, tOf(mate.times, m.to)) }; }
+  p.chart.timeScale().setVisibleLogicalRange(r); p.fitted = true;
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (!p.dead) p.chart.timeScale().setVisibleLogicalRange(r); }));      // again once the chart has its final width
+}
+function fill(fit) { if (st.pct) return fillPct(fit); st.panes.forEach(p => { if (fit) p.fitted = false; }); return Promise.all(st.panes.map(p => fillPane(p, fit))); }
+function status() {
+  const t = st.until != null ? st.until : st.newest;
+  $("when").textContent = t == null ? "" : (st.until != null ? `Replay · ${wall(t)} New York · nothing after it is shown` : `Newest candle ${wall(t)} New York`);
+  if (document.activeElement !== $("at") && t != null) $("at").value = new Date(t * 1000).toISOString().slice(0, 16);
+  $("replaybtn").classList.toggle("on", st.replay || st.until != null); $("replay").classList.toggle("on", st.replay || st.until != null);
+}
 
-$("undo").onclick = () => { st.mine.pop(); keepMine(); draw(); };
-$("clear").onclick = () => { st.mine = []; keepMine(); draw(); };
-$("save").onclick = async () => {
-  const r = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ asset: st.asset, tf: st.tf, marks: st.mine, note: $("note").value }) });
-  $("saved").textContent = r.ok ? `saved ${st.mine.length} mark(s) at ${new Date().toLocaleTimeString()}` : "save failed";
+// ---- one chart: every instrument in the layout as a line, in % from the left edge of the window
+function buildPct(g) {
+  g.style.gridTemplateColumns = "minmax(0, 1fr)"; g.style.gridAutoRows = "minmax(0, 1fr)";
+  const list = [...new Set(st.cfg.map(c => c.asset))], tf = st.cfg[0].tf;
+  const el = document.createElement("div"); el.className = "pane";
+  el.innerHTML = `<div class="legend"></div><div class="c"></div>`; g.appendChild(el);
+  const chart = mkChart(el.lastChild);
+  const p = { pct: true, tf, el, infoEl: el.firstChild, chart, lines: list.map(asset => { const color = COLORS[st.assets.indexOf(asset) % COLORS.length];
+    return { asset, color, series: chart.addLineSeries({ color, lineWidth: 2, priceLineVisible: false, title: asset,
+      priceFormat: { type: "custom", minMove: 0.01, formatter: v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%" } }) }; }) };
+  chart.subscribeCrosshairMove(prm => pctHead(p, prm));
+  st.panes.push(p); fillPct(true);
+}
+function pctHead(p, prm) {
+  p.infoEl.innerHTML = p.lines.map(l => { const d = prm && prm.seriesData ? prm.seriesData.get(l.series) : null, v = d ? d.value : l.lastV;
+    return `<span><span class="sw" style="background:${l.color}"></span><b>${l.asset}</b> <span class="num ${v >= 0 ? "up" : "dn"}">${v == null ? "–" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span></span>`; }).join("") +
+    `<span class="dim">${TFNAME[p.tf]} · % change since ${p.from || ""} New York</span>`;
+}
+async function fillPct(fit) {
+  const p = st.panes[0]; if (!p || !p.lines) return;
+  const all = await Promise.all(p.lines.map(l => getCandles(l.asset, p.tf))); if (p.dead || !all[0].length) return;
+  const first = all[0];
+  if (fit || p.t0 == null) p.t0 = first[Math.max(0, first.length - SHOW[p.tf])].time;
+  p.from = wall(p.t0);
+  p.lines.forEach((l, i) => { const c = all[i], b = c.find(x => x.time >= p.t0) || c[0];
+    const d = b ? c.map(x => ({ time: x.time, value: 100 * (x.close / b.close - 1) })) : [];
+    l.series.setData(d); l.lastV = d.length ? d[d.length - 1].value : null; });
+  if (fit) { p.chart.applyOptions({ rightPriceScale: { autoScale: true } }); const n = first.length; p.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - SHOW[p.tf]), to: n + 8 }); }
+  pctHead(p); status();
+}
+
+// ---- writing on the chart: his notes (and Claude's, read-only) pinned at a time and a price
+function notesFor(p) {
+  const wrap = document.createElement("div"); p.box.appendChild(wrap);
+  const ed = document.createElement("div"); ed.className = "noteedit";
+  ed.innerHTML = `<textarea placeholder="What I see here / what was missed"></textarea><div class="row"><button data-ok>Keep</button><button data-del>Delete</button><button data-x>Cancel</button><span class="dim">Ctrl+Enter keeps</span></div>`;
+  p.box.appendChild(ed); p.ed = ed;
+  const close = (keepIt, del) => { const e = p.editing; if (!e) return; const txt = ed.querySelector("textarea").value.trim(), list = myNotes(p.c.asset), i = list.indexOf(e.note);
+    if (del || (keepIt && !txt)) { if (i >= 0) list.splice(i, 1); } else if (keepIt) { e.note.text = txt; if (i < 0) list.push(e.note); }
+    p.editing = null; ed.style.display = "none"; keepMine(); count("not saved yet"); };
+  ed.querySelector("[data-ok]").onclick = () => close(true); ed.querySelector("[data-x]").onclick = () => close(false); ed.querySelector("[data-del]").onclick = () => close(false, true);
+  ed.querySelector("textarea").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) close(true); else if (e.key === "Escape") close(false); e.stopPropagation(); });
+  for (const ev of ["mousedown", "pointerdown", "click"]) ed.addEventListener(ev, e => e.stopPropagation());
+  wrap.addEventListener("click", e => { const el = e.target.closest(".cnote"); if (!el || el.classList.contains("claude")) return;
+    const n = myNotes(p.c.asset).find(x => x.uid === el.dataset.u); if (n) openEditor(p, n, parseFloat(el.style.left), parseFloat(el.style.top), false); });
+  wrap.addEventListener("contextmenu", e => { const el = e.target.closest(".cnote"); if (!el || el.classList.contains("claude")) return; e.preventDefault();
+    const l = myNotes(p.c.asset), i = l.findIndex(x => x.uid === el.dataset.u); if (i >= 0) { l.splice(i, 1); keepMine(); count("not saved yet"); } });
+  (function place() {
+    if (p.dead) return;
+    const doc = st.claude[p.c.asset], theirs = doc && $("ovon").checked ? (doc.notes || []).filter(n => st.until == null || n.t <= st.until).map((n, i) => ({ ...n, uid: "c" + i, claude: true })) : [];
+    const list = myNotes(p.c.asset).concat(theirs).filter(n => shows(n, p.c.tf));
+    if (wrap.children.length !== list.length) wrap.innerHTML = list.map(() => `<div class="cnote"></div>`).join("");
+    list.forEach((n, i) => { const el = wrap.children[i], a = atOrBefore(p, n.t), x = a ? p.chart.timeScale().timeToCoordinate(a.time) : null, y = p.series.priceToCoordinate(n.price);
+      el.classList.toggle("claude", !!n.claude); el.dataset.u = n.uid; if (el.textContent !== n.text) el.textContent = n.text;
+      el.style.display = x == null || y == null ? "none" : ""; if (x != null && y != null) { el.style.left = x + "px"; el.style.top = y + "px"; } });
+    requestAnimationFrame(place);
+  })();
+}
+function openEditor(p, note, x, y, isNew) {
+  p.editing = { note, isNew }; const r = p.box.getBoundingClientRect(), ed = p.ed;
+  ed.style.display = "block"; ed.style.left = Math.max(4, Math.min(x, r.width - 280)) + "px"; ed.style.top = Math.max(4, Math.min(y, r.height - 140)) + "px";
+  const ta = ed.querySelector("textarea"); ta.value = note.text || ""; ed.querySelector("[data-del]").style.display = isNew ? "none" : ""; setTimeout(() => ta.focus(), 0);
+}
+
+// ---- the right panel: the watchlist, and Claude's read for the chart last touched
+async function watch() {
+  const rows = await Promise.all(st.assets.map(async a => { const d = await getCandles(a, "1D"), k = d[d.length - 1]; return k ? [a, k.close, 100 * (k.close - k.open) / k.open] : [a, null, null]; }));
+  st.rows = rows; side();
+}
+function side() {
+  $("side").classList.toggle("on", st.side); $("readbtn").classList.toggle("on", st.side);
+  if (!st.side) return;
+  const a = curCfg().asset, d = st.claude[a] || {}, n = (d.marks || []).length;
+  $("watch").innerHTML = (st.rows || st.assets.map(x => [x, null, null])).map(([x, px, ch]) => `<div class="w ${x === a ? "on" : ""}" data-a="${x}"><b>${x}</b>` +
+    `<span class="num">${px == null ? "" : px.toFixed(dp(px))}</span><span class="num ${ch >= 0 ? "up" : "dn"}" style="width:58px;text-align:right">${ch == null ? "" : (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%"}</span></div>`).join("");
+  $("watch").querySelectorAll(".w").forEach(el => el.onclick = () => setAsset(el.dataset.a));
+  $("readh").innerHTML = `Claude's read · ${esc(a)} <span style="text-transform:none;letter-spacing:0">${esc(d.at || "")}</span>`;
+  $("read").innerHTML = ((d.read || []).length ? `<ul>${d.read.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : '<div class="dim">Nothing written for this instrument.</div>') +
+    `<div class="dim" style="margin-top:10px">${n} mark${n === 1 ? "" : "s"} of Claude's on this instrument (labels start "C ·"). Yours start "S ·".</div>`;
+}
+
+// ---- the top bar: it acts on the chart last touched
+function setAsset(a) { const p = cur(); if (!p || !p.c) return; p.c.asset = a; save(); fillPane(p, true, true); topbar(); side(); }
+function setTf(tf) { const p = cur(); if (!p || !p.c) return; p.c.tf = tf; save(); fillPane(p, true); topbar(); }
+function topbar() {
+  const c = curCfg();
+  $("sym").innerHTML = st.assets.map(n => `<option ${n === c.asset ? "selected" : ""}>${n}</option>`).join("");
+  $("tfs").innerHTML = TFS.map(t => `<button class="tb ${t === c.tf && !st.pct ? "act" : ""}" data-t="${t}" title="${t} (Shift+click: every chart)">${TFNAME[t]}</button>`).join("");
+  $("tfs").querySelectorAll("button").forEach(b => b.onclick = e => { if (e.shiftKey || st.pct) { st.cfg.forEach(x => x.tf = b.dataset.t); save(); build(); } else setTf(b.dataset.t); });
+  $("ctype").textContent = c.line ? "╱ Line" : "▮ Candles"; $("pct").classList.toggle("on", st.pct);
+}
+$("sym").onchange = e => setAsset(e.target.value);
+$("ctype").onclick = e => { if (e.shiftKey) return allLine(); const p = cur(); if (!p || !p.c) return; p.c.line = !p.c.line; save(); fillPane(p, false); };
+const allLine = () => { const on = !st.cfg.every(c => c.line); st.cfg.forEach(c => c.line = on); save(); if (!st.pct) st.panes.forEach(p => fillPane(p, false)); topbar(); };
+$("add").onclick = () => { const c = curCfg(); st.cfg.push({ asset: c.asset, tf: c.tf, line: c.line }); st.solo = null; st.pct = false; save(); build(); };
+$("layoutbtn").onclick = e => {                           // how many charts, how they are arranged, and ready-made sets
+  e.stopPropagation(); const m = $("menu"), r = $("layoutbtn").getBoundingClientRect(), c = curCfg();
+  if (m.style.display === "block") { m.style.display = "none"; return; }
+  const grids = [["1 chart", 1, 1], ["2 side by side", 2, 2], ["2 stacked", 2, 1], ["3 side by side", 3, 3], ["3 stacked", 3, 1], ["4 in a square", 4, 2], ["6 (3 across)", 6, 3], ["8 (4 across)", 8, 4]];
+  const sets = { ...Object.fromEntries(Object.entries(SETS).map(([k, v]) => [k, v.filter(n => st.assets.includes(n))]).filter(([, v]) => v.length).map(([k, v]) => [k, () => v.map(asset => ({ asset, tf: c.tf }))])),
+    "All instruments": () => st.assets.map(asset => ({ asset, tf: c.tf })),
+    [`${c.asset} · W D 4h`]: () => ["1W", "1D", "4h"].map(tf => ({ asset: c.asset, tf })),
+    [`${c.asset} · D 4h 1h`]: () => ["1D", "4h", "1h"].map(tf => ({ asset: c.asset, tf })),
+    [`${c.asset} · 1h 15m 5m`]: () => ["1h", "15m", "5m"].map(tf => ({ asset: c.asset, tf })),
+    [`${c.asset} · 15m 5m 1m`]: () => ["15m", "5m", "1m"].map(tf => ({ asset: c.asset, tf })) };
+  m.innerHTML = "<h4>Layout</h4>" + grids.map(([n], i) => `<div class="it" data-g="${i}">${n}</div>`).join("") + "<h4>Ready-made sets</h4>" + Object.keys(sets).map(k => `<div class="it" data-s="${esc(k)}">${esc(k)}</div>`).join("");
+  m.style.display = "block"; m.style.left = r.left + "px"; m.style.top = (r.bottom + 4) + "px";
+  m.querySelectorAll("[data-g]").forEach(el => el.onclick = () => { const [, n, cols] = grids[+el.dataset.g];
+    while (st.cfg.length < n) st.cfg.push({ ...c }); st.cfg.length = n; st.cols = cols; st.solo = null; st.pct = false; save(); m.style.display = "none"; build(); });
+  m.querySelectorAll("[data-s]").forEach(el => el.onclick = () => { st.cfg = sets[el.dataset.s](); st.cols = 0; st.solo = null; st.pct = false; save(); m.style.display = "none"; build(); });
 };
-$("reload").onclick = () => load(true);
+$("pct").onclick = () => { st.pct = !st.pct; build(); };
+$("readbtn").onclick = () => { st.side = !st.side; save(); side(); };
+$("fsbtn").onclick = () => full(cur());
+$("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
+$("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = new Set(); for (const p of st.active ? [st.active, ...st.panes] : st.panes) if (!seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); } } };
+async function refresh() { st.cache.clear(); st.claude = {}; await fill(true); watch(); }
+$("refresh").onclick = refresh;
 
-async function load(keepView) {
-  $("status").textContent = "loading…";
-  const [c, m] = await Promise.all([fetch(`/api/candles?asset=${st.asset}&tf=${st.tf}`).then(r => r.json()), fetch(`/api/marks?asset=${st.asset}`).then(r => r.json())]);
-  if (c.error) { $("status").textContent = c.error; return; }
-  st.candles = c; st.marks = m.marks || []; series.setData(c);
-  if (!keepView) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, c.length - 160), to: c.length + 6 });
-  $("read").innerHTML = (m.read || []).length ? m.read.map(x => `<li>${x.replace(/[&<>]/g, s => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[s]))}</li>`).join("") : '<li class="dim">nothing yet</li>';
-  $("at").textContent = m.at ? `· ${m.at}` : "";
-  const last = c[c.length - 1], t = new Date(last.time * 1000).toISOString().slice(0, 16).replace("T", " ");
-  $("status").textContent = `${st.asset} ${st.tf} · last candle ${t} New York · ${last.close}`;
-  history.replaceState(null, "", `?asset=${st.asset}&tf=${st.tf}`);
-  requestAnimationFrame(draw);
+// ---- replay: take the charts back to a moment
+let timer = null;
+async function goTo(t) {                                  // t = New York clock time in seconds; null = the newest candles
+  if (t != null && st.newest != null && t >= st.newest) t = null;
+  st.until = t; st.cache.clear(); await fill(false); status(); watch(); return t != null;
 }
-function tabs(el, names, cur, pick) {
-  el.innerHTML = ""; for (const n of names) { const b = document.createElement("button"); b.textContent = n; b.className = n === cur ? "on" : ""; b.onclick = () => pick(n); el.appendChild(b); }
+function step(k) {
+  const tf = curCfg().tf, d = k === "D" ? 86400 : k === "-D" ? -86400 : +k * STEP[tf];
+  return goTo((st.until != null ? st.until : st.newest) + d);
 }
-async function start() {
-  const a = await fetch("/api/assets").then(r => r.json());
-  if (!a.assets.includes(st.asset)) st.asset = a.assets[0];
-  if (!a.timeframes.includes(st.tf)) st.tf = "1D";
-  const again = () => { tabs($("assets"), a.assets, st.asset, n => { st.asset = n; loadMine(); again(); load(); }); tabs($("tfs"), a.timeframes, st.tf, n => { st.tf = n; again(); load(); }); };
-  for (const t of TOOLS) { const b = document.createElement("button"); b.textContent = t[0]; b.className = "tool"; b.onclick = () => arm(st.tool === t ? null : t); $("tools").appendChild(b); }
-  loadMine(); again(); load();
-  chart.timeScale().subscribeVisibleLogicalRangeChange(draw);
-  new ResizeObserver(draw).observe($("wrap"));
-  setInterval(draw, 400);                                                 // the price scale can move without an event
-}
-start();
+document.querySelectorAll("button[data-step]").forEach(b => b.onclick = () => step(b.dataset.step));
+$("at").addEventListener("change", () => { const v = $("at").value; if (v) goTo(Date.parse(v + ":00Z") / 1000); });
+$("at").addEventListener("keydown", e => e.stopPropagation());
+const stopPlay = () => { if (timer) { clearInterval(timer); timer = null; $("play").textContent = "▶ Play"; } };
+$("now").onclick = () => { stopPlay(); st.replay = false; goTo(null); };
+$("replaybtn").onclick = () => { if (st.replay || st.until != null) return $("now").onclick(); st.replay = true; status(); };
+$("play").onclick = () => { if (timer) return stopPlay();
+  $("play").textContent = "❚❚ Pause"; timer = setInterval(async () => { if (!(await step("1"))) stopPlay(); }, 1000); };
+
+document.addEventListener("keydown", e => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (e.altKey) {                                         // the drawing shortcuts he knows
+    if (k === "t") { e.preventDefault(); setPlace(KIND.trendline); }
+    else if (k === "h") { e.preventDefault(); setPlace(KIND[st.lastKind.level || "BOS"]); }
+    else if (k === "v") { e.preventDefault(); setPlace(KIND[st.lastKind.vline || "→ bull"]); }
+    else if (k === "r") { e.preventDefault(); st.panes.forEach(p => { if (!p.pct && p.times.length) { p.fitted = false; } }); st.panes.forEach(p => !p.pct && p.times.length && recentre(p)); }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey) return;
+  if (e.shiftKey && k === "f") full(cur());
+  else if (e.shiftKey && k === "l") allLine();
+  else if (e.shiftKey && k === "r") refresh();
+  else if (e.shiftKey) return;
+  else if (k === "l") $("ctype").click();
+  else if (k === "g") setGrab(!st.grab);
+  else if (k === "n") setNoteTool(!st.noteTool);
+  else if (k === "w") $("readbtn").click();
+  else if (k === "escape") { setPlace(null); setGrab(false); setNoteTool(false); $("fly").style.display = "none"; $("menu").style.display = "none"; }
+});
+
+(async function start() {
+  const a = await (await fetch("api/assets")).json(); st.assets = a.assets;
+  loadMine();
+  const q = new URLSearchParams(location.search), tf = TFS.includes(q.get("tf")) ? q.get("tf") : null;       // a link can set the charts: ?assets=US100,US500&tf=5m or ?asset=UK100&tf=1D
+  const as = ((q.get("assets") || q.get("asset") || "")).split(",").filter(n => st.assets.includes(n));
+  if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
+  const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
+  st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
+  build(); side(); watch();
+})();
 </script>
 </body>
 </html>

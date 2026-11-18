@@ -55,7 +55,7 @@ coming after liquidity.
 | v2 folder, rules, tests running | [x] |
 | References cleaned into `references/` | [x] waiting for his check |
 | The old version sealed off in its own folder, with its own settings, environment, pages, skills and ignore file; nothing at the top level reads it, runs it or points into it | [x] 18 Nov 2026 |
-| The chart rebuilt clean in `chart/` (candles and marks only; his drawing tools and save; same port and password as before) | [x] 18 Nov 2026 |
+| The chart rebuilt clean in `chart/`, one page laid out like TradingView: any number of charts (layouts, expand, full screen), his full drawing tools with move / resize / grab, notes on the chart, linked crosshair and scrolling, line mode, % compare, watchlist, Claude's read, replay (take time back) | [x] 18 Nov 2026; for him to try |
 | Top-level project settings, readme and ignore file are v2 only | [x] 18 Nov 2026 |
 | Project notes (`CLAUDE.md`) written around v2 | [x] 18 Nov 2026 |
 | Hunts switched off | [x] 18 Nov 2026 |
@@ -68,12 +68,14 @@ coming after liquidity.
 - [ ] The run-through of the learn pipeline on bias and liquidity
 - [ ] The three open bias questions
 - [ ] The brain's pulling design
+- [ ] The backtest skill: his reminder is `.claude/skills/backtest/README.md` ("that skill is very important")
 - [ ] Whether any skill from the old version is wanted in v2 (each would be rebuilt through a design with him)
 - [ ] Whether the ICT PDFs come into `references/`
 
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Chart: the old single chart and multi-chart rebuilt as one page in the TradingView layout he is used to; replay added on the server (nothing after the chosen minute is sent); 16 tests |
 | 18 Nov 2026 | Sweep: the old version made self-contained and sealed off; a clean chart built in `chart/` with tests; every pointer into the old version removed from the notes, skills and tests. The four hunt stages confirmed by him |
 | 18 Nov 2026 | Pipelines and skills designed with him, approved and built: `learn`, `hunt` (off), `day-review`, `context-check`, `draw`, `brain-write`, `speak` |
 | 18 Nov 2026 | Hunts off; `CLAUDE.md` rewritten; memory notes sorted. Bias: he confirmed a break needs a body close, not a wick |

@@ -29,7 +29,9 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 
 The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
 
-- **Claude's marks:** `v2/chart/marks.json`. Per instrument: `marks` and `read` (the lines shown beside the chart);
+- **Claude's marks:** `v2/chart/marks.json`. Per instrument: `marks`, `read` (the lines shown in the right panel) and,
+  rarely, `notes` (`t`, `price`, `tf`, `text`: a short note pinned on the chart; he asked for no text on the chart, so
+  use one only when he asks);
   `at` at the top says when it was written. A mark has `kind` (its short label), `tf`, `t0`, `t1` (null while it is
   still in play) and a `shape`:
   - `level`: `price`
@@ -38,11 +40,14 @@ The chart is `v2/chart/`: a page that shows candles and marks, and nothing else.
   - `vline`: a vertical line at `t0` (a change of bias, for example)
 - **Times** are New York clock times as epoch seconds, the same as the candles the page serves
   (`/api/candles?asset=<NAME>&tf=<TF>`), so take `t0` and `t1` from those candles.
-- **Page:** `http://127.0.0.1:8776/?asset=<NAME>&tf=<TF>`. If it is down:
+- **Page:** `http://127.0.0.1:8776/?asset=<NAME>&tf=<TF>` (several charts: `?assets=A,B&tf=<TF>`). One page, laid out
+  like TradingView: instrument and interval along the top, his drawing tools down the left, the watchlist and Claude's
+  read on the right, replay along the bottom. **Replay** takes every chart back to a moment and shows nothing after it:
+  use it to show a concept back on a chart without seeing what came next. If the page is down:
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD` (only port 8776 may listen on
   the network). Fresh candles: `uv run python v2/chart/fetch.py <NAME>`, then press refresh on the page.
-- **His marks:** he draws with the buttons under the chart and presses save; they are appended to
-  `v2/chart/saves.jsonl`. Read them; never edit them.
+- **His marks:** he draws with the tools on the left and presses save; marks and notes are appended to
+  `v2/chart/saves.jsonl` (with `chart_time` when the chart was in replay). Read them; never edit them.
 
 ## Before saying the marks are there
 

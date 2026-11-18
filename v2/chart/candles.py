@@ -70,3 +70,17 @@ def to_candles(df: pd.DataFrame, last: int | None = None) -> list[dict]:
     secs = (df.index - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1)
     return [{"time": int(t), "open": float(o), "high": float(h), "low": float(lo), "close": float(c)}
             for t, o, h, lo, c in zip(secs, df["open"], df["high"], df["low"], df["close"])]
+
+
+SPAN = {"1m": "2min", "5m": "10min", "15m": "30min", "1h": "2h", "4h": "8h", "1D": "4D", "1W": "16D", "1M": "70D"}   # enough minutes to rebuild one forming candle
+
+
+def cut(df: pd.DataFrame, full: pd.DataFrame, tf: str, until: pd.Timestamp) -> pd.DataFrame:
+    """The timeframe's candles as they stood at ``until`` (New York clock): nothing after that minute is used.
+    ``df`` are the 1-minute candles, ``full`` the timeframe's candles built from all of them. The candle that was
+    still forming at ``until`` is rebuilt from the minutes up to it, so its high, low and close know nothing later."""
+    past = df[(df.index > until - pd.Timedelta(SPAN[tf])) & (df.index <= until)]
+    if past.empty:
+        return full[full.index <= until].iloc[0:0] if full.empty or full.index[0] > until else full[full.index <= until]
+    forming = resample(past, tf).iloc[[-1]]
+    return pd.concat([full[full.index < forming.index[0]], forming])

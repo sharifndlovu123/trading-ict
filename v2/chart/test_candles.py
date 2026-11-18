@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from candles import resample, to_candles, trading_day  # noqa: E402
+from candles import cut, resample, to_candles, trading_day  # noqa: E402
 from fetch import month_starts, parse_csv  # noqa: E402
 
 
@@ -73,3 +73,28 @@ def test_the_downloaders_csv_is_read_as_utc_minutes():
 def test_which_months_are_fetched():
     from datetime import date
     assert [m.isoformat() for m in month_starts(date(2031, 1, 20), 3)] == ["2030-11-01", "2030-12-01", "2031-01-01"]
+
+
+def test_taking_time_back_uses_nothing_after_that_minute():
+    """Five 5-minute candles, then the chart is cut in the middle of the fourth: three finished candles and a forming
+    one that knows only the minutes up to the cut. The later spike must not show."""
+    prices = [100 + i for i in range(15)] + [115, 116, 140, 90, 117] + [118 + i for i in range(5)]      # the spike to 140 and the drop to 90 come after the cut
+    df = minutes("2031-01-06 09:30", prices)
+    full = resample(df, "5m")
+    at = pd.Timestamp("2031-01-06 09:46")                                                                # two minutes into the fourth candle
+    got = cut(df, full, "5m", at)
+    assert list(got.index.strftime("%H:%M")) == ["09:30", "09:35", "09:40", "09:45"]
+    forming = got.iloc[-1]
+    assert forming.close == 116 and forming.high == 116.5 and forming.low == 113.5                       # no 140, no 90
+    assert got.iloc[:3].equals(full.iloc[:3])                                                            # finished candles are untouched
+    whole = cut(df, full, "5m", df.index[-1])
+    assert whole.equals(full)                                                                            # cut at the last minute = everything
+
+
+def test_taking_time_back_on_a_higher_timeframe_rebuilds_the_forming_day():
+    day1 = minutes("2031-01-06 10:00", [100, 105, 103])
+    day2 = minutes("2031-01-07 10:00", [104, 106, 150, 107])                                             # the 150 comes after the cut
+    df = pd.concat([day1, day2])
+    got = cut(df, resample(df, "1D"), "1D", pd.Timestamp("2031-01-07 10:01"))
+    assert list(got.index.strftime("%m-%d")) == ["01-06", "01-07"]
+    assert got.iloc[-1].close == 106 and got.iloc[-1].high == 106.5 and got.iloc[0].close == 103

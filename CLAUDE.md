@@ -22,7 +22,8 @@ Claude to read the market his way.
 - **The eyes** (the top-down process that uses the concepts together) **and the brain** (how lessons are pulled
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
 - `v2/references/`: cleaned copies of the source notes (private, not in git).
-- `v2/chart/`: the chart page (candles and marks only). Start it with
+- `v2/chart/`: the chart page, one page laid out like TradingView (any number of charts, his drawing tools, notes on
+  the chart, linked crosshair, line mode, % compare, replay = take time back). Candles and marks only. Start it with
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD`, open
   `http://127.0.0.1:8776/?asset=UK100&tf=1D`. Claude's marks: `v2/chart/marks.json`; what he draws and saves:
   `v2/chart/saves.jsonl`. Fresh candles: `uv run python v2/chart/fetch.py <ASSET>` (free data, needs Node.js).

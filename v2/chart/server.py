@@ -18,6 +18,8 @@ import json
 import os
 import sys
 import time
+
+import pandas as pd
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -27,6 +29,7 @@ sys.path.insert(0, str(HERE))
 import candles as cd  # noqa: E402
 
 MARKS, SAVES, PAGE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html"
+STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 _cache: dict[str, tuple] = {}
@@ -93,11 +96,17 @@ def frames(asset: str):
     return _cache[asset]
 
 
-def candles(asset: str, tf: str) -> list[dict]:
+def candles(asset: str, tf: str, until: int | None = None) -> dict:
+    """{"candles": [...], "last": time of the newest minute on file, "end": True when ``until`` is at or past it}.
+    With ``until`` (New York clock, epoch seconds) the chart is taken back to that minute: nothing later is sent."""
     _, df, done = frames(asset)
     if tf not in done:
-        done[tf] = cd.to_candles(cd.resample(df, tf), LAST.get(tf))
-    return done[tf]
+        done[tf] = cd.resample(df, tf)
+    newest = int((df.index[-1] - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1))
+    if until is None or until >= newest:
+        return {"candles": cd.to_candles(done[tf], LAST.get(tf)), "last": newest, "end": True}
+    at = pd.Timestamp(until, unit="s")
+    return {"candles": cd.to_candles(cd.cut(df, done[tf], tf, at), LAST.get(tf)), "last": newest, "end": False}
 
 
 def marks_for(asset: str) -> dict:
@@ -142,12 +151,15 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path == "/":
                 self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+            elif u.path in STATIC:
+                self._send(200, (HERE / STATIC[u.path][0]).read_bytes(), STATIC[u.path][1])
             elif u.path == "/api/assets":
                 self._json({"assets": cd.available(), "timeframes": cd.TIMEFRAMES})
             elif u.path == "/api/candles":
                 if q.get("asset") not in cd.FOLDERS or q.get("tf") not in cd.TIMEFRAMES:
                     return self._json({"error": "unknown instrument or timeframe"}, 400)
-                self._json(candles(q["asset"], q["tf"]))
+                until = int(q["until"]) if q.get("until", "").lstrip("-").isdigit() else None
+                self._json(candles(q["asset"], q["tf"], until))
             elif u.path == "/api/marks":
                 self._json(marks_for(q.get("asset", "")))
             else:
@@ -171,12 +183,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(size))
             row = {"saved": int(time.time()), "asset": str(body["asset"]), "tf": str(body.get("tf", "")),
-                   "marks": list(body.get("marks", [])), "note": str(body.get("note", ""))}
+                   "marks": list(body.get("marks", [])), "notes": list(body.get("notes", [])), "note": str(body.get("note", "")),
+                   "chart_time": body.get("chart_time")}
         except Exception:
             return self._json({"error": "bad save"}, 400)
         with SAVES.open("a") as f:
             f.write(json.dumps(row) + "\n")
-        self._json({"saved": len(row["marks"])})
+        self._json({"saved": len(row["marks"]) + len(row["notes"])})
 
 
 def main() -> None:
