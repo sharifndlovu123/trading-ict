@@ -108,7 +108,11 @@ top-down process (the eyes), which is built later.
   it's good enough to be an EQH or EQL. I don't know the best way to teach it to a machine." So it is a judgement of
   how the chart looks from a distance, not a number. The tool still leaves it to the caller. How to give a machine
   that eye is open: any measure I propose is mine until he has looked at what it picks.
-  **Being tried (mine):** "from far" = a share of the height of the stretch of chart on screen (`near_from_view`). The
+  **His setting (18 Nov 2026): 0.65%.** "I just confirmed it 0.65%." He set it with the slider and pressed "this looks
+  right" on four charts: the Russell 2000 and US100 on the daily, US500 and US100 on the 15-minute, each at the page's
+  usual zoom. It is now the tool's default (`HIS_EYE`). It is his eye's setting at that zoom, not a rule of the market;
+  if he sets another, that one is used.
+  **The measure itself (my proposal, which he tried and used):** "from far" = a share of the height of the stretch of chart on screen (`near_from_view`). The
   chart has a slider (the ≈ tool) that shows the sets found for any share, so he can set it by eye and save the one that
   looks right as a note. First look on the Russell daily: about 1% reproduces his reading of the October pair being
   eaten in November; the tool cannot see two highs on neighbouring candles as a pair (his "small EQH"), because it

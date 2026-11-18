@@ -187,7 +187,7 @@ const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"
 const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep.side !== false, pct: false, solo: null, panes: [], active: null,
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
-             eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 1,
+             eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 0.65,      // 0.65% is the setting he confirmed by eye
              lastKind: keep.lastKind || {} };
 const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }

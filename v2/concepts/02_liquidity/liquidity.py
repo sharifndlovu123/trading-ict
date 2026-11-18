@@ -71,12 +71,18 @@ def equal(levels: list[dict], near: float) -> list[dict]:
     return out
 
 
-def near_from_view(view: list[dict], share: float) -> float:
+# How close is "equal" to his eye: the share of the chart's height he set with the slider on 18 Nov 2026 ("I just
+# confirmed it 0.65%"), on four charts: two instruments on the daily, two on the 15-minute, each at the page's usual zoom.
+# It is his eye's setting, not a rule of the market: pass another share whenever he sets one.
+HIS_EYE = 0.0065
+
+
+def near_from_view(view: list[dict], share: float = HIS_EYE) -> float:
     """"Very close by" as an eye sees it from far: a share of the height of the stretch of chart being looked at.
     He: "if someone couldn't tell these two highs are the same height from far, it's good enough to be an EQH or EQL."
     ``view`` are the candles on screen; ``share`` is how much of that picture's height two highs may differ by and
-    still look level (he sets it by eye; there is no built-in number). Using the picture's height as the yardstick is
-    mine, not his."""
+    still look level. The default is the share he set by eye (``HIS_EYE``). Using the picture's height as the
+    yardstick was my proposal; he tried it on the chart and confirmed a setting with it."""
     if not view:
         return 0.0
     return share * (max(x["high"] for x in view) - min(x["low"] for x in view))

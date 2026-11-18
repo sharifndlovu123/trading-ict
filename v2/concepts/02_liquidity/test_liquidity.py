@@ -118,6 +118,12 @@ def test_very_close_is_a_share_of_the_height_of_the_picture_being_looked_at():
     assert near_from_view(tall, 0.01) == pytest.approx(40.0)              # the eye's tolerance grows with it
 
 
+def test_with_no_share_given_his_own_setting_is_used():
+    from liquidity import HIS_EYE
+    view = mk([(100, 150, 90, 120), (120, 130, 50, 60)])                  # 100 tall
+    assert near_from_view(view) == pytest.approx(100 * HIS_EYE) and 0 < HIS_EYE < 0.05
+
+
 def test_the_same_highs_are_equal_from_far_and_separate_up_close():
     c = mk(SET[:5])                                                        # two highs 0.3 apart; the stretch is about 11 tall
     far = equal_sets(c, near_from_view(c, 0.05))                           # an eye that cannot tell 5% of the picture apart
