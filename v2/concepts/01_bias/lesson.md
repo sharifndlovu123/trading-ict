@@ -1,6 +1,7 @@
 # Bias
 
-Confirmed by Sharif on 17 Nov 2026 on three charts I had not seen: the dollar index per timeframe ("well done"), the
+Run through again on 18 Nov 2026 on a fourth chart I had not seen, the Russell 2000, with liquidity ("so far I am happy,
+I think we are good"). Confirmed by Sharif on 17 Nov 2026 on three charts I had not seen: the dollar index per timeframe ("well done"), the
 FTSE daily ("you see the bias properly now") and the DAX weekly ("perfect, now you've got it").
 
 ## His words
@@ -10,6 +11,15 @@ FTSE daily ("you see the bias properly now") and the DAX weekly ("perfect, now y
 - "Key areas are the bigger picture; the tricky part was 'level below: break = change'."
 - "Higher TF highs and lows have higher importance."
 - "Don't look at that task's exact values, understand why I put lines where I put them... because if I give you a different chart you'll be confused."
+
+## What counts as a break (confirmed again 18 Nov 2026, on the Russell 2000 run-through)
+- "A wick breaking through an area isn't truly a break." (I asked; he: "yes".)
+- "If we have a body candle under or above that zone, it's a break."
+- A body beyond the level is a break **however the candle got there**. His example was a week that opened already
+  under the level: the candle never crossed it, there was a gap between the level and the open, and it is still the
+  break. He: "this was a rare instance because there's a gap… so I wanted to clarify it."
+- Say it as "a closed candle below (or above) it", naming that candle's timeframe. A level can be broken on the daily
+  and not on the weekly at the same moment; both are true.
 
 ## How to read it
 State it per timeframe first (bull / bear / range), highest timeframe first. For each, name:

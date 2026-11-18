@@ -76,3 +76,35 @@ def test_nothing_is_known_before_it_happened():
     c = mk(BASE + [(101, 109, 100, 102)])
     assert all(x["eaten_at"] is None or x["eaten_at"] > x["t"] for x in highs_lows(c))
     assert ("high", 108) not in {(x["side"], x["price"]) for x in highs_lows(c[:6])}    # the high is not a high until the next candle is in
+
+
+# a high, then a second high a hair above it, then a candle clearly past both, then a new pair of highs up there
+SET = [(100, 104, 99, 103), (103, 110, 102, 106), (106, 107, 100, 101), (101, 110.3, 100, 104), (104, 105, 99, 100),
+       (100, 121, 99, 118), (118, 120.8, 112, 114), (114, 116, 110, 111)]
+
+
+def test_a_high_that_lands_a_hair_above_an_earlier_one_joins_it_and_does_not_eat_it():
+    """His correction: the second high "couldn't have been eaten, it's still relatively close"; the two "created EQH"."""
+    c = mk(SET[:5])
+    literal = {x["price"]: x["eaten_at"] for x in highs_lows(c) if x["side"] == "high"}
+    assert literal[110] == c[3]["time"]                                   # read to the letter, a hair above counts as eaten: wrong
+    close = [x for x in highs_lows(c, near=0.5) if x["side"] == "high" and x["eaten_at"] is None]
+    assert [x["price"] for x in close] == [110, 110.3]                    # read his way, both rest
+    assert [(g["bottom"], g["top"], g["count"]) for g in equal(close, near=0.5)] == [(110, 110.3, 2)]     # and they are one set of equal highs
+
+
+def test_what_eats_the_set_is_the_high_that_goes_clearly_past_it_and_a_new_set_can_form_there():
+    c = mk(SET)
+    hs = {x["price"]: x["eaten_at"] for x in highs_lows(c, near=0.5) if x["side"] == "high"}
+    assert hs[110] == c[5]["time"] and hs[110.3] == c[5]["time"]          # both taken by the same candle: the set is eaten as one
+    left = resting(c, near=0.5)["buyside"]
+    assert [x["price"] for x in left] == [121]                            # the eaten set is gone from what is resting
+    c2 = mk(SET + [(111, 120.9, 110, 112), (112, 113, 108, 109)])          # a second high up there, a hair under the first
+    top = resting(c2, near=0.5)["buyside"]
+    assert [x["price"] for x in top] == [120.9, 121] and equal(top, near=0.5)[0]["count"] == 2     # its own small set
+
+
+def test_the_same_holds_for_lows():
+    c = mk([(100, 101, 96, 97), (97, 98, 90, 93), (93, 99, 92, 98), (98, 99, 89.8, 95), (95, 100, 94, 99), (99, 100, 80, 82), (82, 85, 81, 84)])
+    assert [x["price"] for x in resting(c[:5], near=0.5)["sellside"]] == [90, 89.8]
+    assert all(x["eaten_at"] == c[5]["time"] for x in highs_lows(c, near=0.5) if x["side"] == "low" and x["price"] > 85)

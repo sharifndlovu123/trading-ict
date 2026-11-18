@@ -7,43 +7,49 @@ His words this follows:
   * equal highs / lows "are just relatively close to each other; you could put a straight line at one point and the
     other point may not hit it but it's very close by";
   * "relative to where price currently is, we look at previous day and previous week for highs or lows that were left
-    uneaten".
+    uneaten";
+  * a later high that lands very close to an earlier one has not eaten it: the two "created EQH"; what eats the set
+    is a high that goes clearly past it.
 
 Candles are dicts with ``time``, ``open``, ``high``, ``low``, ``close``, oldest first.
 
 Two choices here are mine, not his, and are named so they can be changed:
   * an "old high" is a candle whose high is above the highs of the candle before and after it (a turn), low likewise;
-  * a high is eaten as soon as a later candle trades above it; a wick is enough (he did not say wick or close);
+  * a wick is enough to eat a high (he did not say wick or close), once it goes clearly past;
   * "very close by" is a distance the caller passes in (``near``). There is no built-in number;
   * equal highs are joined neighbour to neighbour, so a long group can be wider end to end than ``near``.
 """
 from __future__ import annotations
 
 
-def highs_lows(c: list[dict]) -> list[dict]:
-    """Every old high and old low, with when (if ever) it was eaten: a later candle traded beyond it.
-    ``{"side": "high" | "low", "price", "t", "eaten_at": time | None}``. The last candle cannot be a turn yet."""
+def highs_lows(c: list[dict], near: float = 0.0) -> list[dict]:
+    """Every old high and old low, with when (if ever) it was eaten: a later candle traded clearly beyond it.
+    ``{"side": "high" | "low", "price", "t", "eaten_at": time | None}``. The last candle cannot be a turn yet.
+
+    "Clearly" is his: a later high that lands very close by, a little under or a little over, has not eaten the earlier
+    one. It has joined it, and the two are equal highs. Only a candle that goes past by more than ``near`` eats it.
+    ``near`` is the same "very close by" that ``equal`` uses; the caller decides it. With 0, any trade beyond eats."""
     out = []
     for i in range(1, len(c) - 1):
         for side, key, sgn in (("high", "high", 1), ("low", "low", -1)):
             p = c[i][key]
             if sgn * p > sgn * c[i - 1][key] and sgn * p > sgn * c[i + 1][key]:
-                hit = next((x["time"] for x in c[i + 1:] if sgn * x[key] > sgn * p), None)
+                hit = next((x["time"] for x in c[i + 1:] if sgn * (x[key] - p) > near), None)
                 out.append({"side": side, "price": p, "t": c[i]["time"], "eaten_at": hit})
     return out
 
 
-def resting(c: list[dict]) -> dict:
+def resting(c: list[dict], near: float = 0.0) -> dict:
     """What is left uneaten: ``{"buyside": [highs above price, nearest first], "sellside": [lows below, nearest first]}``.
-    A high that was eaten is never returned, however near or far it is."""
-    left = [x for x in highs_lows(c) if x["eaten_at"] is None]
+    A high that was eaten is never returned, however near or far it is. ``near``: see ``highs_lows``."""
+    left = [x for x in highs_lows(c, near) if x["eaten_at"] is None]
     return {"buyside": sorted((x for x in left if x["side"] == "high"), key=lambda x: x["price"]),
             "sellside": sorted((x for x in left if x["side"] == "low"), key=lambda x: -x["price"])}
 
 
-def eaten_since(c: list[dict], since: float) -> list[dict]:
+def eaten_since(c: list[dict], since: float, near: float = 0.0) -> list[dict]:
     """Highs and lows eaten at or after ``since`` (a time), newest first: what the present move has taken."""
-    return sorted((x for x in highs_lows(c) if x["eaten_at"] is not None and x["eaten_at"] >= since), key=lambda x: -x["eaten_at"])
+    return sorted((x for x in highs_lows(c, near) if x["eaten_at"] is not None and x["eaten_at"] >= since), key=lambda x: -x["eaten_at"])
 
 
 def equal(levels: list[dict], near: float) -> list[dict]:

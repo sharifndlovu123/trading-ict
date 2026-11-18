@@ -129,3 +129,15 @@ def test_the_candle_still_forming_is_never_read():
     now = forming[-1]["time"] + 1800
     assert completed(forming, now) == c and bias_levels(completed(forming, now), above(c))["side"] == "bull"
     assert completed(forming, forming[-1]["time"] + 3600) == forming
+
+
+def test_a_body_beyond_the_level_is_a_break_even_when_the_candle_opened_past_it():
+    """His words: "if we have a body candle under or above that zone, it's a break." A candle that opens already
+    under the level behind (a gap) never crosses it, and it is still the change: the body is beyond the level."""
+    up = path(RISE + [(150, 15), (190, 20), (160, 12)])
+    t = up[-1]["time"]
+    gapped = up + [{"time": t + 3600, "open": 146, "high": 148, "low": 141, "close": 143}]        # opens and closes under 149.5: the whole body is below
+    r = bias_levels(gapped, above(gapped))
+    assert r["side"] == "bear" and r["events"][-1]["kind"] == "change"
+    wick_only = up + [{"time": t + 3600, "open": 158, "high": 159, "low": 141, "close": 156}]     # a wick under it, the body above
+    assert bias_levels(wick_only, above(wick_only))["side"] == "bull"

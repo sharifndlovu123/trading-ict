@@ -41,7 +41,7 @@ coming after liquidity.
 
 | Skill | What it is | State |
 |---|---|---|
-| `learn` | The learn pipeline: the only one in which the brain changes | [x] built 18 Nov 2026; first run-through pending |
+| `learn` | The learn pipeline: the only one in which the brain changes | [x] built 18 Nov 2026; first run-through done on the Russell 2000 |
 | `hunt` | The hunt pipeline | [x] built; switched off |
 | `day-review` | Held hunt corrections become lessons, or not | [x] built; not yet used |
 | `context-check` | Context, not the example: lessons, links, tools, tests, hunt notes | [x] in use; 11 tests |
@@ -65,7 +65,6 @@ coming after liquidity.
 
 ## Waiting on Sharif
 - [ ] The first links for bias and liquidity (only he can state them)
-- [ ] The run-through of the learn pipeline on bias and liquidity
 - [ ] The three open bias questions
 - [ ] The brain's pulling design
 - [ ] The backtest skill: his reminder is `.claude/skills/backtest/README.md` ("that skill is very important")
@@ -75,6 +74,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 18 Nov 2026 | Learn run-through on the Russell 2000 (bias, liquidity, alt-liquidity): "so far I am happy". Added to the lessons: a body beyond a level is a break however it got there; mark from the monthly down; equal and eaten are both relative; an eaten set comes off the chart. Liquidity tool fixed (3 tests), bias test added |
 | 18 Nov 2026 | Chart: a Live switch (free feed, about a minute behind; only the instruments on the page; stops by itself when the page is closed) |
 | 18 Nov 2026 | Chart: one colour per kind of mark (Claude's dashed, his solid); a light / dark switch; candles blue and black (light grey for black on the dark page) |
 | 18 Nov 2026 | Chart drawing: snap to a candle's open / high / low / close (toggle, M); double-click locks and unlocks a mark, and a locked one lets clicks through to what is underneath; a block's corners size it both ways |

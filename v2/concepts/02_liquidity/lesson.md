@@ -52,6 +52,28 @@ Sharif ("my references should be accounted for, they are clear and concise as we
   that were left uneaten."
 - **Trendline liquidity: skipped.** "The alt-liquidity tends to eat trendline liq either way."
 
+## From the Russell 2000 run-through, 18 Nov 2026 (his words)
+The learn pipeline's first run: bias, liquidity and alt-liquidity shown back on a chart I had not seen. "So far I am
+happy, I think we are good."
+
+- **Mark from the top down, and every timeframe gets its own marks.** "I don't see any marking on monthly. Remember
+  when marking you're starting from the top to the bottom, BUT it is relative to now, so what's happening in our
+  current time, but relative to tf this xx is close so mark it." Close to price is judged on each timeframe's own
+  scale. (My mistake: I read the monthly and drew nothing on it. It held the most important thing on the chart: a
+  monthly imbalance price was sitting on, with the hourly lows inside it.)
+- **Equal highs are relative, and so is eaten.** A later high that lands very close to an earlier one, a little under
+  or a little over, has not eaten it: the two "created EQH". He: "that one couldn't have been eaten, it's still
+  relatively close… just by looking at [the two] those two points are very close to each other, so what actually ate
+  the set was [the high that went clearly past them], and [that high and the next one] has their own small EQH."
+  (My mistake: I called the earlier high eaten because the later one was a point above it.)
+- **An eaten set comes off the chart.** "Once it was eaten it's not relative to the chart anymore, so the EQH for that
+  one wouldn't be needed, but that [newer] EQH is still uneaten."
+- **On a live chart this has to be spotted as it happens.** "On a live chart you'd need to spot that, because content
+  is drawn as it changes." Two things to watch as candles come in: a new high that joins a set, and a new high that
+  ends it.
+- **"How would you know it's EQH or a fake?"** His question to me. My answer, which he accepted: check whether any of
+  the highs went clearly past another; if one did, the lower one is gone and it was never a pool.
+
 ## The tools and their tests (18 Nov 2026)
 `liquidity.py` (old highs and lows and whether each was eaten; what is resting; what the present move ate; equal
 highs / lows; the previous day's and week's high and low) and `alt_liquidity.py` (see `alt-liquidity.md`). Tests:
@@ -65,8 +87,12 @@ does not list them, because it only counts a low that is a turn (lower than the 
 lows rose one after another. Whether a plain previous daily low counts as liquidity beyond "the previous day" is
 his to say.
 
+Changed after the run-through: a high is eaten only when a later candle goes past it by more than "very close by"
+(`near`); within that, the later high joins it. Three tests cover it (`test_a_high_that_lands_a_hair_above…`,
+`test_what_eats_the_set…`, `test_the_same_holds_for_lows`).
+
 Choices that are mine, not his (named in the code; he read them on 18 Nov 2026: "it's fine"): what makes an "old high" (a turn); a wick beyond a level is
-enough to eat it; "very close by" is a distance the caller passes in, with no built-in number; equal highs are
+enough to eat it, once it goes clearly past; "very close by" is a distance the caller passes in, with no built-in number; equal highs are
 joined neighbour to neighbour.
 
 **Left to the reading, on purpose (no code):** single levels lining up with a nearby equal pool, pools as targets,
@@ -77,4 +103,6 @@ top-down process (the eyes), which is built later.
 - Taught live earlier in the week but not yet re-confirmed for v2: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the
   candles that judge it.
-- "Very close by" as a measure: left to the caller for now; to be settled when the eyes are built and he can see what it picks.
+- "Very close by" and "clearly past" as a measure: left to the caller for now (I asked whether he judges it by eye,
+  relative to how the candles around it are moving; he did not answer that yet).
+- Whether two neighbouring highs a point apart (his "small EQH") count the same as a wider set.
