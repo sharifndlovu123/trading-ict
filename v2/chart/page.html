@@ -285,7 +285,7 @@ function underMarks(c) {                                 // Claude's marks for t
   const doc = st.claude[c.asset]; if (!doc || !$("ovon").checked) return [];
   return (doc.marks || []).filter(m => shows(m, c.tf) && (st.until == null || m.t0 == null || m.t0 <= st.until)).map(m => ({ ...m,
     t1: st.until != null && m.t1 != null && m.t1 > st.until ? null : m.t1, nofill: TFS.indexOf(m.tf || "1h") - TFS.indexOf(c.tf) >= 3,
-    color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") }));
+    color: markColor(m.kind, css("--claude")), dash: [7, 3], label: (m.by || "C") + " · " + (m.kind || "") + (m.shape === "zone" && m.tf ? " " + m.tf : "") }));
 }
 function activate(p) { if (st.active === p) return; st.active = p; st.panes.forEach(q => q.el.classList.toggle("active", q === p && st.panes.length > 1)); topbar(); side(); }
 function build() {

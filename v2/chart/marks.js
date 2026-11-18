@@ -85,7 +85,8 @@ function marksLayer(chart, series, el, o) {
   const xLast = () => { const a = T(); return a.length ? xOf(a[a.length - 1]) : null; };
   const xEnd = m => m.t1 != null ? xOf(m.t1) : (xLast() == null ? null : xLast() + STUB);
   const col = m => markColor(m.kind, o.color("--mine"));
-  const name = m => "S · " + m.kind + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") + (m.locked ? " 🔒" : "");
+  // a block or an imbalance carries its timeframe beside its name: on a lower chart you can tell which timeframe made it
+  const name = m => "S · " + m.kind + (m.shape === "zone" && m.tf ? " " + m.tf : "") + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") + (m.locked ? " 🔒" : "");
   // snap: the nearest candle to the mouse, and of its open / high / low / close the one closest to the mouse
   let hover = null;                                    // where the snapped point is, while placing or dragging (drawn as a ring)
   function snapAt(px, py) {

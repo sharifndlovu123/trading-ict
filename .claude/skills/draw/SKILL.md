@@ -24,6 +24,8 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
   still in play stays open.
 - **Name the timeframe** each mark belongs to; it shows on that timeframe and the lower ones.
 - **Say what it is in the label**, shortly: "EQL", "PWL", "alt: BISI", "level behind".
+- **Blocks and imbalances show their timeframe beside the name** ("BISI 1M", "order block 4h"): the page adds it from
+  the mark's `tf`, so always set `tf` to the timeframe that made it and do not repeat it in `kind`.
 
 ## Where the marks go
 
