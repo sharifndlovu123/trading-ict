@@ -13,8 +13,11 @@ His words this follows:
 
 Candles are dicts with ``time``, ``open``, ``high``, ``low``, ``close``, oldest first.
 
-Two choices here are mine, not his, and are named so they can be changed:
-  * an "old high" is a candle whose high is above the highs of the candle before and after it (a turn), low likewise;
+An "old high" is a candle whose high is above the highs of the candle before and after it (a turn), low likewise. That
+began as my choice; he confirmed it on 18 Nov 2026: two highs on neighbouring candles "shouldn't count, because if I go
+to 4 hour it's fine" (a lower timeframe shows them as separate highs).
+
+Choices here that are mine, not his, named so they can be changed:
   * a wick is enough to eat a high (he did not say wick or close), once it goes clearly past;
   * "very close by" is a distance the caller passes in (``near``). There is no built-in number;
   * equal highs are joined neighbour to neighbour, so a long group can be wider end to end than ``near``.

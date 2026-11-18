@@ -114,7 +114,10 @@ top-down process (the eyes), which is built later.
   if he sets another, that one is used.
   **The measure itself (my proposal, which he tried and used):** "from far" = a share of the height of the stretch of chart on screen (`near_from_view`). The
   chart has a slider (the ≈ tool) that shows the sets found for any share, so he can set it by eye and save the one that
-  looks right as a note. First look on the Russell daily: about 1% reproduces his reading of the October pair being
-  eaten in November; the tool cannot see two highs on neighbouring candles as a pair (his "small EQH"), because it
-  only counts a high that is a turn. That choice of mine needs his ruling.
+  looks right as a note.
+- **Two highs on neighbouring candles are not an EQH on that timeframe (his ruling, 18 Nov 2026).** The tool counts a
+  high only when it is a turn (higher than the candle on each side), so two highs side by side do not make a pair. I
+  asked whether they should. He: "the issue it found actually makes sense; them being relatively close to each other
+  shouldn't count, because if I go to 4 hour it's fine, so I think what we selected is perfect." The pair shows as
+  equal highs one timeframe down, where each is its own high. So "a high is a turn" is no longer only my choice.
 - Whether two neighbouring highs a point apart (his "small EQH") count the same as a wider set.
