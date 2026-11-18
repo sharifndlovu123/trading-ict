@@ -103,6 +103,9 @@ top-down process (the eyes), which is built later.
 - Taught live earlier in the week but not yet re-confirmed for v2: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the
   candles that judge it.
-- "Very close by" and "clearly past" as a measure: left to the caller for now (I asked whether he judges it by eye,
-  relative to how the candles around it are moving; he did not answer that yet).
+- "Very close by" and "clearly past" as a measure. His answer (18 Nov 2026): "very close by and clearly past is
+  judged by eye, so that's why relatively close; if someone couldn't tell these two highs are the same height from far,
+  it's good enough to be an EQH or EQL. I don't know the best way to teach it to a machine." So it is a judgement of
+  how the chart looks from a distance, not a number. The tool still leaves it to the caller. How to give a machine
+  that eye is open: any measure I propose is mine until he has looked at what it picks.
 - Whether two neighbouring highs a point apart (his "small EQH") count the same as a wider set.
