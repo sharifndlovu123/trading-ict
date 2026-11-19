@@ -193,3 +193,48 @@ def test_a_line_chart_keeps_the_times_and_closes_and_knows_nothing_early():
     assert all(x["high"] == x["low"] == x["close"] for x in line)
     cut = as_line(c[:30])
     assert cut == line[:30]                                            # a candle's line value never depends on later candles
+
+
+# a rise sets the bias bull; a fall closes under the level behind (bear); then a recovery with its own structure:
+# a first leg up, a pullback that holds above the fall's low, a close above the first leg's high, and at last a close
+# above the top the fall came from
+RECOVERY = [(100, 0), (100, 3), (140, 20), (120, 15), (170, 25), (90, 30), (130, 20), (110, 15), (150, 20), (190, 25)]
+
+
+@pytest.mark.parametrize("k", [1.0, 0.01, 250.0])
+@pytest.mark.parametrize("step", [300, 3600, 86400])
+def test_the_level_behind_is_the_pullback_the_break_was_built_on_not_the_lowest_low(k, step):
+    """He, on a chart where the two differ: the level behind is the low of the pullback the break was built on."""
+    r = read(RECOVERY, k=k, step=step)
+    assert r["side"] == "bull" and r["events"][-1]["kind"] == "change"
+    assert r["change"]["price"] == pytest.approx(109.5 * k)             # the pullback after the first leg up
+    assert r["change"]["price"] > 89.5 * k                              # not the low of the fall
+
+
+def test_with_no_structure_on_the_way_back_the_level_behind_is_still_the_low_it_came_from():
+    """A straight recovery has no pullback of its own, so nothing replaces the low of the fall."""
+    r = read([(100, 0), (100, 3), (140, 20), (120, 15), (170, 25), (90, 30), (190, 40)])
+    assert r["side"] == "bull" and r["change"]["price"] == pytest.approx(89.5)
+
+
+def test_a_pullback_that_was_closed_back_through_is_not_the_level_behind():
+    """The recovery's first structure fails (a close under its pullback low, to a new low); the next recovery goes
+    straight up. The failed pullback must not come back as the level behind."""
+    r = read([(100, 0), (100, 3), (140, 20), (120, 15), (170, 25), (90, 30), (130, 20), (110, 15), (135, 10), (70, 30), (160, 45)])     # ends above the last bounce, under the old top
+    assert r["side"] == "bull" and r["change"]["price"] == pytest.approx(69.5)
+
+
+def test_the_mirror_the_level_behind_a_fall_is_the_bounce_it_was_built_on():
+    up_first = [(200, 0), (200, 3), (160, 20), (180, 15), (130, 25), (210, 30), (170, 20), (190, 15), (150, 20), (110, 25)]
+    r = read(up_first)
+    assert r["side"] == "bear" and r["change"]["price"] == pytest.approx(190.5)
+
+
+def test_the_pullback_is_not_known_before_it_happened():
+    """Cut just before the close above the first leg's high: no pullback has been named yet, and the bias is still bear."""
+    c = path(RECOVERY)
+    first_leg_high = 130.5
+    k = next(i for i, x in enumerate(c) if i > 93 and x["close"] > first_leg_high)
+    early = c[:k]
+    r = bias_levels(early, above(early))
+    assert r["side"] == "bear"

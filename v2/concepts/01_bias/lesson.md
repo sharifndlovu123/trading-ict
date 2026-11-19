@@ -79,10 +79,14 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
   both and asked: is his low the level behind because the break was built on that pullback, and not on the older,
   lower low? "Yes." So the level behind is the low of the pullback the break was built on. A lower low from the leg
   before it is not the level behind, even though it is the lowest low under the break.
-  - **The tool does not do this yet.** It takes the lowest low between the level that was broken and the candle that
-    broke it, which on that chart reaches back into the older leg. That rule was already named as mine above; it is
-    now known to be wrong where the stretch under the break has its own structure. It has not been changed: a change
-    must hold on every chart he has confirmed, not be fitted to this one.
+  - **The tool, fixed the same day.** While the bias is bear, a close above a significant high made after the low
+    of the fall names the pullback under that high; if the level behind is then closed through, that pullback's low is
+    the new level behind (the mirror for a fall). If a later candle closes back through the pullback, it is dropped
+    and the old reading (the low the move came from) stands. How the pullback is found is mine; that it is the
+    pullback and not the lowest low is his.
+  - Run once on ten instruments and five timeframes after the change, nothing tuned: 46 of 50 readings are the same
+    as before, including every reading he has confirmed, and the chart he asked about now puts the level behind where
+    he marked it. The other three that moved are small shifts on charts he has not looked at.
 - **Range, on the same chart:** I asked whether the daily is a range now, with price going up and down under the
   level ahead and no closed candle beyond the recent high or low. "Yes, it's a range." The tool says bull there.
   - Why it is tricky, in his words: "Daily is bullish; one thing that would make it range as a possibility is the BOS

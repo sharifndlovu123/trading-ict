@@ -77,6 +77,14 @@ def bias_levels(c: list[dict], parent: list[dict] | None = None, grand: list[dic
     open_h: list[dict] = []          # significant highs known and not yet closed through
     open_l: list[dict] = []
     ih = il = 0
+    # The pullback a coming change would be built on. While the bias is bear, a close above a significant high that
+    # sits under the level behind starts a structure of its own: the lowest low since that high is the pullback. If the
+    # level behind is then closed through, THAT low is the new level behind, not the lowest low of the whole fall
+    # (he, 19 Nov 2026, on a chart where the two differ: the level behind is the low of the pullback the break was built
+    # on). How the pullback is found is mine: the oldest high closed through on that candle, and the pullback is dropped
+    # if a later candle closes back beyond it.
+    pend_low: dict | None = None
+    pend_high: dict | None = None
 
     def extreme(t0: float, k: int, low: bool) -> dict:
         """The lowest low (highest high) of this timeframe from ``t0`` up to candle ``k``: the pullback the break was built on."""
@@ -96,16 +104,32 @@ def bias_levels(c: list[dict], parent: list[dict] | None = None, grand: list[dic
         dn = [lv for lv in open_l if x["close"] < lv["price"]]
         open_h = [h for h in open_h if h not in up]
         open_l = [lv for lv in open_l if lv not in dn]
+        if pend_low and x["close"] < pend_low["price"]:
+            pend_low = None
+        if pend_high and x["close"] > pend_high["price"]:
+            pend_high = None
+        if side == "bear":                   # only highs made on the way back up, after the low of the fall
+            turn = extreme(change["t"], k, low=True)["t"]
+            inner = [h for h in up if h["price"] < change["price"] and h["t"] > turn]
+            if inner:
+                pend_low = extreme(min(inner, key=lambda v: v["t"])["t"], k, low=True)
+        elif side == "bull":
+            turn = extreme(change["t"], k, low=False)["t"]
+            inner = [lv for lv in dn if lv["price"] > change["price"] and lv["t"] > turn]
+            if inner:
+                pend_high = extreme(min(inner, key=lambda v: v["t"])["t"], k, low=False)
 
         if side == "bull" and x["close"] < change["price"]:              # the level below closed through: the change
             origin = change
             side, since, brk = "bear", x["time"], {"t": x["time"], "price": origin["price"]}
-            change = extreme(origin["t"], k, low=False)                   # the high that break down was built on
+            change = pend_high or extreme(origin["t"], k, low=False)      # the high that break down was built on
+            pend_low = pend_high = None
             events.append({"t": x["time"], "kind": "change", "side": "bear", "price": origin["price"]})
         elif side == "bear" and x["close"] > change["price"]:
             origin = change
             side, since, brk = "bull", x["time"], {"t": x["time"], "price": origin["price"]}
-            change = extreme(origin["t"], k, low=True)
+            change = pend_low or extreme(origin["t"], k, low=True)
+            pend_low = pend_high = None
             events.append({"t": x["time"], "kind": "change", "side": "bull", "price": origin["price"]})
         elif side == "neutral" and (up or dn):                           # the first significant level closed through
             if up:
