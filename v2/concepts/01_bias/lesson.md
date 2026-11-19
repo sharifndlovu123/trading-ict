@@ -62,6 +62,8 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
   important lows but then it eats important highs, it's almost confused; and it gets to a point where that most recent
   high and most recent low is a range, and nothing is breaking it; it's stuck in that middle area going up and down
   but never breaking it." The tool does not say "range" yet.
+  Held for later by him (19 Nov 2026): "mark range for later as something to find better, I'll try get examples for
+  you; it is difficult to mark out."
 - **A close under by a small amount, answered 19 Nov 2026:** "You're right, it was a small close, but if you're
   confused, take a look at that same chart on daily; I don't think you'll be confused by those two lows." When a
   higher timeframe's close beyond a level is marginal, the timeframe below shows whether it was clean. (The second
