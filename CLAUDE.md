@@ -26,7 +26,11 @@ Claude to read the market his way.
   the chart, linked crosshair, line mode, % compare, replay = take time back). Candles and marks only. Start it with
   `uv run python v2/chart/server.py --host 0.0.0.0 --password-env LIVE_PAGE_PASSWORD`, open
   `http://127.0.0.1:8776/?asset=UK100&tf=1D`. Claude's marks: `v2/chart/marks.json`; what he draws and saves:
-  `v2/chart/saves.jsonl`; the notes he writes in its Notes panel (learn / hunt): `v2/chart/notes.jsonl`. One chart
+  `v2/chart/saves.jsonl`; the notes he writes in its Notes panel (learn / hunt): `v2/chart/notes.jsonl`. **Each note shows whether Claude has
+  read it, and Claude's answer under it:** when he works from another machine the Notes panel is how he talks to
+  Claude. Watch `notes.jsonl` and `saves.jsonl` for new lines (a background monitor, re-armed when it expires), and
+  answer with `server.add_reply(server.REPLIES, <note id>, <text>, time.time())` (empty text = read, nothing to say
+  yet). Answers are kept in `v2/chart/replies.jsonl`, which is Claude's file. One chart
   serves both learning and hunting. **Live** is a switch on the page: while on, the instruments shown are
   refreshed from the free feed about once a minute (it runs a minute or two behind) and kept in `data/bars/`. A whole
   month by hand: `uv run python v2/chart/fetch.py <ASSET>` (needs Node.js).

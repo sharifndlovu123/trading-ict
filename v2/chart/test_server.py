@@ -121,3 +121,19 @@ def test_the_equal_slider_uses_only_what_is_on_screen_or_to_its_left():
     assert server.equal_in_view(cs, 0, 6, share=0.05)["sets"] == []                # with that candle on screen the set is gone
     assert server.equal_in_view(cs, 0, 4, share=0.0)["sets"] == []                 # a perfectly sharp eye sees no two highs as equal here
     assert server.equal_in_view(cs, 50, 60, share=0.05) == {"near": 0.0, "sets": []}   # nothing on screen
+
+
+def test_a_note_says_whether_claude_has_read_it_and_carries_the_answers(tmp_path):
+    notes, replies = tmp_path / "notes.jsonl", tmp_path / "replies.jsonl"
+    a = server.add_note(notes, {"text": "first", "asset": "A", "tf": "1h"}, 1000.0)
+    b = server.add_note(notes, {"text": "second", "asset": "A", "tf": "1h"}, 1001.0)
+    his = notes.read_text()
+    assert [(n["seen"], n["replies"]) for n in server.list_notes(notes, replies=replies)] == [(None, []), (None, [])]
+    server.add_reply(replies, a["id"], "", 2000.0)                 # read, nothing to say yet
+    server.add_reply(replies, a["id"], "an answer", 2005.0)
+    server.add_reply(replies, "no-such-note", "lost", 2006.0)      # an answer to a note that is not there shows nowhere
+    got = {n["id"]: n for n in server.list_notes(notes, replies=replies)}
+    assert got[a["id"]]["seen"] == 2000 and [r["text"] for r in got[a["id"]]["replies"]] == ["an answer"]
+    assert got[b["id"]]["seen"] is None and got[b["id"]]["replies"] == []
+    assert notes.read_text() == his                                 # his notes file is never written by an answer
+    assert "seen" not in server.list_notes(notes)[0]                # without the answers file the notes are as he wrote them

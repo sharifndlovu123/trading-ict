@@ -35,6 +35,7 @@ sys.path.insert(0, str(HERE.parent / "concepts" / "02_liquidity"))
 import liquidity  # noqa: E402     the concept's own tool: the chart only shows what it finds
 
 MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
+REPLIES = HERE / "replies.jsonl"          # Claude's answers to his notes: Claude's file, so his notes file is never touched
 MODES = ("learn", "hunt", "")          # "" = no session
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
@@ -134,13 +135,40 @@ def remove_note(path: Path, note_id: str, now: float) -> None:
         f.write(json.dumps({"delete": str(note_id)[:40], "saved": int(now)}) + "\n")
 
 
-def list_notes(path: Path, last: int = 200) -> list[dict]:
-    """His notes, newest first, without the removed ones."""
+def add_reply(path: Path, note_id: str, text: str, now: float) -> dict:
+    """Claude marks one of his notes as read and, with ``text``, answers it. Kept in Claude's own file."""
+    row = {"note": str(note_id)[:40], "saved": int(now), "text": str(text).strip()[:20000]}
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+    return row
+
+
+def replies_by_note(path: Path | None) -> dict:
+    """Per note id: when Claude first read it, and Claude's answers in the order they were written."""
+    out: dict = {}
+    if path is None or not path.exists():
+        return out
+    for line in path.read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            o = out.setdefault(r["note"], {"seen": r["saved"], "replies": []})
+            if r.get("text"):
+                o["replies"].append({"saved": r["saved"], "text": r["text"]})
+    return out
+
+
+def list_notes(path: Path, last: int = 200, replies: Path | None = None) -> list[dict]:
+    """His notes, newest first, without the removed ones. With ``replies``, each note also says whether Claude has
+    read it (``seen``: when, or None) and carries Claude's answers (``replies``)."""
     if not path.exists():
         return []
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     gone = {r["delete"] for r in rows if "delete" in r}
-    return [r for r in rows if "delete" not in r and r["id"] not in gone][::-1][:last]
+    notes = [r for r in rows if "delete" not in r and r["id"] not in gone][::-1][:last]
+    if replies is not None:
+        by = replies_by_note(replies)
+        notes = [{**n, "seen": by.get(n["id"], {}).get("seen"), "replies": by.get(n["id"], {}).get("replies", [])} for n in notes]
+    return notes
 
 
 # ---- live: while it is switched on, the instruments on the page are refreshed from the free feed about once a minute
@@ -274,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
             elif u.path == "/api/marks":
                 self._json(marks_for(q.get("asset", "")))
             elif u.path == "/api/notes":
-                self._json(list_notes(NOTES))
+                self._json(list_notes(NOTES, replies=REPLIES))
             elif u.path == "/api/mode":
                 self._json(get_mode(MODE))
             elif u.path == "/api/live":

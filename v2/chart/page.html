@@ -56,6 +56,8 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 #notetext { width:100%; height:450px; min-height:150px; max-height:80vh; flex:none; resize:vertical; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; line-height:1.45; }
 #noteadd { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:7px; cursor:pointer; font-weight:600; }
 #notelist { flex:none; margin:0 -12px; }
+.nseen { margin-top:5px; font-size:11px; color:var(--dim, #8a93a6); } .nseen.yes { color:#2bb673; }
+.nreply { margin-top:6px; padding:6px 8px; border-left:3px solid var(--claude); background:var(--bg); border-radius:0 5px 5px 0; white-space:pre-wrap; }
 .nrow { padding:8px 12px; border-top:1px solid var(--line); white-space:pre-wrap; } .nrow .m { display:flex; gap:6px; align-items:center; margin-bottom:3px; font-size:11px; color:var(--ink2); }
 .nrow .k { border-radius:4px; padding:0 6px; font-weight:700; color:#fff; } .nrow .k.learn { background:#2962ff; } .nrow .k.hunt { background:#c2410c; }
 .nrow .x { margin-left:auto; background:none; border:0; color:var(--ink2); cursor:pointer; } .nrow .x:hover { color:var(--neg); }
@@ -483,7 +485,9 @@ const refs = text => esc(text).replace(/\[([^\]\[]+?) (1M|1W|1D|4h|1h|15m|5m|1m)
 function showNotes() {
   $("notelist").innerHTML = st.written.length ? st.written.map(n => `<div class="nrow"><div class="m"><span class="k ${n.kind}">${n.kind}</span>` +
     `<span>${new Date(n.saved * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span><span>${esc(n.asset)} ${esc(TFNAME[n.tf] || n.tf)}${n.chart_time ? " · chart at " + wall(n.chart_time) : ""}</span>` +
-    `<button class="x" data-id="${n.id}" title="remove this note">✕</button></div>${esc(n.text)}</div>`).join("") : '<div class="dim" style="padding:8px 12px">No notes yet.</div>';
+    `<button class="x" data-id="${n.id}" title="remove this note">✕</button></div>${esc(n.text)}` +
+    `<div class="nseen ${n.seen ? "yes" : ""}">${n.seen ? "✓ Claude has read this" : "… Claude has not read this yet"}</div>` +
+    (n.replies || []).map(r => `<div class="nreply"><b>Claude</b> ${esc(r.text)}</div>`).join("") + `</div>`).join("") : '<div class="dim" style="padding:8px 12px">No notes yet.</div>';
   $("notelist").querySelectorAll(".x").forEach(b => b.onclick = async () => { if (!confirm("Remove this note?")) return;
     await fetch("api/note", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delete: b.dataset.id }) }); loadNotes(); });
 }
@@ -505,6 +509,7 @@ async function pollMode() { try { showMode(await (await fetch("api/mode")).json(
 document.querySelectorAll("#mode button").forEach(b => b.onclick = async () => {
   const r = await fetch("api/mode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: b.dataset.m }) }); if (r.ok) showMode(await r.json()); });
 setInterval(pollMode, 4000);
+setInterval(() => { if (st.tab === "notes" && document.activeElement !== $("notetext")) loadNotes(); }, 6000);   // Claude's "read" tick and answers appear by themselves
 $("noteadd").onclick = addNote;
 $("notetext").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addNote(); } e.stopPropagation(); });
 $("notetext").addEventListener("input", () => { try { localStorage.setItem(KEEP + "-draft", $("notetext").value); } catch (e) {} });     // a draft survives a reload
