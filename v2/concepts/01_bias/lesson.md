@@ -98,6 +98,11 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
     were only a little above the old highest close. He: "But notice, on line chart, that's a clearer BOS; this would
     show higher high, and it's bodies talking." On closes the new high is plainly above the old one: a higher high
     made by bodies. The candle chart was the confusing one, because the old high there was a wick.
+  - **And it settles the range question on that chart.** After seeing the levels drawn: "With the line chart approach,
+    this is strength; in this instance, it's not range, it's bull." So his earlier "yes, it's a range" was the candle
+    chart's reading; on closes the same daily is bull, which is also what the tool says. When the candles look like a
+    range and the line chart shows the bodies making a higher high, the line chart decides. (The last sentence is
+    mine.)
   - The tool can now read this way (`as_line`, tests beside it). It is an option, not the default.
   - Mine, from running it once on five charts (nothing tuned): read mechanically on closes, the tool turns more
     often than he does, and on one weekly he had confirmed as bull it says bear. So for now the line chart is for the eye, to
