@@ -66,4 +66,8 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
   confused, take a look at that same chart on daily; I don't think you'll be confused by those two lows." When a
   higher timeframe's close beyond a level is marginal, the timeframe below shows whether it was clean. (The second
   sentence is mine. On his example the daily closed far beyond both lows.)
-- "Significant" as a swing of the timeframe above: he asked me to put the question more clearly.
+- **"Significant" as a swing of the timeframe above, answered 19 Nov 2026:** "This still counts; it's relative to what
+  you're looking at: if you're on daily, obviously weekly and monthly is stronger; if you're on hourly, 4-hour and daily
+  is stronger." So the tool's reading stands as far as it goes. What is still mine: the tool looks only at the next
+  timeframe up, and he names the two above; and where his mark and the tool's differed on the FTSE daily is not
+  explained by this answer.
