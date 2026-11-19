@@ -21,6 +21,11 @@ timeframe, right now. Fixed statements are how a read hardens into a rule, and t
 3. **A pattern is "might be".** What the brain brings to mind is a possibility to watch, never a prediction. "Never
    try to make the market do what it wants."
 4. **Recent and relative to now.** "Focus on where price currently is." Old, eaten, far-off things are not the read.
+5. **A read never ends on a condition about the future.** Not "it would become wise once the daily closes above
+   it". He, 19 Nov 2026: "that's expecting price to do what we want; we would have to see it happen already." Stop at
+   what the chart has shown.
+6. **Top to bottom, always.** Start on the monthly and go down, in the reasons as well as in the bias line: "no
+   matter what, it's top to bottom."
 
 ## Breaks: say "a closed candle below", and on which timeframe
 
