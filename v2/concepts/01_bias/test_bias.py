@@ -8,7 +8,7 @@ the candle still forming is never read. There is no "weak close = range" rule wi
 break = change", and "range" stays a hand judgement until he teaches how he decides it."""
 import pytest
 
-from bias import bias_levels, swings
+from bias import as_line, bias_levels, swings
 
 N = 5                                    # candles of the timeframe read per candle of the timeframe above
 
@@ -170,3 +170,26 @@ def test_a_turn_two_up_is_not_known_before_the_candle_after_it_has_closed_there(
     known = [h for h in swings(two_up)[0] if h["price"] == pytest.approx(140)][0]["known"]
     early = [x for x in c if x["time"] + 3600 < known]
     assert bias_levels(early, above(early, 5), above(early, 25))["side"] == "neutral"
+
+
+@pytest.mark.parametrize("k", [1.0, 0.01, 250.0])
+@pytest.mark.parametrize("step", [300, 3600, 86400])
+def test_on_a_line_chart_a_level_is_made_of_closes_and_a_wick_is_no_part_of_it(k, step):
+    """He: "try using line chart; it focuses on body only, and body is strength." With long wicks, the candle chart puts
+    the level at the wick's tip; the line chart puts it at the highest close, so a later close between the two is a
+    break on the line chart and not on the candles."""
+    c = path([(100, 0), (100, 3), (140, 20), (120, 15), (145, 20), (130, 20)], step=step, k=k, wick=8.0)
+    top_close = max(x["close"] for x in c[:25])
+    assert max(x["high"] for x in c[:25]) > top_close                  # the wick reaches past the highest close
+    candles, line = bias_levels(c, above(c)), bias_levels(as_line(c), above(as_line(c)))
+    assert candles["side"] == "neutral"                                # no close beyond the wick's tip
+    assert line["side"] == "bull" and line["break"]["price"] == pytest.approx(top_close)
+
+
+def test_a_line_chart_keeps_the_times_and_closes_and_knows_nothing_early():
+    c = path(RISE)
+    line = as_line(c)
+    assert [x["time"] for x in line] == [x["time"] for x in c] and [x["close"] for x in line] == [x["close"] for x in c]
+    assert all(x["high"] == x["low"] == x["close"] for x in line)
+    cut = as_line(c[:30])
+    assert cut == line[:30]                                            # a candle's line value never depends on later candles

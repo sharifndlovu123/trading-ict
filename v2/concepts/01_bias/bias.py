@@ -34,6 +34,13 @@ def completed(c: list[dict], now: float) -> list[dict]:
     return [x for x in c if x["time"] + step <= now]
 
 
+def as_line(c: list[dict]) -> list[dict]:
+    """The same candles as a line chart of their closes: each candle's high and low become its close. He, 19 Nov 2026:
+    "when looking at bias, try using line chart; it focuses on body only, and body is strength." Read this way, a
+    turn is a turn of the closes and a wick is never part of a level."""
+    return [{**x, "open": x["close"], "high": x["close"], "low": x["close"]} for x in c]
+
+
 def swings(c: list[dict]) -> tuple[list[dict], list[dict]]:
     """Swing highs and lows of a candle list: ``{"t": time of the swing candle, "price", "known": time it became known}``.
     A swing is known when the candle after it has closed (no look-ahead)."""
