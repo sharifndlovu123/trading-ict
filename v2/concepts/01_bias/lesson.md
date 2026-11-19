@@ -75,4 +75,13 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
   - The tool now takes the timeframe above and, when given, the one above that (`bias_levels(c, parent, grand)`): a
     turn on either is a significant level. Which timeframes those are is the caller's choice. Tests: a top that is a
     turn only two up counts when two are given and not when one is; it is not a level before it is known there.
-  - Still mine: where his mark and the tool's differed on the FTSE daily is not explained by this answer.
+- **Where the level behind sits, answered 19 Nov 2026 on the chart where the tool and his mark differ.** I showed
+  both and asked: is his low the level behind because the break was built on that pullback, and not on the older,
+  lower low? "Yes." So the level behind is the low of the pullback the break was built on. A lower low from the leg
+  before it is not the level behind, even though it is the lowest low under the break.
+  - **The tool does not do this yet.** It takes the lowest low between the level that was broken and the candle that
+    broke it, which on that chart reaches back into the older leg. That rule was already named as mine above; it is
+    now known to be wrong where the stretch under the break has its own structure. It has not been changed: a change
+    must hold on every chart he has confirmed, not be fitted to this one.
+- **Range, on the same chart:** I asked whether the daily is a range now, with price going up and down under the
+  level ahead and no closed candle beyond the recent high or low. "Yes, it's a range." The tool says bull there.
