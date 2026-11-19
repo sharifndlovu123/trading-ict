@@ -85,3 +85,12 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
     must hold on every chart he has confirmed, not be fitted to this one.
 - **Range, on the same chart:** I asked whether the daily is a range now, with price going up and down under the
   level ahead and no closed candle beyond the recent high or low. "Yes, it's a range." The tool says bull there.
+  - Why it is tricky, in his words: "Daily is bullish; one thing that would make it range as a possibility is the BOS
+    at daily: it exists, but notice how it isn't so powerful, so to us daily does range, but at the same time it did
+    technically break the high."
+- **Read bias on a line chart (19 Nov 2026):** "Maybe to make your life easier, when looking at bias, try using line
+  chart. It focuses on body only, and body is strength."
+  - The tool can now read this way (`as_line`, tests beside it). It is an option, not the default.
+  - Mine, from running it once on five charts (nothing tuned): read mechanically on closes, the tool turns more
+    often than he does, and on one weekly he had confirmed as bull it says bear. So the line chart is for the eye, to
+    see how strong a break was; it does not replace the levels.
