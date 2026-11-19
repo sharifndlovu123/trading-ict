@@ -90,7 +90,11 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
     technically break the high."
 - **Read bias on a line chart (19 Nov 2026):** "Maybe to make your life easier, when looking at bias, try using line
   chart. It focuses on body only, and body is strength."
+  - **My mistake, and his correction.** I looked at the line chart and called that break weak, because the closes
+    were only a little above the old highest close. He: "But notice, on line chart, that's a clearer BOS; this would
+    show higher high, and it's bodies talking." On closes the new high is plainly above the old one: a higher high
+    made by bodies. The candle chart was the confusing one, because the old high there was a wick.
   - The tool can now read this way (`as_line`, tests beside it). It is an option, not the default.
   - Mine, from running it once on five charts (nothing tuned): read mechanically on closes, the tool turns more
-    often than he does, and on one weekly he had confirmed as bull it says bear. So the line chart is for the eye, to
-    see how strong a break was; it does not replace the levels.
+    often than he does, and on one weekly he had confirmed as bull it says bear. So for now the line chart is for the eye, to
+    see whether the bodies made a higher high or a lower low; the tool's line reading is not trusted yet.
