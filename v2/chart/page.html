@@ -120,6 +120,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   <span class="sep"></span>
   <button class="tb" id="pct" title="one chart: every instrument shown as a line in % change, so strength and divergence show directly">％ Compare</button>
   <label class="tb" title="the crosshair shows the same moment on every chart; charts on the same timeframe also scroll and zoom together"><input type="checkbox" id="sync" checked autocomplete="off"> Sync</label>
+  <label class="tb" title="on: every chart shows the same timeframe, and choosing one changes them all. off: each chart keeps its own (click a chart, then choose its timeframe)"><input type="checkbox" id="sametf" autocomplete="off"> Same TF</label>
   <button class="tb" id="livebtn" title="live candles: while on, the instruments on this page are refreshed from the free feed about once a minute (it runs about a minute behind)">● Live</button>
   <button class="tb" id="replaybtn" title="take the charts back to a moment: nothing after it is shown">⏮ Replay</button>
   <span class="sp"></span>
@@ -192,7 +193,7 @@ const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
              eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 0.65,      // 0.65% is the setting he confirmed by eye
              lastKind: keep.lastKind || {} };
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -524,7 +525,7 @@ function topbar() {
   const c = curCfg();
   $("sym").innerHTML = st.assets.map(n => `<option ${n === c.asset ? "selected" : ""}>${n}</option>`).join("");
   $("tfs").innerHTML = TFS.map(t => `<button class="tb ${t === c.tf && !st.pct ? "act" : ""}" data-t="${t}" title="${t} (Shift+click: every chart)">${TFNAME[t]}</button>`).join("");
-  $("tfs").querySelectorAll("button").forEach(b => b.onclick = e => { if (e.shiftKey || st.pct) { st.cfg.forEach(x => x.tf = b.dataset.t); save(); build(); } else setTf(b.dataset.t); });
+  $("tfs").querySelectorAll("button").forEach(b => b.onclick = e => { if (e.shiftKey || st.pct || $("sametf").checked) { st.cfg.forEach(x => x.tf = b.dataset.t); save(); build(); } else setTf(b.dataset.t); });
   $("ctype").textContent = c.line ? "╱ Line" : "▮ Candles"; $("pct").classList.toggle("on", st.pct);
 }
 $("sym").onchange = e => setAsset(e.target.value);
@@ -554,6 +555,8 @@ theme();
 $("readbtn").onclick = () => { st.side = !st.side; save(); side(); };
 $("fsbtn").onclick = () => full(cur());
 $("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
+$("sametf").checked = !!keep.sameTf;
+$("sametf").onchange = () => { save(); if ($("sametf").checked) { const tf = curCfg().tf; if (st.cfg.some(x => x.tf !== tf)) { st.cfg.forEach(x => x.tf = tf); save(); build(); } } };   // switching it on matches every chart to the one last touched
 $("sync").onchange = () => { if ($("sync").checked && !st.pct) { const seen = new Set(); for (const p of st.active ? [st.active, ...st.panes] : st.panes) if (!seen.has(p.c.tf)) { seen.add(p.c.tf); follow(p); } } };
 async function refresh() { st.cache.clear(); st.claude = {}; await fill(true); watch(); }
 $("refresh").onclick = refresh;
