@@ -127,6 +127,13 @@ smaller piece you're looking for within."
   TP 1, you'll normally get knocked out early if you do so; and don't trail until the trade range you're currently
   focusing on is hit."
 
+- **Going a timeframe deeper for the entry** (my question, shown to him on the chart he first taught on): "Going in
+  deeper is good, and I think that's your call; it does offer better entries, and better RRs, but you could get
+  knocked out, but it is a good way to think."
+- **An area price never reached is a miss, like the 50%.** On that same chart price turned before the resting
+  liquidity and the higher-timeframe imbalance above it: "the same logic of a trading range failing to meet the 50%
+  at least, because if we were looking to sell and wanted price to hit that for a sell, it didn't reach."
+
 ### My mistakes on the show-back, and what he said
 - I drew a trading range while not looking for a trade. He: "you shouldn't have drawn the trading range."
 - I kept the top of a range at the first high and only moved the bottom, making one huge range. He drew the ranges
@@ -215,7 +222,7 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | a FVG sits in the discounted half of the range when looking up (the expensive half when looking down) | an entry there, with the stop on the liquidity the move left from and targets on the same timeframe | stated by Sharif, 18 Nov 2026 |
 | an idea goes against the bias of the timeframe above | the nearer targets only: quick and small | stated by Sharif, 18 Nov 2026 |
 | an idea goes with the bias of the timeframe above | runner targets, or further liquidity to reach: most of the trade off at the first target, the rest split over what is left | stated by Sharif, 18 Nov 2026 |
-| price turns on the timeframe being traded | the same sequence building one or two timeframes down, as an earlier approach | noticed by Claude, unconfirmed |
+| a setup shows on the timeframe being traded | the same sequence forming earlier one or two timeframes down, as a deeper entry: better entry and return, more chance of being knocked out; the trader's call | stated by Sharif, 19 Nov 2026 |
 | a trading range is about to be drawn | the higher timeframe's range first: where price is inside it, and whether its trade has already passed | stated by Sharif, 19 Nov 2026 |
 | the higher timeframe's trade has already gone and its target is not reached | the continuation on the lower timeframes, not a fresh entry at the old area | stated by Sharif, 19 Nov 2026 |
 | a lower-timeframe candle closes beyond a higher-timeframe area | that area's own timeframe: only wicks in it means it held | stated by Sharif, 19 Nov 2026 |
@@ -226,6 +233,6 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 
 - Names dropped by him: liquidity void (18 Nov 2026: "skip liquidity void, in fact delete it"), and gap and trendline
   (19 Nov 2026: "drop"). They are off the chart's tools; the plain line tool is now called "line".
-- My unconfirmed link above ("price turns on the timeframe being traded"): he asked me to ask it again more clearly.
+
 - "Deep enough" for a retracement to move the end of a range: 50% as a working number; to be worked on over time.
 - A read on an unseen chart with no corrections.
