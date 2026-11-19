@@ -47,9 +47,12 @@ def swings(c: list[dict]) -> tuple[list[dict], list[dict]]:
     return hi, lo
 
 
-def bias_levels(c: list[dict], parent: list[dict] | None = None) -> dict:
+def bias_levels(c: list[dict], parent: list[dict] | None = None, grand: list[dict] | None = None) -> dict:
     """Walk the candles of one timeframe against the swings of the timeframe above (``parent``; the candles' own swings
-    when there is none above). Returns::
+    when there is none above) and, when given, of the one above that (``grand``). He, 19 Nov 2026: "it's relative to
+    what you're looking at: if you're on daily, obviously weekly and monthly is stronger; if you're on hourly, 4-hour and
+    daily is stronger… depending on where you're trading there is a limit, so 2 up makes sense." Which candles are
+    "one up" and "two up" is the caller's choice; no timeframe is named in here. Returns::
 
         {"side": "bull" | "bear" | "neutral",
          "since": time of the candle that changed the bias (None while neutral),
@@ -60,6 +63,9 @@ def bias_levels(c: list[dict], parent: list[dict] | None = None) -> dict:
     """
     step = _step(c)
     ph, pl = swings(parent if parent else c)
+    if grand:                                # a level that turns the timeframe two up counts too, from when it is known there
+        gh, gl = swings(grand)
+        ph, pl = sorted(ph + gh, key=lambda v: v["known"]), sorted(pl + gl, key=lambda v: v["known"])
     side, since, brk, change, events = "neutral", None, None, None, []
     open_h: list[dict] = []          # significant highs known and not yet closed through
     open_l: list[dict] = []

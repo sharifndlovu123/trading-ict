@@ -141,3 +141,32 @@ def test_a_body_beyond_the_level_is_a_break_even_when_the_candle_opened_past_it(
     assert r["side"] == "bear" and r["events"][-1]["kind"] == "change"
     wick_only = up + [{"time": t + 3600, "open": 158, "high": 159, "low": 141, "close": 156}]     # a wick under it, the body above
     assert bias_levels(wick_only, above(wick_only))["side"] == "bull"
+
+
+def flat_top(k=1.0, step=3600):
+    """A top whose high is shared by neighbouring candles of the timeframe above (so it is not a turn there) and is one
+    clear turn on the timeframe two up; then a lower stretch, then a close above the top."""
+    c = path([(100, 0), (130, 25), (140, 10), (140, 10), (120, 5), (125, 25), (170, 25)], step=step, k=k, wick=0.0)
+    return c, above(c, 5), above(c, 25)
+
+
+@pytest.mark.parametrize("k", [1.0, 0.01, 250.0])
+@pytest.mark.parametrize("step", [300, 3600, 86400])
+def test_a_turn_of_the_timeframe_two_up_counts_as_significant(k, step):
+    """He: "if you're on hourly, 4-hour and daily is stronger... 2 up makes sense." Read with one timeframe above, this
+    top is nothing to break; read with two, a close above it is the break."""
+    c, one_up, two_up = flat_top(k, step)
+    assert not [h for h in swings(one_up)[0] if h["price"] == pytest.approx(140 * k)]      # not a turn one timeframe up
+    assert [h for h in swings(two_up)[0] if h["price"] == pytest.approx(140 * k)]          # a turn two up
+    assert bias_levels(c, one_up)["side"] == "neutral"
+    r = bias_levels(c, one_up, two_up)
+    assert r["side"] == "bull" and r["break"]["price"] == pytest.approx(140 * k)
+
+
+def test_a_turn_two_up_is_not_known_before_the_candle_after_it_has_closed_there():
+    """No look-ahead: while the candle after the top has not closed on the timeframe two up, the top is not a level yet."""
+    c, one_up, two_up = flat_top()
+    assert bias_levels(c, one_up, two_up[:2])["side"] == "neutral"
+    known = [h for h in swings(two_up)[0] if h["price"] == pytest.approx(140)][0]["known"]
+    early = [x for x in c if x["time"] + 3600 < known]
+    assert bias_levels(early, above(early, 5), above(early, 25))["side"] == "neutral"

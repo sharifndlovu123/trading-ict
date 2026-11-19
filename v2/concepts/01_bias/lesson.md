@@ -68,6 +68,11 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
   sentence is mine. On his example the daily closed far beyond both lows.)
 - **"Significant" as a swing of the timeframe above, answered 19 Nov 2026:** "This still counts; it's relative to what
   you're looking at: if you're on daily, obviously weekly and monthly is stronger; if you're on hourly, 4-hour and daily
-  is stronger." So the tool's reading stands as far as it goes. What is still mine: the tool looks only at the next
-  timeframe up, and he names the two above; and where his mark and the tool's differed on the FTSE daily is not
-  explained by this answer.
+  is stronger." So the tool's reading stands as far as it goes.
+  - **How far up (19 Nov 2026):** "This is relative all the way to the top, but depending on where you're trading
+    there is a limit, so 2 up makes sense. For example, if you're trading 15-minute, daily is very steep for you; it's
+    not an issue if it's with bias, but if it's against bias the distance between the two timeframes can be wide."
+  - The tool now takes the timeframe above and, when given, the one above that (`bias_levels(c, parent, grand)`): a
+    turn on either is a significant level. Which timeframes those are is the caller's choice. Tests: a top that is a
+    turn only two up counts when two are given and not when one is; it is not a level before it is known there.
+  - Still mine: where his mark and the tool's differed on the FTSE daily is not explained by this answer.
