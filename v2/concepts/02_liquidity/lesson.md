@@ -120,4 +120,9 @@ top-down process (the eyes), which is built later.
   asked whether they should. He: "the issue it found actually makes sense; them being relatively close to each other
   shouldn't count, because if I go to 4 hour it's fine, so I think what we selected is perfect." The pair shows as
   equal highs one timeframe down, where each is its own high. So "a high is a turn" is no longer only my choice.
-- Whether two neighbouring highs a point apart (his "small EQH") count the same as a wider set.
+- Small equal highs: he did not rank them against a wider set, but they are not to be ignored: when they sit inside
+  the area being watched they "played a part, and it wouldn't be wise to not acknowledge it" (19 Nov 2026).
+- **A sweep is not an equal high** (19 Nov 2026): "a sweep is almost clearly not an EQH: the highs are nearby but it
+  was clearly an 'eat this high' situation. EQHs and EQLs are quite close and are areas price might want to eat."
+- The four points taught before the rebuild (first bullet): "valid, we might have to reconfirm it, but as we are
+  learning I am teaching." They stay unconfirmed until he teaches them.

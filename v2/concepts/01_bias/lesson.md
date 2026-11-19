@@ -58,6 +58,12 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
 | FTSE | weekly: code says bull, hand read said range. Daily: both bull, but the code puts the level behind at March's low and his own mark is May's low |
 
 ## Open questions for him
-- How he decides "range" (he uses it often; the code cannot say it).
-- Whether "a swing of the timeframe above" is the right meaning of significant, given the FTSE daily difference.
-- US100 weekly on 17 Nov 2026: the level behind (July's low) was closed under by a small amount. A change, or too marginal?
+- **Range, answered 19 Nov 2026:** "Range is consolidative: price isn't really bearish or bullish, or it's eating
+  important lows but then it eats important highs, it's almost confused; and it gets to a point where that most recent
+  high and most recent low is a range, and nothing is breaking it; it's stuck in that middle area going up and down
+  but never breaking it." The tool does not say "range" yet.
+- **A close under by a small amount, answered 19 Nov 2026:** "You're right, it was a small close, but if you're
+  confused, take a look at that same chart on daily; I don't think you'll be confused by those two lows." When a
+  higher timeframe's close beyond a level is marginal, the timeframe below shows whether it was clean. (The second
+  sentence is mine. On his example the daily closed far beyond both lows.)
+- "Significant" as a swing of the timeframe above: he asked me to put the question more clearly.

@@ -27,10 +27,11 @@ marked as mine.
 FVG and IFVG were taken last "because they're PD arrays": they are also traded from. This file covers only their role
 as a draw; trading from them is a later concept.
 
-## My readings, not yet confirmed by him
+## My readings, confirmed by him on 19 Nov 2026
 - "Moving in their direction" = price is already heading toward the gap; an unfilled gap that price is moving away
-  from is not a draw right now.
-- Marking on the 1-minute applies to the NDOG too, since it is also two exact prices.
+  from is not a draw right now. He: "yes, correct."
+- Marking on the 1-minute applies to the NDOG too, since it is also two exact prices. He: "proceed, they should be
+  marked."
 
 ## The tools and their tests (18 Nov 2026)
 `alt_liquidity.py`: `fvgs` (BISI / SIBI, untouched / partly / filled, and whether it was traded through = IFVG),

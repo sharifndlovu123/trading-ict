@@ -32,6 +32,19 @@ times below are rules: they define when a trade is looked for.
 - Outside these times the chart is still read top to bottom, so that what is resting and what was swept is known when
   a window opens. No entry is looked for. (This sentence is mine; he confirmed the rule it follows from.)
 
+## Opening, holding and closing (his answers, 19 Nov 2026)
+- "You're allowed to open a trade during the session, and entries during kill zones is very nice."
+- "The hour before a session is for you to start looking and analysing things such as higher TF, bias, what's price
+  trying to do; but your entries or trigger mode should only initiate within the kill zones / special times we
+  mentioned. There's reasons we mentioned them: they tend to favour us more and have more volatile movements."
+- "You can keep trades open as long as you like, but try not overhold and reach end of the trading day… at the end
+  of the day our close should be close."
+- A trade from London can carry into New York. His example: a sell found in London with a bearish bias, targets hit,
+  runners left; in the New York session "we're watching and we consider selling again; there's nothing wrong with
+  that."
+- Runners: "try to have a trailing stop; don't trail for TP 1, you'll normally get knocked out early if you do so;
+  and don't trail until the trade range you're currently focusing on is hit."
+
 ## The reference definitions he gave beside his own (ICT's, as he pasted them)
 | Session | Whole session | Narrower window |
 |---|---|---|
@@ -50,6 +63,10 @@ an important area we have, and price driving into that area might be the 8:30 to
 important area could be anywhere from 10:00. And when I say these specific times, just be fluid with it; maybe it
 might happen at 10:05."
 
+On my unconfirmed link about the early move: "this is just to keep in mind; as I said, that pattern can change, but
+it's good to be aware of it. When we backtest you will notice, if you skip 8:30 and start looking just before 9:30
+it might be a bit easier, because some trickery has already been pushed out."
+
 ## Left to the reading (no tool yet)
 No tool was written. A tool that says which session a moment falls in would be simple, and it would carry these clock
 times as his definitions; it waits for his word, and for the context check to be taught that session times are
@@ -62,8 +79,7 @@ allowed where other clock times are not.
 | everything lines up for an entry | whether the moment is inside one of his session times; outside them no trade is looked for | stated by Sharif, 19 Nov 2026 |
 | a session is about an hour away | what is interesting from the top down: bias, areas, liquidity resting and liquidity already swept | stated by Sharif, 19 Nov 2026 |
 | the New York PM session has begun | only managing or closing a trade already open | stated by Sharif, 19 Nov 2026 |
-| a move starts early in the New York morning | whether it is the early move, with the real move still to come | noticed by Claude, unconfirmed |
+| a move starts early in the New York morning | whether it is the early move, with the real move still to come: to keep in mind, the pattern can change | stated by Sharif, 19 Nov 2026 |
 
 ## Open questions for him
-- When each of his sessions ends for the purpose of new trades (the London morning in particular).
-- Whether the hour before a session is the same for London and New York.
+- "End of the trading day" for closing: the exact time he means.

@@ -107,6 +107,26 @@ smaller piece you're looking for within."
   edge of an imbalance below it, "only because I'm expecting price to sell, the bias states so". Nearest-only is for
   an idea against the bias.
 
+### His answers to my questions (19 Nov 2026)
+- **"Deep enough":** "To make it simple and give you a number, just say 50%, because it's tricky to show to a
+  machine. A consolidation could be happening for a while under that area, just below the 50%, and it might drop a bit
+  lower, but it should still have, and be fluid with, its trading range… we will try work on it over time; as I explain
+  things, try catch what I fix." Still a working number, not a settled rule.
+- **How far the targets go:** "Relative to the trade range, what are you looking for: are you trading the big piece
+  itself, to the end, or are you trading a smaller piece of a bigger piece? And you must know that. TF is important:
+  if you're seeing a BISI and we are inside it at daily, the swing to get to your TP might take some time, and longer
+  than what you'd expect… It goes back to looking for nearby liq, and if you want to allow a runner, allow it; but
+  does bias allow it, and what liq is a runner going for?"
+- **A sweep against equal highs:** I asked whether a high slightly past equal highs joins the set unless it wicks over
+  and closes back under. "Yes, but a sweep is almost clearly not an EQH: the highs are nearby but it was clearly an
+  'eat this high' situation. EQHs and EQLs are quite close and are areas price might want to eat."
+- **Small equal highs inside the area being watched count as context.** They "played a part, and it wouldn't be wise
+  to not acknowledge it; they more support what we were trying to do, which is find context within the current
+  special area."
+- **Trailing a runner** (from his answer on sessions): "with runners try to have a trailing stop; don't trail for
+  TP 1, you'll normally get knocked out early if you do so; and don't trail until the trade range you're currently
+  focusing on is hit."
+
 ### My mistakes on the show-back, and what he said
 - I drew a trading range while not looking for a trade. He: "you shouldn't have drawn the trading range."
 - I kept the top of a range at the first high and only moved the bottom, making one huge range. He drew the ranges
@@ -204,8 +224,8 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 
 ## Open questions for him
 
-- Gap and trendline: held for next time (his word, 18 Nov 2026). Liquidity void is deleted: "skip liquidity void, in
-  fact delete it."
-- "Deep enough" for a retracement to move the end of a range: 50% for now, "tricky to say".
-- Where exactly the first target goes when with the bias: he "stretched" it once; no general rule given.
+- Names dropped by him: liquidity void (18 Nov 2026: "skip liquidity void, in fact delete it"), and gap and trendline
+  (19 Nov 2026: "drop"). They are off the chart's tools; the plain line tool is now called "line".
+- My unconfirmed link above ("price turns on the timeframe being traded"): he asked me to ask it again more clearly.
+- "Deep enough" for a retracement to move the end of a range: 50% as a working number; to be worked on over time.
 - A read on an unseen chart with no corrections.

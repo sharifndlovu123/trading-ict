@@ -178,10 +178,10 @@ const SETS = { Indices: ["US100", "US500", "US30"], Europe: ["DE40", "UK100"], M
 const CLEAR = "rgba(0,0,0,0)";
 const COLORS = ["#2962ff", "#ff9800", "#26a69a", "#e91e63", "#9c27b0", "#ffeb3b", "#00bcd4", "#8bc34a", "#795548", "#607d8b"];
 // the tools down the left side: [icon, name, the kinds in its fly-out]
-const GROUPS = [["╱", "Lines", ["trendline", "displacement", "fake push"]],
+const GROUPS = [["╱", "Lines", ["line", "displacement", "fake push"]],
                 ["—", "Levels", ["buyside", "sellside", "EQH", "EQL", "BOS", "level behind", "level ahead"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
-                ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "gap", "NWOG", "NDOG"]],
+                ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "NWOG", "NDOG"]],
                 ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
                 ["⇕", "Range", ["trading range", "50%"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
@@ -193,6 +193,7 @@ const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
              eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 0.65,      // 0.65% is the setting he confirmed by eye
              lastKind: keep.lastKind || {} };
+for (const k in st.lastKind) if (!KIND[st.lastKind[k]]) delete st.lastKind[k];        // a tool name that was dropped is forgotten
 const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
@@ -261,7 +262,7 @@ function tools() {                                       // the toolbar down the
 function fly(i, btn) {                                   // a tool's fly-out, like the drawing menus
   const f = $("fly"), g = GROUPS[i];
   if (f.style.display === "block" && f.dataset.g == i) { f.style.display = "none"; return; }
-  const keys = { trendline: "Alt+T", [st.lastKind.level || "BOS"]: "Alt+H", [st.lastKind.vline || "→ bull"]: "Alt+V" };
+  const keys = { line: "Alt+T", [st.lastKind.level || "BOS"]: "Alt+H", [st.lastKind.vline || "→ bull"]: "Alt+V" };
   f.dataset.g = i; f.style.display = "block"; f.style.top = Math.min(btn.getBoundingClientRect().top, innerHeight - 40 - g[2].length * 31) + "px";
   f.innerHTML = `<h4>${g[1]}</h4>` + g[2].map(k => `<div class="it ${st.place && st.place.kind === k ? "on" : ""}" data-k="${esc(k)}"><span class="sw" style="background:${markColor(k, "#888")}"></span>${esc(k)}<span class="k">${keys[k] || ""}</span></div>`).join("");
   f.querySelectorAll(".it").forEach(el => el.onclick = () => { f.style.display = "none"; const k = KIND[el.dataset.k]; setPlace(st.place && st.place.kind === k.kind ? null : k); });
@@ -622,7 +623,7 @@ document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   const k = e.key.toLowerCase();
   if (e.altKey) {                                         // the drawing shortcuts he knows
-    if (k === "t") { e.preventDefault(); setPlace(KIND.trendline); }
+    if (k === "t") { e.preventDefault(); setPlace(KIND.line); }
     else if (k === "h") { e.preventDefault(); setPlace(KIND[st.lastKind.level || "BOS"]); }
     else if (k === "v") { e.preventDefault(); setPlace(KIND[st.lastKind.vline || "→ bull"]); }
     else if (k === "r") { e.preventDefault(); st.panes.forEach(p => !p.pct && p.times.length && recentre(p)); setTimeout(align, 120); }

@@ -25,9 +25,9 @@ const MARK_PALETTE = [
   ["sellside", "level", ["sellside", "EQL"]],
   ["", "level", ["BOS", "level behind", "level ahead"]],
   ["", "vline", ["→ bull", "→ bear"]],
-  ["", "line", ["trendline", "displacement", "fake push"]],
+  ["", "line", ["line", "displacement", "fake push"]],
   ["area", "zone", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "order block", "breaker", "mitigation block", "rejection block"]],
-  ["area", "zone", ["gap", "NWOG", "NDOG"]],
+  ["area", "zone", ["NWOG", "NDOG"]],
   ["", "zone", ["trading range"]],
   ["", "level", ["50%"]],
 ];
@@ -38,16 +38,16 @@ const MARK_PALETTE = [
 const KIND_COLOR = {
   "buyside": "#2f80ed", "EQH": "#00a3c4", "sellside": "#f2711c", "EQL": "#d99a00",
   "BOS": "#9b51e0", "level behind": "#e03131", "level ahead": "#2f9e44", "→ bull": "#2f9e44", "→ bear": "#e03131",
-  "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
+  "line": "#7b8794", "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
   "FVG": "#e8a200", "BISI": "#0ca678", "SIBI": "#c2255c", "IFVG": "#7950f2", "VI": "#c930c9", "BPR": "#1c7ed6",
   "order block": "#4c6ef5", "breaker": "#d6336c", "mitigation block": "#0b7285", "rejection block": "#a8641a",
-  "trading range": "#8d99ae", "50%": "#8d99ae", "gap": "#74b816", "NWOG": "#e8890c", "NDOG": "#b8860b",
+  "trading range": "#8d99ae", "50%": "#8d99ae", "NWOG": "#e8890c", "NDOG": "#b8860b",
 };
 // a mark whose label is free text (Claude's often are) takes the colour of the kind it names
 const KIND_WORDS = [["EQH", "EQH"], ["EQL", "EQL"], ["IFVG", "IFVG"], ["FVG", "FVG"], ["BISI", "BISI"], ["SIBI", "SIBI"], ["IFVG", "IFVG"], ["NWOG", "NWOG"], ["NDOG", "NDOG"], ["BPR", "BPR"],
   ["order block", "order block"], ["breaker", "breaker"], ["level behind", "level behind"], ["level ahead", "level ahead"], ["BOS", "BOS"], ["bull", "→ bull"], ["bear", "→ bear"],
   ["buyside", "buyside"], ["PDH", "buyside"], ["PWH", "buyside"], ["high", "buyside"], ["sellside", "sellside"], ["PDL", "sellside"], ["PWL", "sellside"], ["low", "sellside"],
-  ["VI", "VI"], ["gap", "gap"], ["displacement", "displacement"]];
+  ["VI", "VI"], ["displacement", "displacement"]];
 function markColor(kind, fallback) {
   if (KIND_COLOR[kind]) return KIND_COLOR[kind];
   const k = String(kind || ""); for (const [word, as] of KIND_WORDS) if (new RegExp("(^|[^a-z])" + word + "([^a-z]|$)", "i").test(k)) return KIND_COLOR[as];
