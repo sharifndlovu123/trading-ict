@@ -18,7 +18,8 @@ Claude to read the market his way.
 - Rules: `v2/README.md`. Checklist: `v2/MIGRATION.md` (read it at the start of v2 work; update it when a box changes).
 - **One concept = one numbered folder** under `v2/concepts/`: `lesson.md` (his words, the why), the concept's
   tools (`<name>.py`) and their tests (`test_<name>.py`). In so far: `01_bias`, `02_liquidity` (with alt-liquidity:
-  imbalances as draws), `03_bias_with_liquidity` (how the two work together).
+  imbalances as draws), `03_bias_with_liquidity` (how the two work together; the bigger trade), `04_sessions` (when a trade is
+  looked for: his session times are rules, the one place a clock time is).
 - **The eyes** (the top-down process that uses the concepts together) **and the brain** (how lessons are pulled
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
 - `v2/references/`: cleaned copies of the source notes (private, not in git).

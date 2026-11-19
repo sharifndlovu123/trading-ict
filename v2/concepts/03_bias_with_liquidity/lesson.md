@@ -2,8 +2,11 @@
 
 Taught by Sharif on 18 Nov 2026 in a learn session, on the Russell 2000, walking one morning down from the monthly to
 the 5-minute. He said the lesson was done the same day. It builds on `01_bias` and `02_liquidity` and adds no new
-kind of mark except the trading range and its 50%. **Not yet tested on a chart I had not seen:** everything below was
-shown on the one chart he taught on.
+kind of mark except the trading range and its 50%.
+
+**Shown back on 19 Nov 2026 on two charts I had not seen** (gold and the Nasdaq). He: "the read so far has been pretty
+good", "so far not so bad", "nice catch", with the corrections below under "The bigger trade". He said that part
+was done the same day. A read on an unseen chart with no corrections has not happened yet.
 
 ## Know the bias first (his emphasis when closing the lesson)
 
@@ -61,6 +64,67 @@ shoots aggressively. It doesn't mean anything if it's not in an area of interest
 - **It does not have to get there.** "Imagine… price failed to reach the 50% of the trade range and it didn't break
   into the lower portion, but we are looking to go up: even if it didn't hit those zones it's still possible for
   price to go up. We might have just missed it."
+
+## The bigger trade (taught 19 Nov 2026, on the show-back)
+
+What he was teaching, in his words: "understanding when drawing bias, liq and trading ranges that you might have
+missed the trade, because I kept seeing you draw ranges and areas that were very relative to now's trade; and that's
+good, but remember there's a bigger trade. That bigger trade has importance, and it can assist in understanding the
+smaller piece you're looking for within."
+
+- **Top to bottom, always.** "Start on monthly, remember to do that, and go down; no matter what, it's top to bottom."
+- **Ask whether it already passed.** "You're constantly looking for current areas for the current trade and current
+  trading range… have you ever considered you missed it? Meaning it already passed." When the higher timeframe's
+  range has already been sold from its expensive half (or bought from its discounted half), what is left lower down
+  is the continuation: "we break lower timeframes, because now… we see the momentum… it's already moving, the entry
+  was missed."
+- **When a trading range is drawn.** "The trading range should be drawn when you're looking for a trade."
+  "Normally try to show what's relevant to now."
+- **The range is fluid.** "You should allow for the trading range to move, a bit more fluid, because expect a
+  retracement… even if a low was broken below with a body, the trading range can expand."
+  - "A break on the low can happen and it can have a closed body candle break, but it can't be too deep if we expect
+    a retracement into our FVG."
+  - Whether the top steps down to a retracement high once the low after it is broken: "technically yes, and only
+    yes if the retracement that happened was deep enough." How deep: "it's tricky to say, but for now say 50%, but
+    mark that it's tricky to say." **This is a working answer, not a settled rule.**
+  - What decides which high or low ends a range: "TF is important, but also respecting higher TF highs or lows is
+    important; they are more significant than smaller TF ones." A bounce that only shows on the smaller timeframes
+    does not move the top of a higher timeframe's range, even when it comes back past the middle. (The last sentence
+    is mine: it is how I read his drawing against mine. He answered my question with the quote.)
+- **An area keeps the power of its own timeframe.** "Current TF and your important areas' TF are not the same level
+  of power." A closed lower-timeframe candle beyond a higher-timeframe imbalance "doesn't invalidate it"; "we would
+  need to see it close" on the area's own timeframe. The check he showed: on the area's own timeframe "it's just
+  wicks" in it, which "also tells us price really pushed it down".
+- **The 50% against the imbalance, as the entry.** "Sometimes respecting the 50% and your better pricing is an
+  advantage, but sometimes it's a loss." Price can wick into the imbalance and leave before reaching the 50%; another
+  time it comes all the way. "This doesn't always happen: sometimes you'll get the better bang for your buck… or you
+  don't."
+- **Know what was swept, even though it is off the chart.** Of equal highs already eaten: "I know we normally don't
+  chart it, but you would have to know it was a sweep, because this was a time to get interesting price action."
+  When that happens inside the area being watched, at the 50% of the range: "from here we should have been eyes
+  open."
+- **The first target with the bias.** He would have "stretched TP 1 a bit", past the nearest resting low to the far
+  edge of an imbalance below it, "only because I'm expecting price to sell, the bias states so". Nearest-only is for
+  an idea against the bias.
+
+### My mistakes on the show-back, and what he said
+- I drew a trading range while not looking for a trade. He: "you shouldn't have drawn the trading range."
+- I kept the top of a range at the first high and only moved the bottom, making one huge range. He drew the ranges
+  leg by leg.
+- I then stepped a top down to a small bounce that had passed the middle. He kept the top at the higher timeframe's
+  high.
+- I read only the newest leg as "the" range and never drew one on the higher timeframe. He: "this one is tricky, the
+  trading range is what I just marked… it's another one you missed."
+- I let a high that went slightly past equal highs join the set, and wrote that I could not tell whether liquidity
+  had been taken. It had been swept.
+- I jumped from the bias table straight to the lowest timeframe.
+
+### A rhythm he asked me to learn by watching (not a rule, his words)
+"You might have to learn it on your own." Inside the New York morning: an early move, then the move playing out,
+then "we normally missed it and are catching the continuation". Some days the early stretch is price driving into an
+important area and the turn from it comes later. "Don't be fixed to this, just be fluid enough to understand this
+key point… when we do backtesting I'll also need you to notice this pattern." The clock times he gave for it are in
+`04_sessions`; they are approximate by his own word.
 
 ## The trade, on the timeframe being traded
 
@@ -132,9 +196,16 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | an idea goes against the bias of the timeframe above | the nearer targets only: quick and small | stated by Sharif, 18 Nov 2026 |
 | an idea goes with the bias of the timeframe above | runner targets, or further liquidity to reach: most of the trade off at the first target, the rest split over what is left | stated by Sharif, 18 Nov 2026 |
 | price turns on the timeframe being traded | the same sequence building one or two timeframes down, as an earlier approach | noticed by Claude, unconfirmed |
+| a trading range is about to be drawn | the higher timeframe's range first: where price is inside it, and whether its trade has already passed | stated by Sharif, 19 Nov 2026 |
+| the higher timeframe's trade has already gone and its target is not reached | the continuation on the lower timeframes, not a fresh entry at the old area | stated by Sharif, 19 Nov 2026 |
+| a lower-timeframe candle closes beyond a higher-timeframe area | that area's own timeframe: only wicks in it means it held | stated by Sharif, 19 Nov 2026 |
+| liquidity is swept inside the area being watched, at the middle of the range or beyond | eyes open for the entry, inside a session | stated by Sharif, 19 Nov 2026 |
+| a low is broken with a body after a retracement (a high, when looking up) | whether the range has expanded or moved: how deep the retracement was, and which timeframe its high belongs to | stated by Sharif, 19 Nov 2026 |
 
 ## Open questions for him
 
 - Gap and trendline: held for next time (his word, 18 Nov 2026). Liquidity void is deleted: "skip liquidity void, in
   fact delete it."
-- This lesson has not been shown back on a chart I had not seen.
+- "Deep enough" for a retracement to move the end of a range: 50% for now, "tricky to say".
+- Where exactly the first target goes when with the bias: he "stretched" it once; no general rule given.
+- A read on an unseen chart with no corrections.
