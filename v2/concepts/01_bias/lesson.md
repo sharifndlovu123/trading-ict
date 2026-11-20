@@ -141,6 +141,11 @@ It stays read by eye, with the test above.
 - **"Significant" as a swing of the timeframe above, answered 19 Nov 2026:** "This still counts; it's relative to what
   you're looking at: if you're on daily, obviously weekly and monthly is stronger; if you're on hourly, 4-hour and daily
   is stronger." So the tool's reading stands as far as it goes.
+  - **Seen in the tools backtest (20 Nov 2026), and marked by him as very important:** "notice the picture: the
+    higher timeframes have higher percentages than below; note that, it's very important." On the instruments he
+    trades, over seven years, what the bias added to a liquidity call grew step by step from the lowest timeframe read
+    to the weekly. It is an observation about the tools on old data, not a rule, but it is the same thing he taught
+    by eye: the higher timeframe's bias and levels carry more weight than the ones below.
   - **How far up (19 Nov 2026):** "This is relative all the way to the top, but depending on where you're trading
     there is a limit, so 2 up makes sense. For example, if you're trading 15-minute, daily is very steep for you; it's
     not an issue if it's with bias, but if it's against bias the distance between the two timeframes can be wide."

@@ -53,6 +53,13 @@ About two minutes per instrument per year. Results go to `v2/backtest/out/` (not
    are shown apart, labelled as tests.
    Why: "these backtesting tools are validating for trades you're expected to make in the future yourself."
 
+## The first thing it showed, which he marked as very important
+
+"Notice the picture: the higher timeframes have higher percentages than below; note that, it's very important."
+(20 Nov 2026.) What the bias adds to a liquidity call grows with the timeframe, from very little on the lowest one read
+to the most on the weekly. Lead with the higher timeframes when reading a result, and never judge a lower timeframe's
+call without the bias of the ones above it.
+
 ## What it must never do
 
 - **Change a tool or a lesson.** What it shows goes to Sharif, the way hunt notes do. A tool changes only in learn,
