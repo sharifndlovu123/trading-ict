@@ -11,7 +11,9 @@ Claude to read the market his way.
   into it,** and it may be deleted. Do not open it for v2 work. If he asks about something old, ask him first.
 - **Hunts are off** (18 Nov 2026): no London or New York prep, no watcher, no paper trades, no scheduled jobs. Do
   not restart any of it. Hunting returns only on v2 and on his word.
-- **This week's objective** (week of 16 to 20 Nov 2026): "cleaning up our mess." Check with him after that week.
+- **The objective** (set for the week of 16 to 20 Nov 2026, and carried on by him on 20 Nov): "cleaning up our mess."
+  "We haven't finished cleaning v1 and building v2, there's still a lot more left to do, but I'm happy so far." It
+  stays the objective until he says otherwise.
 
 ## v2
 
