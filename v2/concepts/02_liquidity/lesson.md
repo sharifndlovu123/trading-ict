@@ -99,6 +99,21 @@ joined neighbour to neighbour.
 reading from the weekly down, the hint to bias, and original liquidity before alt-liquidity. These belong to the
 top-down process (the eyes), which is built later.
 
+## Links
+
+Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He has not yet
+read them as links.
+
+| Comes to mind when | Then look for | Status |
+|---|---|---|
+| the bias has been read | liquidity relative to now, from the highest timeframe down: what was just taken and what is left close by | stated by Sharif, 17 Nov 2026 |
+| highs or lows sit very close together | an area price might want to eat | stated by Sharif, 19 Nov 2026 |
+| a high or low has been eaten | it is used up: it comes off the chart, but the sweep is remembered as a time for interesting price action | stated by Sharif, 19 Nov 2026 |
+| a high goes clearly past the highs beside it | a sweep, not another equal high | stated by Sharif, 19 Nov 2026 |
+| two highs sit on neighbouring candles | one timeframe down, where each is its own high | stated by Sharif, 18 Nov 2026 |
+| a pool has been eaten | the single level near it (a previous day's or week's high or low) as what follows | stated by Sharif, 17 Nov 2026 |
+| original liquidity has been marked | the imbalances near price, as the second thing price is drawn to | stated by Sharif, 17 Nov 2026 |
+
 ## Open
 - Taught live earlier in the week but not yet re-confirmed for v2: liquidity created
   against an area, swept into an area, equal highs / lows as sub-groups, matching the timeframe of a pool to the

@@ -27,6 +27,19 @@ marked as mine.
 FVG and IFVG were taken last "because they're PD arrays": they are also traded from. This file covers only their role
 as a draw; trading from them is a later concept.
 
+## Links
+
+Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He has not yet
+read them as links.
+
+| Comes to mind when | Then look for | Status |
+|---|---|---|
+| an imbalance is unfilled and price is already moving toward it | a draw: somewhere price may reach | stated by Sharif, 17 Nov 2026 |
+| an imbalance is unfilled and price is moving away from it | not a draw right now | stated by Sharif, 19 Nov 2026 |
+| price trades through an imbalance and comes back to it | an inversion: the same area acting the other way | stated by Sharif, 17 Nov 2026 |
+| a new week or day opens with a gap | the opening gap, marked on the lowest timeframe available | stated by Sharif, 17 Nov 2026 |
+| an imbalance sits on a higher timeframe | more weight than one on a lower timeframe | stated by Sharif, 17 Nov 2026 |
+
 ## My readings, confirmed by him on 19 Nov 2026
 - "Moving in their direction" = price is already heading toward the gap; an unfilled gap that price is moving away
   from is not a draw right now. He: "yes, correct."

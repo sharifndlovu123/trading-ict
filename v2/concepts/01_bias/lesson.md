@@ -57,6 +57,24 @@ Run once on the charts he confirmed, 17 Nov 2026 (a check; nothing was tuned to 
 | Dollar index | all five agree on direction; the weekly's levels differ from the hand read |
 | FTSE | weekly: code says bull, hand read said range. Daily: both bull, but the code puts the level behind at March's low and his own mark is May's low |
 
+## Links
+
+Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He has not yet
+read them as links.
+
+| Comes to mind when | Then look for | Status |
+|---|---|---|
+| a chart is opened for a read | the bias on each timeframe first, from the highest down: the break that set it, the level behind it, the level ahead | stated by Sharif, 17 Nov 2026 |
+| a candle body closes through the level behind | a change of bias on that candle's own timeframe | stated by Sharif, 17 Nov 2026 |
+| only a wick goes through a level | no break: the level still stands | stated by Sharif, 18 Nov 2026 |
+| a new swing forms against the bias | the level behind: while no body has closed through it, nothing has changed | stated by Sharif, 17 Nov 2026 |
+| the level ahead is not broken | no change: the bias is still the one the last break set | stated by Sharif, 17 Nov 2026 |
+| the candles make a break hard to judge | the line chart: whether the bodies made a higher high or a lower low | stated by Sharif, 19 Nov 2026 |
+| a close beyond a level is marginal | the same level one timeframe down, where the close may be clean | stated by Sharif, 19 Nov 2026 |
+| a high or low is being weighed | which timeframe it turned: the ones above the chart being read are stronger, about two up | stated by Sharif, 19 Nov 2026 |
+| the bias has just changed | the pullback the break was built on, as the new level behind | stated by Sharif, 19 Nov 2026 |
+| neither the recent high nor the recent low is being broken | a range, read by eye until he has shown examples | noticed by Claude, unconfirmed |
+
 ## Open questions for him
 - **Range, answered 19 Nov 2026:** "Range is consolidative: price isn't really bearish or bullish, or it's eating
   important lows but then it eats important highs, it's almost confused; and it gets to a point where that most recent

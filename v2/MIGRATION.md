@@ -17,8 +17,8 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 
 | # | Concept | Taught | Lesson | Links | Tools + tests | In use |
 |---|---|---|---|---|---|---|
-| 01 | Bias | [x] | [x] | [ ] | [x] | [ ] |
-| 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [ ] | [x] | [ ] |
+| 01 | Bias | [x] | [x] | [x] drafted from his words 20 Nov 2026, for his check | [x] | [ ] |
+| 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [x] drafted from his words 20 Nov 2026, for his check | [x] | [ ] |
 | 03 | Bias and liquidity working together (favouring, the sequence, the trading range and its 50%, targets by timeframe and by bias, the bigger trade) | [x] 20 Nov 2026, a top-down read of the Dow he did not correct: "so far so good, your read is solid" | [x] | [x] 13 stated by him | none yet: read on the chart | [ ] |
 | 04 | Sessions: when a trade is looked for (his times, the reference definitions, locked time) | [x] 20 Nov 2026, the same read, made inside the London morning with the session in it from the start | [x] | [x] 4 stated by him | none yet | [ ] |
 
@@ -69,7 +69,7 @@ coming after liquidity.
 - [ ] **REMIND HIM:** on 20 Nov 2026, looking at US30 (1h, London morning), he found "one thing that's interesting" and asked to be reminded to teach it later. He has not said what it is. Not part of what is being confirmed now
 - [ ] **Range:** how to find it better. Held for later (19 Nov 2026): "mark range for later as something to find better, I'll try get examples for you; it is difficult to mark out." Until then range is read by eye and the tool does not say it
 - [ ] Gap and trendline: his to show next time
-- [ ] The first links for bias and liquidity (only he can state them)
+- [ ] Read the links drafted for bias and liquidity (20 Nov 2026) and say which are wrong
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
 - [ ] The brain's pulling design
 - [ ] The backtest skill: his reminder is `.claude/skills/backtest/README.md` ("that skill is very important")
