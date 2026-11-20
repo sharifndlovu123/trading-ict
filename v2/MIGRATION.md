@@ -49,6 +49,7 @@ coming after liquidity.
 | `context-check` | Context, not the example: lessons, links, tools, tests, hunt notes | [x] in use; 11 tests |
 | `draw`, `brain-write`, `speak` | Marks on the chart; how a lesson and its links are written; wording | [x] built |
 | backtest pipeline | Runs the hunt pipeline over old data and assesses it | [ ] later, after the eyes |
+| `tools-backtest` | The tools reading old data on the higher timeframes: calls about where price might draw to, each followed to see whether it came true; tables (the first pattern finder); any call opens on the chart in replay | [x] built 20 Nov 2026 (`v2/backtest/`, 40 tests); first run on one instrument and one year; waiting for his look before a full run |
 | pattern finder | Finds patterns inside the sessions on old data (displacement around his times, for one) | [ ] later, on his request, with backtesting (20 Nov 2026: "I want to build your foundations, then when I ask you to backtest on old data I'll request you build a pattern finder skill") |
 
 ## The system
@@ -78,6 +79,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 20 Nov 2026 | Tools backtest designed with him, approved and built: calls, outcomes, tables, replay of any call. Range taught and written (a moment inside the bias). The line for the pattern finder below is its first version |
 | 20 Nov 2026 | Alt-liquidity: the thing he found on the Dow was a volume imbalance on the highest timeframe, lying inside a lower timeframe's imbalance. Taught: a draw is traded into from outside and watched from inside. Sessions got a tool and tests; the context check's reading was done for 01, 02 and 04; links for 01 and 02 |
 | 20 Nov 2026 | Concepts 03 and 04 confirmed on a chart I had not seen (the Dow, London morning): "so far so good, your read is solid". On 19 Nov: his answers to the open questions written into all four lessons; the bias tool looks two timeframes up, finds the level behind as the pullback the break was built on, and can read a line chart; range held for his examples |
 | 19 Nov 2026 | Lesson 03 shown back on gold and the Nasdaq; his corrections written in as "The bigger trade" (missed trades, the fluid range, an area's own timeframe, the 50% against the imbalance, knowing what was swept). Concept 04, sessions, written from what he confirmed. Chart: Claude's read tick and answers under his notes; a Same TF switch |

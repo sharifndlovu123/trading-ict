@@ -34,10 +34,15 @@ import fetch  # noqa: E402
 sys.path.insert(0, str(HERE.parent / "concepts" / "02_liquidity"))
 import liquidity  # noqa: E402     the concept's own tool: the chart only shows what it finds
 
+sys.path.insert(0, str(HERE.parent / "backtest"))
+import tables as backtest  # noqa: E402     the tools backtest: its tables, and one call as marks for replay
+
 MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
 REPLIES = HERE / "replies.jsonl"          # Claude's answers to his notes: Claude's file, so his notes file is never touched
 MODES = ("learn", "hunt", "")          # "" = no session
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
+BACKTEST_PAGE = HERE.parent / "backtest" / "page.html"
+_calls: dict = {"stamp": None, "df": None}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 _cache: dict[str, tuple] = {}
@@ -242,6 +247,20 @@ def equal_in_view(cs: list[dict], t_from: int, t_to: int, share: float) -> dict:
     return {"near": near, "sets": [g for g in sets if g["t1"] >= t_from]}
 
 
+def backtest_calls():
+    """The calls of the last backtest run, read again only when the files have changed."""
+    stamp = tuple(sorted((f.name, f.stat().st_mtime) for f in backtest.OUT.glob("calls-*.parquet")))
+    if _calls["stamp"] != stamp:
+        _calls.update(stamp=stamp, df=backtest.load())
+    return _calls["df"]
+
+
+def backtest_call(call_id: str) -> dict | None:
+    df = backtest_calls()
+    hit = df[df["id"] == call_id] if len(df) else df
+    return backtest.call_marks(hit.iloc[0].to_dict()) if len(hit) else None
+
+
 def marks_for(asset: str) -> dict:
     doc = json.loads(MARKS.read_text()) if MARKS.exists() else {}
     return {"at": doc.get("at", ""), **{"marks": [], "read": []}, **doc.get(asset, {})}
@@ -300,7 +319,19 @@ class Handler(BaseHTTPRequestHandler):
                 cs = candles(q["asset"], q["tf"], until)["candles"]
                 self._json(equal_in_view(cs, int(float(q.get("from", 0))), int(float(q.get("to", 0))), float(q.get("share", 0))))
             elif u.path == "/api/marks":
-                self._json(marks_for(q.get("asset", "")))
+                call = backtest_call(q["call"]) if q.get("call") else None       # a backtest call opened on the chart shows its own marks
+                self._json({"marks": [], "read": [], **call} if call and call["asset"] == q.get("asset") else marks_for(q.get("asset", "")))
+            elif u.path == "/backtest":
+                self._send(200, BACKTEST_PAGE.read_bytes(), "text/html; charset=utf-8")
+            elif u.path == "/api/backtest/tables":
+                self._json(backtest.tables(backtest_calls()))
+            elif u.path == "/api/backtest/calls":
+                df = backtest_calls()
+                limit = min(int(q["limit"]), 500) if q.get("limit", "").isdigit() else 60
+                self._json(backtest.pick(df, limit, **{k: q.get(k) for k in ("asset", "tf", "kind", "outcome", "nearer")}) if len(df) else [])
+            elif u.path == "/api/backtest/call":
+                call = backtest_call(q.get("id", ""))
+                self._json(call or {"error": "no such call"}, 200 if call else 404)
             elif u.path == "/api/notes":
                 self._json(list_notes(NOTES, replies=REPLIES))
             elif u.path == "/api/mode":

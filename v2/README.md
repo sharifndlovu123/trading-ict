@@ -24,6 +24,7 @@ v2/
       lesson.md        how the two work together: favouring, the sequence, the trading range, the bigger trade
     04_sessions/
       lesson.md        when a trade is looked for: his session times (the one place a clock time is a rule)
+  backtest/        the tools backtest: calls the tools make on old data, what happened to each, the tables
   brain/           how lessons are pulled together while price moves (empty until Sharif sets the design)
   chart/           the chart page: candles and marks, nothing else (server, page, candle reader, downloader, tests)
   hunts/           the hunt stage he has set, and one notes file per hunting day (hunts are off)

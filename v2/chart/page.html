@@ -211,7 +211,7 @@ async function getCandles(asset, tf) {
   if (d.last != null) st.newest = Math.max(st.newest || 0, d.last);
   return d.candles || [];
 }
-async function getClaude(asset) { try { st.claude[asset] = await (await fetch("api/marks?asset=" + asset)).json(); } catch (e) { st.claude[asset] = { marks: [], read: [] }; } }
+async function getClaude(asset) { try { st.claude[asset] = await (await fetch("api/marks?asset=" + asset + (st.call ? "&call=" + encodeURIComponent(st.call) : ""))).json(); } catch (e) { st.claude[asset] = { marks: [], read: [] }; } }
 
 // ---- his marks: one set of tools for every chart
 function marksChanged() {
@@ -649,9 +649,13 @@ document.addEventListener("keydown", e => {
   const q = new URLSearchParams(location.search), tf = TFS.includes(q.get("tf")) ? q.get("tf") : null;       // a link can set the charts: ?assets=US100,US500&tf=5m or ?asset=UK100&tf=1D
   const as = ((q.get("assets") || q.get("asset") || "")).split(",").filter(n => st.assets.includes(n));
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
+  let call = null;                                    // ?call=<id>: one call of the tools backtest, shown as it stood at its own moment
+  if (q.get("call")) { try { const r = await fetch("api/backtest/call?id=" + encodeURIComponent(q.get("call"))); if (r.ok) call = await r.json(); } catch (e) {} }
+  if (call) { st.call = q.get("call"); st.cfg = [{ asset: call.asset, tf: TFS.includes(call.tf) ? call.tf : "1D" }]; st.cols = 0; st.tab = "read"; st.side = true; }
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
   build(); side(); watch(); loadNotes(); pollMode(); if (st.live) liveBeat().then(status); eqAll();
+  if (call) setTimeout(async () => { await goTo(call.moment); await fill(true); }, 600);       // nothing after the moment of the call is shown
 })();
 </script>
 </body>

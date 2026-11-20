@@ -52,6 +52,7 @@ when a pipeline starts and clear it when it ends, so he can always tell which on
 | "learn", or he starts teaching | `learn` | He teaches → Claude draws it on a chart it has not seen → he corrects → he says it is done → lesson and links written → tools and tests → context check. **The only pipeline in which the brain changes** |
 | "hunt" | `hunt` | **Off for now: answer that hunts are off and ask.** When on: where is price now → draw what is interesting → what the brain brings to mind → his corrections are noted in `v2/hunts/` and held |
 | end of the trading day | `day-review` | Go through the held notes together; he says which are lessons; those go through learn |
+| "backtest", "test the tools" | `tools-backtest` | The tools read old data on the higher timeframes and make calls about where price might draw to; each is followed to see whether it came true. Tables at `/backtest` on the chart server; any call opens on the chart in replay. No entries. **Never changes a tool or a lesson** |
 | (later) | backtest | Runs the hunt pipeline over old data and assesses it. Not built |
 
 Small skills the pipelines use: `context-check` (context, not the example), `draw` (marks on the chart),

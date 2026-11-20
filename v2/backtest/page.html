@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools backtest</title>
+<style>
+  :root { --bg:#0f1320; --panel:#161b2b; --line:#262d42; --ink:#dfe4f0; --dim:#8a93a6; --good:#2bb673; --bad:#e5534b; --accent:#5b8cff; color-scheme:dark; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f6f7fa; --panel:#fff; --line:#dfe3ec; --ink:#1b2130; --dim:#5d6678; --accent:#2962ff; color-scheme:light; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:28px 0 4px; }
+  p { margin:4px 0 10px; color:var(--dim); max-width:75ch; }
+  a { color:var(--accent); }
+  .wrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { padding:6px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--dim); font-weight:600; position:sticky; top:0; background:var(--panel); }
+  th:first-child, td:first-child, .l { text-align:left; }
+  tr:last-child td { border-bottom:0; }
+  .bar { display:inline-block; height:8px; border-radius:4px; background:var(--good); vertical-align:middle; margin-right:6px; }
+  .few { color:var(--dim); }
+  .warn { border:1px solid var(--line); border-left:4px solid var(--bad); background:var(--panel); padding:10px 14px; border-radius:6px; margin:14px 0; }
+  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:0 6px 8px 0; }
+  .true { color:var(--good); } .undone { color:var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tools backtest</h1>
+  <p id="scope">Loading…</p>
+  <div class="warn"><b>How to read this.</b> A call is one sentence the tools made at a past moment, such as "price might draw to the buyside". It has no entry, stop or target. The nearer of two levels usually goes first whatever a tool says, so every table is split by which was nearer. A share is only of the calls that resolved one way or the other, and the count is beside it. These are observations about the tools, not rules.</div>
+
+  <h2>How often each kind of call came true</h2>
+  <p>By timeframe, split by which was nearer at the time: the target, or the thing that would undo the call.</p>
+  <div class="wrap" id="by_kind"></div>
+
+  <h2>What the bias adds, for liquidity</h2>
+  <p>Where liquidity rested on both sides of price: how often the nearer side went first, when the nearer side was the bias's side and when it was the other side. The gap between the two columns is what the bias tool is worth here.</p>
+  <div class="wrap" id="bias_adds"></div>
+
+  <h2>With the timeframe above, and against it</h2>
+  <div class="wrap" id="with_above"></div>
+
+  <h2>By the session the call was made in</h2>
+  <div class="wrap" id="made_in"></div>
+
+  <h2>The hour of the day a call resolved (1h and 4h calls, New York time)</h2>
+  <p>Calls decided by a body close can only resolve when a candle closes, so those hours stand out for that reason alone.</p>
+  <div class="wrap" id="hours"></div>
+
+  <h2>By year</h2><div class="wrap" id="by_year"></div>
+  <h2>By instrument</h2><div class="wrap" id="by_instrument"></div>
+
+  <h2>Calls to open on the chart</h2>
+  <p>Each opens the chart at the moment the call was made, with the tools' marks as they stood and nothing after it shown. Step the replay forward to see what happened.</p>
+  <div id="filters"></div>
+  <div class="wrap" id="calls"></div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw" };
+const NEAR = { target: "the target was nearer", undo: "what undoes it was nearer", level: "equally near", null: "nothing to undo it" };
+const share = r => r.true_share == null ? '<span class="few">none resolved</span>'
+  : `<span class="bar" style="width:${Math.round(r.true_share * 60)}px"></span>${Math.round(r.true_share * 100)}%` + (r.true + r.undone < 30 ? ' <span class="few">(few)</span>' : "");
+function table(el, rows, cols) {
+  if (!rows || !rows.length) { $(el).innerHTML = '<p style="padding:10px 12px">Nothing to show.</p>'; return; }
+  $(el).innerHTML = "<table><thead><tr>" + cols.map(c => `<th>${esc(c[0])}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map(r => "<tr>" + cols.map(c => `<td>${c[1](r)}</td>`).join("") + "</tr>").join("") + "</tbody></table>";
+}
+const std = first => [...first, ["Calls", r => r.calls], ["Came true", r => r.true], ["Undone", r => r.undone], ["Not resolved", r => r.other],
+  ["Came true, of those resolved", share], ["Typical hours", r => r.median_hours ?? ""]];
+const when = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
+async function calls() {
+  const q = [...document.querySelectorAll("#filters select")].filter(s => s.value).map(s => s.name + "=" + encodeURIComponent(s.value)).join("&");
+  const rows = await (await fetch("api/backtest/calls?limit=80&" + q)).json();
+  table("calls", rows, [["Call", r => `<a href="./?call=${encodeURIComponent(r.id)}" target="_blank">open on the chart</a>`], ["Made (New York)", r => when(r.moment)],
+    ["Instrument", r => esc(r.asset)], ["Timeframe", r => esc(r.tf)], ["Kind", r => esc(KIND[r.kind] || r.kind)], ["Bias", r => esc(r.side)],
+    ["Nearer", r => esc(NEAR[r.nearer])], ["Ended", r => `<span class="${esc(r.outcome)}">${esc(r.outcome)}</span>`], ["Hours", r => r.hours == null ? "" : Math.round(r.hours)]]);
+}
+(async function () {
+  const t = await (await fetch("api/backtest/tables")).json();
+  if (!t.calls) { $("scope").textContent = "No backtest has been run yet. Run: uv run python v2/backtest/run.py <INSTRUMENT> --since YYYY-MM-DD"; return; }
+  $("scope").textContent = `${t.calls.toLocaleString()} calls · ${t.instruments.join(", ")} · ${t.years[0]}${t.years.length > 1 ? " to " + t.years[t.years.length - 1] : ""} · read at the start of the London and New York kill zones, on the monthly down to the 1-hour.`;
+  table("by_kind", t.by_kind, std([["Kind of call", r => esc(KIND[r.kind])], ["Timeframe", r => esc(r.tf)], ["At the time", r => esc(NEAR[r.nearer])]]));
+  table("bias_adds", t.what_the_bias_adds, [["Timeframe", r => esc(r.tf)], ["Nearer side was the bias's side: calls", r => r.nearer_was_bias_side],
+    ["…and it went first", r => r.nearer_went_first_share == null ? "" : Math.round(r.nearer_went_first_share * 100) + "%"],
+    ["Nearer side was the other side: calls", r => r.nearer_was_other_side],
+    ["…and it went first", r => r.nearer_went_first_share_other == null ? "" : Math.round(r.nearer_went_first_share_other * 100) + "%"]]);
+  table("with_above", t.with_the_timeframe_above, std([["Kind of call", r => esc(KIND[r.kind])], ["Timeframe", r => esc(r.tf)],
+    ["Timeframe above", r => r.with_above ? "same bias" : "opposite bias"], ["At the time", r => esc(NEAR[r.nearer])]]));
+  table("made_in", t.made_in, std([["Kind of call", r => esc(KIND[r.kind])], ["Made at the start of", r => esc(r.made_in)], ["At the time", r => esc(NEAR[r.nearer])]]));
+  table("hours", t.resolved_hour, [["Hour", r => String(r.resolved_hour).padStart(2, "0") + ":00"], ["Calls resolved", r => r.calls], ["Came true", r => r.true], ["Undone", r => r.undone]]);
+  table("by_year", t.by_year, std([["Kind of call", r => esc(KIND[r.kind])], ["Year", r => r.year], ["At the time", r => esc(NEAR[r.nearer])]]));
+  table("by_instrument", t.by_instrument, std([["Kind of call", r => esc(KIND[r.kind])], ["Instrument", r => esc(r.asset)], ["At the time", r => esc(NEAR[r.nearer])]]));
+  const opts = { asset: t.instruments, tf: ["1M", "1W", "1D", "4h", "1h"], kind: Object.keys(KIND), outcome: ["true", "undone", "unresolved", "same candle", "open"], nearer: ["target", "undo"] };
+  $("filters").innerHTML = Object.entries(opts).map(([k, v]) => `<select name="${k}"><option value="">any ${k === "tf" ? "timeframe" : k === "asset" ? "instrument" : k}</option>` +
+    v.map(x => `<option value="${esc(x)}">${esc(KIND[x] || x)}</option>`).join("") + "</select>").join("");
+  document.querySelectorAll("#filters select").forEach(s => s.onchange = calls);
+  $("filters").querySelector("[name=outcome]").value = "undone";
+  calls();
+})();
+</script>
+</body>
+</html>
