@@ -24,6 +24,9 @@ timeframe, right now. Fixed statements are how a read hardens into a rule, and t
 5. **A read never ends on a condition about the future.** Not "it would become wise once the daily closes above
    it". He, 19 Nov 2026: "that's expecting price to do what we want; we would have to see it happen already." Stop at
    what the chart has shown.
+7. **A range is a moment, not a bias.** Give bull or bear per timeframe; where price is stuck between its most recent
+   important high and low, add that a range is building and name its two edges. He, 20 Nov 2026: "a bias on a higher
+   timeframe could be bullish, but there's a range building… a range is more like a moment."
 6. **Top to bottom, always.** Start on the monthly and go down, in the reasons as well as in the bias line: "no
    matter what, it's top to bottom."
 

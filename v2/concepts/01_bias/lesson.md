@@ -73,15 +73,43 @@ the same day: "perfect".
 | a close beyond a level is marginal | the same level one timeframe down, where the close may be clean | stated by Sharif, 19 Nov 2026 |
 | a high or low is being weighed | which timeframe it turned: the ones above the chart being read are stronger, about two up | stated by Sharif, 19 Nov 2026 |
 | the bias has just changed | the pullback the break was built on, as the new level behind | stated by Sharif, 19 Nov 2026 |
-| neither the recent high nor the recent low is being broken | a range, read by eye until he has shown examples | noticed by Claude, unconfirmed |
+| price swings between its most recent important high and low and no body closes beyond either | a range building: a moment inside the bias, not a change of it | stated by Sharif, 20 Nov 2026 |
+| a low or high inside a range goes only a little past the edge and price comes straight back | equal lows or equal highs at that edge, not a break | stated by Sharif, 20 Nov 2026 |
+| a range is building | the chance of a break above or below, which could change the bias on that timeframe | stated by Sharif, 20 Nov 2026 |
 
-## Open questions for him
-- **Range, answered 19 Nov 2026:** "Range is consolidative: price isn't really bearish or bullish, or it's eating
+## Range (taught 20 Nov 2026, with a drawing of his own)
+
+He drew one "in simple terms", and made it tricky on purpose: a low, then the highest high, then many swings between
+the two with no order to them; one later low goes just under the bottom edge and comes straight back; the last high
+stops just under the top edge.
+
+- **What it is** (19 Nov 2026): "Range is consolidative: price isn't really bearish or bullish, or it's eating
   important lows but then it eats important highs, it's almost confused; and it gets to a point where that most recent
   high and most recent low is a range, and nothing is breaking it; it's stuck in that middle area going up and down
-  but never breaking it." The tool does not say "range" yet.
-  Held for later by him (19 Nov 2026): "mark range for later as something to find better, I'll try get examples for
-  you; it is difficult to mark out."
+  but never breaking it."
+- **The tricky part:** "Notice how it nearly broke, it just smidged the bottom; those are situations where it can be
+  confusing, and that's an EQL." A low that goes only a little past the edge has joined it as an equal low. On his
+  drawing he wrote "failed to break this low".
+- **What ends it:** I asked whether it is a body closing clearly beyond an edge, as for bias. "Same as break for bias."
+- **A range is a moment, not a third bias.** "What you'll notice more often is that a bias on a higher timeframe could
+  be bullish, but there's a range building, or vice versa with bearish but a range is building now. A range is more
+  like a moment."
+- **What it can point to:** "When there's a range, it can also indicate the possibility of a break below or above;
+  can dictate the possible bias change, depending on timeframe perspective, which we discussed already."
+
+**What this settles.** On the chart where he first said "it's a range" and then "it's bull", both were true: the bias
+is bull (the bodies made a higher high and the level behind stands), and the moment is a range (since that high,
+price has swung between it and the low below with no body beyond either). He: "yes, this makes much more sense."
+
+**How it is said in a read (mine):** the bias per timeframe stays bull or bear; where a range is building, that is
+added with its two edges. "Range" does not replace the bias.
+
+**No tool yet.** How many swings make a range, and when a pullback becomes one, he has not said, so the tool still
+gives only the bias. It stays read by eye.
+
+## Open questions for him
+- Range for a machine: when a pullback has become a range (how many swings, how long). Taught by eye in the section
+  above; the tool does not say it yet.
 - **A close under by a small amount, answered 19 Nov 2026:** "You're right, it was a small close, but if you're
   confused, take a look at that same chart on daily; I don't think you'll be confused by those two lows." When a
   higher timeframe's close beyond a level is marginal, the timeframe below shows whether it was clean. (The second
