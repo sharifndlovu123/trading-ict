@@ -23,9 +23,11 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
 3. **Original liquidity before alt-liquidity.** Pools of stops first; imbalances second.
 4. **Only what is in the brain.** Draw with concepts that are in `v2/concepts/`, and nothing else.
 5. **Keep it readable.** Few marks. If the chart is busy, the read is not clear yet.
-6. **A trading range is drawn only when looking for a trade,** and only the one relevant to now (he, 19 Nov 2026:
-   "the trading range should be drawn when you're looking for a trade"). Draw the higher timeframe's range before a
-   lower one, and ask on each timeframe whether its trade has already passed (lesson 03, "The bigger trade").
+6. **Mark the trading range that is relevant to now, on every read.** He, 20 Nov 2026: "keep marking it on the chart,
+   so you don't forget its use." One range, the higher timeframe's first; a lower one only when a trade is being
+   looked for inside it (19 Nov 2026: "the trading range should be drawn when you're looking for a trade"; "normally
+   try to show what's relevant to now"). Keep it fluid, and ask on each timeframe whether its trade has already
+   passed (lesson 03, "The bigger trade").
 7. **Say what was swept, as well as what is resting.** Eaten liquidity comes off the chart, but the read names it:
    "you would have to know it was a sweep, because this was a time to get interesting price action."
 8. **An entry is only looked for inside his session times** (lesson 04). Outside them, read and mark; do not look

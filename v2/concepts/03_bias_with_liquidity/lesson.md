@@ -215,7 +215,8 @@ the way; that area "is an interesting area for price to take lower prices".
 ## Left to the reading, on purpose (no tool yet)
 
 The trading range as a tool is held for later by him (20 Nov 2026): "trading range, consider it later; it's tricky, but
-keep the fluidity in your mind." Until then it is read by eye, and it stays fluid: it moves and expands.
+keep the fluidity in your mind." Until then it is read by eye, and it stays fluid: it moves and expands. "But keep marking it on the chart, so you don't
+forget its use": the range relevant to now goes on every read.
 
 No tool was written for this lesson. Finding displacement and the leg that makes a trading range has not been taught
 as something to pick out mechanically, so it is read on the chart for now. The chart can draw a trading range and its
