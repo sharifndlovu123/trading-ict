@@ -49,6 +49,7 @@ coming after liquidity.
 | `context-check` | Context, not the example: lessons, links, tools, tests, hunt notes | [x] in use; 11 tests |
 | `draw`, `brain-write`, `speak` | Marks on the chart; how a lesson and its links are written; wording | [x] built |
 | backtest pipeline | Runs the hunt pipeline over old data and assesses it | [ ] later, after the eyes |
+| pattern finder | Finds patterns inside the sessions on old data (displacement around his times, for one) | [ ] later, on his request, with backtesting (20 Nov 2026: "I want to build your foundations, then when I ask you to backtest on old data I'll request you build a pattern finder skill") |
 
 ## The system
 

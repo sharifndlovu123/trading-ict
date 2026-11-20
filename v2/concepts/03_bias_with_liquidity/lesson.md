@@ -53,6 +53,12 @@ and breakers are not in v2 yet.
 How it is seen: "notice how price is moving at a specific pace, it's almost a steady pace, and suddenly it just
 shoots aggressively. It doesn't mean anything if it's not in an area of interest or a place we are watching."
 
+Where it is looked for (his note, 20 Nov 2026): "For displacement you're looking for it to happen within our key area,
+our interesting area. So, example: we have a SIBI or BISI, and we are expecting to sell from there maybe, or buy into
+it, but it depends on where price is right now. So let's say it's almost at our SIBI: buying into it isn't so wise,
+it's almost already there. We would be expecting a tipping hat within that SIBI or around that zone. And remember the
+sessions, that's important too: a displacement around those times too are nice."
+
 ## The trading range
 
 - It runs from the low the move began from to the high where the first pullback began (for a move up), wick to wick.

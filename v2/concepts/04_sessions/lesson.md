@@ -68,6 +68,13 @@ On my unconfirmed link about the early move: "this is just to keep in mind; as I
 it's good to be aware of it. When we backtest you will notice, if you skip 8:30 and start looking just before 9:30
 it might be a bit easier, because some trickery has already been pushed out."
 
+## Something to notice later, with backtesting (his note, 20 Nov 2026; not a rule)
+"Once you backtest, and once we create the pattern finder skill, you will start noticing displacement patterns around
+8:20 to 8:40 and 9:20 to 9:40, but normally it's the half past of our key points; but that's a point you will see
+later on. I want to build your foundations, then when I ask you to backtest on old data I'll request you build a
+pattern finder skill. It will help you find patterns within these sessions." Nothing is built on this yet, and the
+times are his expectation of what I will see, not something I have checked.
+
 ## The tool and its tests (20 Nov 2026)
 `sessions.py`, tests `test_sessions.py`, beside this file. He asked whether sessions need a tool and tests; they do,
 because "is this a time to look for an entry?" is a question with one right answer.
