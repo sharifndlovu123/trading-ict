@@ -101,8 +101,8 @@ top-down process (the eyes), which is built later.
 
 ## Links
 
-Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He has not yet
-read them as links.
+Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He read them
+the same day: "perfect".
 
 | Comes to mind when | Then look for | Status |
 |---|---|---|
