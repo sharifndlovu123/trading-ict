@@ -34,6 +34,42 @@ against it. That answer sets how far the targets go.
 - **Let price tip its hat.** "Remember to let price tip its hat to you… I would have to see movement or something
   play within that area to give me clear context on whether this move is possible."
 
+### Merging the timeframes: where price is right now (taught 20 Nov 2026)
+
+Taught after he went through the tools backtest and looked at the calls it got wrong. He said the lesson was done the
+same day. **Shown back the same day on a chart I had not seen** (one of the indices he trades, as it stood then, read
+top to bottom); he: "yes, that's the merge."
+
+- **Biases disagreeing is normal.** "What I really need you nailing down is bias disagreeing, it's normal; because the
+  smaller movements are a part of the bigger move sometimes, or it's showing a change later on, and it's relative to
+  time."
+- **Momentum against the higher bias must be looked at.** "It's clearly bullish but there's momentum selling; that
+  momentum might not be as strong but it must be looked at. Notice how it kept breaking structure over and over."
+- **Both reads can be right; the work is joining them.** "Your weekly was right, and your daily was right… the tricky
+  part is merging those two together." "You're still looking at the chart itself from daily and that's one
+  perspective, or monthly and that's one perspective to a result. There's a mix of timeframes to provide a result."
+- **Liquidity is what joins them.** "You'd have to understand that the biases disagreeing is possible, but this is
+  where liquidity is important."
+- **Where price is right now comes first.** "Where price is RIGHT NOW is always more important, because it's drawn to
+  something." "Always think now: where price is right now as I open this chart." Not the far level at the bottom of
+  the chart: "we're not trading to that bottom level, but relative to where price currently is when you open the
+  chart." When price has retraced into a key area, "the current goal might be to reach a nearby imbalance."
+- **It is hard, by his own word.** "It's tricky to say it specifically." "It's difficult to get that merge
+  correctly."
+- **Why the four concepts were backtested together.** "That's the actual reason why I decided to do this backtesting
+  with only these tools we have: these 4 are powerful enough and have to work together very well, because what you
+  see has an impact at different levels."
+
+**What I got wrong, and what he said.** In the backtest each timeframe was read alone: its own bias paired with its
+own liquidity, and a call made from that one view. He: "I'm seeing you got it correct, but the issue you had is
+mixing the bias, different ranges and liquidity areas itself." The price points he named while teaching were an
+example only: "the price points I gave you were to show an example."
+
+Mine, not his (how I said it back, which he accepted as "the merge"): the higher timeframes' bias and the lower
+timeframes' momentum are stated together; then what is nearby from where price stands now, on any of those
+timeframes, is what price might be drawn to; whether the lower move is part of the bigger move or the start of a
+change is left unsaid until a candle of the higher timeframe has closed.
+
 ## What "something playing out" looks like (the sequence he walked me through)
 
 1. "First thing you'd have to notice is anything of importance, such as liquidity marked out."
@@ -239,6 +275,9 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | a lower-timeframe candle closes beyond a higher-timeframe area | that area's own timeframe: only wicks in it means it held | stated by Sharif, 19 Nov 2026 |
 | liquidity is swept inside the area being watched, at the middle of the range or beyond | eyes open for the entry, inside a session | stated by Sharif, 19 Nov 2026 |
 | a low is broken with a body after a retracement (a high, when looking up) | whether the range has expanded or moved: how deep the retracement was, and which timeframe its high belongs to | stated by Sharif, 19 Nov 2026 |
+| the timeframes disagree on bias | where price is right now, and what is nearby that it might be drawn to (liquidity or an imbalance, on any of those timeframes); not a far level one timeframe's bias points at | stated by Sharif, 20 Nov 2026 |
+| the lower timeframe keeps breaking structure against the higher timeframe's bias | that momentum: it is looked at, not ignored; it might be part of the bigger move, or a change that shows on the higher timeframe later | stated by Sharif, 20 Nov 2026 |
+| price has retraced into a key area of the higher timeframe | a nearby imbalance as the current goal | stated by Sharif, 20 Nov 2026 |
 
 ## Open questions for him
 
@@ -246,3 +285,5 @@ as something to pick out mechanically, so it is read on the chart for now. The c
   (19 Nov 2026: "drop"). They are off the chart's tools; the plain line tool is now called "line".
 
 - "Deep enough" for a retracement to move the end of a range: 50% as a working number; to be worked on over time.
+- Merging the timeframes: he has not said how to tell, while it is happening, whether the lower timeframe's move is
+  part of the bigger move or the start of a change ("it's tricky to say it specifically"). Not to be guessed.
