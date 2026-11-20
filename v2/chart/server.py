@@ -324,7 +324,9 @@ class Handler(BaseHTTPRequestHandler):
             elif u.path == "/backtest":
                 self._send(200, BACKTEST_PAGE.read_bytes(), "text/html; charset=utf-8")
             elif u.path == "/api/backtest/tables":
-                self._json(backtest.tables(backtest_calls()))
+                df = backtest_calls()
+                names = [n for n in q.get("assets", "").split(",") if n]            # ?assets=A,B: only those instruments
+                self._json(backtest.tables(df[df["asset"].isin(names)] if names and len(df) else df, [t for t in cd.TIMEFRAMES]))
             elif u.path == "/api/backtest/calls":
                 df = backtest_calls()
                 limit = min(int(q["limit"]), 500) if q.get("limit", "").isdigit() else 60

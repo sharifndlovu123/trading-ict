@@ -5,56 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tools backtest</title>
 <style>
-  :root { --bg:#0f1320; --panel:#161b2b; --line:#262d42; --ink:#dfe4f0; --dim:#8a93a6; --good:#2bb673; --bad:#e5534b; --accent:#5b8cff; color-scheme:dark; }
-  @media (prefers-color-scheme: light) { :root { --bg:#f6f7fa; --panel:#fff; --line:#dfe3ec; --ink:#1b2130; --dim:#5d6678; --accent:#2962ff; color-scheme:light; } }
+  :root { --bg:#0f1320; --panel:#161b2b; --line:#262d42; --ink:#dfe4f0; --dim:#8a93a6; --good:#2bb673; --bad:#e5534b; --accent:#5b8cff; --soft:#1d2438; color-scheme:dark; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f6f7fa; --panel:#fff; --line:#dfe3ec; --ink:#1b2130; --dim:#5d6678; --accent:#2962ff; --soft:#eef1f7; color-scheme:light; } }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 system-ui, sans-serif; }
-  main { max-width:1100px; margin:0 auto; padding:20px 16px 60px; }
-  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:16px; margin:28px 0 4px; }
-  p { margin:4px 0 10px; color:var(--dim); max-width:75ch; }
+  main { max-width:1120px; margin:0 auto; padding:20px 16px 70px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:17px; margin:34px 0 4px; }
+  p { margin:4px 0 10px; color:var(--dim); max-width:78ch; } p b, li b { color:var(--ink); }
   a { color:var(--accent); }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 6px; }
+  .tabs button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; font:inherit; }
+  .tabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
   .wrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
   table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
   th, td { padding:6px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th { color:var(--dim); font-weight:600; position:sticky; top:0; background:var(--panel); }
-  th:first-child, td:first-child, .l { text-align:left; }
+  th { color:var(--dim); font-weight:600; background:var(--panel); vertical-align:bottom; white-space:normal; }
+  th:first-child, td:first-child { text-align:left; }
   tr:last-child td { border-bottom:0; }
+  .n { color:var(--dim); font-size:12px; margin-left:4px; }
   .bar { display:inline-block; height:8px; border-radius:4px; background:var(--good); vertical-align:middle; margin-right:6px; }
+  .bar.neg { background:var(--bad); }
   .few { color:var(--dim); }
-  .warn { border:1px solid var(--line); border-left:4px solid var(--bad); background:var(--panel); padding:10px 14px; border-radius:6px; margin:14px 0; }
-  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:0 6px 8px 0; }
+  .note { border:1px solid var(--line); border-left:4px solid var(--accent); background:var(--panel); padding:10px 14px; border-radius:6px; margin:12px 0; }
+  .note.warn { border-left-color:var(--bad); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:12px 0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .card b { display:block; font-size:20px; } .card span { color:var(--dim); font-size:12px; }
+  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:0 6px 8px 0; font:inherit; }
   .true { color:var(--good); } .undone { color:var(--bad); }
+  ul { margin:4px 0 10px; padding-left:20px; color:var(--dim); max-width:78ch; }
 </style>
 </head>
 <body>
 <main>
   <h1>Tools backtest</h1>
   <p id="scope">Loading…</p>
-  <div class="warn"><b>How to read this.</b> A call is one sentence the tools made at a past moment, such as "price might draw to the buyside". It has no entry, stop or target. The nearer of two levels usually goes first whatever a tool says, so every table is split by which was nearer. A share is only of the calls that resolved one way or the other, and the count is beside it. These are observations about the tools, not rules.</div>
+  <div class="tabs" id="groups"></div>
+  <div class="cards" id="cards"></div>
 
-  <h2>How often each kind of call came true</h2>
-  <p>By timeframe, split by which was nearer at the time: the target, or the thing that would undo the call.</p>
-  <div class="wrap" id="by_kind"></div>
+  <div class="note warn"><b>How to read this page.</b> A call is one sentence the tools made at a past moment, such as "with the daily bull, price might draw to the buyside above". It has no entry, stop or target. The nearer of two levels usually goes first whatever a tool says, so results are split by which was nearer at the time. A share is only of the calls that resolved one way or the other, with the count in grey beside it. These are observations about the tools on old data, not rules, and several rules inside the tools are Claude's own choices.</div>
 
-  <h2>What the bias adds, for liquidity</h2>
-  <p>Where liquidity rested on both sides of price: how often the nearer side went first, when the nearer side was the bias's side and when it was the other side. The gap between the two columns is what the bias tool is worth here.</p>
-  <div class="wrap" id="bias_adds"></div>
+  <h2>1. The picture: the higher timeframes are stronger</h2>
+  <p>Sharif, 20 Nov 2026: <b>"Notice the picture: the higher timeframes have higher percentages than below; note that, it's very important."</b></p>
+  <p>Each row is a timeframe, highest first. <b>What the bias adds</b> is the fairest single number here: where liquidity rested on both sides of price, how often the nearer side went first when it was the bias's side, against how often when it was the other side. If the bias meant nothing, the two would be equal and the last column would be zero.</p>
+  <div class="wrap" id="picture"></div>
+  <ul id="picture_says"></ul>
 
-  <h2>With the timeframe above, and against it</h2>
+  <h2>2. What the bias adds, year by year</h2>
+  <p>The same last column, one year at a time, in points. A tool that only worked in one or two years would show here. Years with few calls are marked.</p>
+  <div class="wrap" id="by_year_adds"></div>
+
+  <h2>3. With the timeframe above, and against it</h2>
+  <p>The same calls, split by whether the timeframe above had the same bias. Only calls where the target was the nearer level, so the two columns are comparable.</p>
   <div class="wrap" id="with_above"></div>
 
-  <h2>By the session the call was made in</h2>
+  <h2>4. London reads and New York reads</h2>
+  <p>Whether a call made at the start of one kill zone did better than the same kind made at the start of the other. Target nearer only.</p>
   <div class="wrap" id="made_in"></div>
 
-  <h2>The hour of the day a call resolved (1h and 4h calls, New York time)</h2>
-  <p>Calls decided by a body close can only resolve when a candle closes, so those hours stand out for that reason alone.</p>
+  <h2>5. Each instrument on its own</h2>
+  <p>Liquidity with the bias, target nearer. Instruments that move together are not separate confirmations of each other.</p>
+  <div class="wrap" id="by_instrument"></div>
+
+  <h2>6. The hour of the day a call resolved (4-hour and 1-hour calls, New York time)</h2>
+  <p>When targets get reached. A call decided by a body close can only resolve when a candle closes, so those hours stand out for that reason alone.</p>
   <div class="wrap" id="hours"></div>
 
-  <h2>By year</h2><div class="wrap" id="by_year"></div>
-  <h2>By instrument</h2><div class="wrap" id="by_instrument"></div>
-
-  <h2>Calls to open on the chart</h2>
-  <p>Each opens the chart at the moment the call was made, with the tools' marks as they stood and nothing after it shown. Step the replay forward to see what happened.</p>
+  <h2>7. Calls to open on the chart</h2>
+  <p>Each opens the chart at the moment the call was made, with the tools' marks as they stood and nothing after it shown. Step the replay forward to see what happened. The most useful ones to look at are calls that were <b>undone although the target was nearer</b>: the tools' clear misses.</p>
   <div id="filters"></div>
   <div class="wrap" id="calls"></div>
 </main>
@@ -62,45 +80,96 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw" };
-const NEAR = { target: "the target was nearer", undo: "what undoes it was nearer", level: "equally near", null: "nothing to undo it" };
-const share = r => r.true_share == null ? '<span class="few">none resolved</span>'
-  : `<span class="bar" style="width:${Math.round(r.true_share * 60)}px"></span>${Math.round(r.true_share * 100)}%` + (r.true + r.undone < 30 ? ' <span class="few">(few)</span>' : "");
+const TFNAME = { "1M": "Monthly", "1W": "Weekly", "1D": "Daily", "4h": "4-hour", "1h": "1-hour" }, ORDER = ["1M", "1W", "1D", "4h", "1h"];
+const TRADED = ["US100", "US500", "US30"], METALS = ["XAUUSD", "XAGUSD"];
+const pct = (v, n) => v == null ? '<span class="few">none</span>' : `${Math.round(v * 100)}%<span class="n">${(n ?? "").toLocaleString()}</span>` + (n != null && n < 30 ? ' <span class="few">few</span>' : "");
+const pts = (v, n) => v == null ? '<span class="few">none</span>' : `<span class="bar ${v < 0 ? "neg" : ""}" style="width:${Math.min(80, Math.round(Math.abs(v) * 300))}px"></span>${v > 0 ? "+" : ""}${Math.round(v * 100)} points` + (n != null && n < 60 ? ' <span class="few">few</span>' : "");
 function table(el, rows, cols) {
   if (!rows || !rows.length) { $(el).innerHTML = '<p style="padding:10px 12px">Nothing to show.</p>'; return; }
-  $(el).innerHTML = "<table><thead><tr>" + cols.map(c => `<th>${esc(c[0])}</th>`).join("") + "</tr></thead><tbody>" +
+  $(el).innerHTML = "<table><thead><tr>" + cols.map(c => `<th>${c[0]}</th>`).join("") + "</tr></thead><tbody>" +
     rows.map(r => "<tr>" + cols.map(c => `<td>${c[1](r)}</td>`).join("") + "</tr>").join("") + "</tbody></table>";
 }
-const std = first => [...first, ["Calls", r => r.calls], ["Came true", r => r.true], ["Undone", r => r.undone], ["Not resolved", r => r.other],
-  ["Came true, of those resolved", share], ["Typical hours", r => r.median_hours ?? ""]];
+const byTf = (a, b) => ORDER.indexOf(a.tf) - ORDER.indexOf(b.tf);
 const when = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
+let group = null, groups = [];
+
 async function calls() {
-  const q = [...document.querySelectorAll("#filters select")].filter(s => s.value).map(s => s.name + "=" + encodeURIComponent(s.value)).join("&");
-  const rows = await (await fetch("api/backtest/calls?limit=80&" + q)).json();
-  table("calls", rows, [["Call", r => `<a href="./?call=${encodeURIComponent(r.id)}" target="_blank">open on the chart</a>`], ["Made (New York)", r => when(r.moment)],
-    ["Instrument", r => esc(r.asset)], ["Timeframe", r => esc(r.tf)], ["Kind", r => esc(KIND[r.kind] || r.kind)], ["Bias", r => esc(r.side)],
-    ["Nearer", r => esc(NEAR[r.nearer])], ["Ended", r => `<span class="${esc(r.outcome)}">${esc(r.outcome)}</span>`], ["Hours", r => r.hours == null ? "" : Math.round(r.hours)]]);
+  const sel = Object.fromEntries([...document.querySelectorAll("#filters select")].map(s => [s.name, s.value]));
+  const assets = sel.asset ? [sel.asset] : group.assets;
+  let rows = [];
+  for (const a of assets) rows = rows.concat(await (await fetch("api/backtest/calls?limit=60&asset=" + a + Object.entries(sel).filter(([k, v]) => v && k !== "asset").map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join(""))).json());
+  rows.sort((a, b) => b.moment - a.moment);
+  table("calls", rows.slice(0, 80), [["Call", r => `<a href="./?call=${encodeURIComponent(r.id)}" target="_blank">open on the chart</a>`], ["Made (New York)", r => when(r.moment)],
+    ["Instrument", r => esc(r.asset)], ["Timeframe", r => esc(TFNAME[r.tf] || r.tf)], ["Kind", r => esc(KIND[r.kind] || r.kind)], ["Bias", r => esc(r.side)],
+    ["Nearer at the time", r => r.nearer === "target" ? "the target" : r.nearer === "undo" ? "what undoes it" : ""], ["Ended", r => `<span class="${esc(r.outcome)}">${esc(r.outcome)}</span>`], ["Hours", r => r.hours == null ? "" : Math.round(r.hours)]]);
 }
+
+async function show(g) {
+  group = g; document.querySelectorAll("#groups button").forEach(b => b.classList.toggle("on", b.dataset.g === g.name));
+  const t = await (await fetch("api/backtest/tables?assets=" + g.assets.join(","))).json();
+  if (!t.calls) { $("cards").innerHTML = ""; ["picture", "by_year_adds", "with_above", "made_in", "by_instrument", "hours", "calls"].forEach(id => $(id).innerHTML = '<p style="padding:10px 12px">No calls for this group.</p>'); return; }
+  const o = t.outcomes, done = (o.true || 0) + (o.undone || 0);
+  $("cards").innerHTML = [[t.calls.toLocaleString(), "calls"], [`${t.years[0]} to ${t.years[t.years.length - 1]}`, "years covered"], [t.instruments.join(", "), "instruments"],
+    [Math.round(100 * (o.true || 0) / done) + "%", "came true, of those resolved (all calls together: mostly distance)"], [((o.unresolved || 0) + (o.open || 0) + (o["same candle"] || 0)).toLocaleString(), "not resolved either way"]]
+    .map(c => `<div class="card"><b>${esc(c[0])}</b><span>${esc(c[1])}</span></div>`).join("");
+
+  const P = [...t.picture].sort(byTf);
+  table("picture", P, [["Timeframe", r => esc(TFNAME[r.tf])], ["Calls", r => r.calls.toLocaleString()],
+    ["Liquidity with the bias: came true when the target was nearer", r => pct(r.liquidity_target, r.liquidity_target_n)],
+    ["…when it was farther", r => pct(r.liquidity_undo, r.liquidity_undo_n)],
+    ["The bias holds, target nearer", r => pct(r.bias_target, r.bias_target_n)],
+    ["Imbalance as a draw, target nearer", r => pct(r.imbalance_target, r.imbalance_target_n)],
+    ["Nearer side went first: it was the bias's side", r => pct(r.bias_side, r.bias_side_n)],
+    ["…it was the other side", r => pct(r.other_side, r.other_side_n)],
+    ["What the bias adds", r => pts(r.bias_adds, r.bias_side_n + r.other_side_n)]]);
+  const solid = P.filter(r => r.bias_adds != null && r.bias_side_n + r.other_side_n >= 60);
+  const rising = solid.every((r, i) => i === 0 || r.bias_adds <= solid[i - 1].bias_adds);
+  $("picture_says").innerHTML = solid.length < 2 ? "" :
+    `<li>${rising ? "<b>Yes: in this group the bias adds more on every step up the ladder</b>" : "<b>In this group the bias does not add more on every step up</b>"}, from ${solid.map(r => `${TFNAME[r.tf].toLowerCase()} ${r.bias_adds > 0 ? "+" : ""}${Math.round(r.bias_adds * 100)}`).reverse().join(", ")} points.</li>` +
+    `<li>The monthly has too few calls to judge and is left out of that sentence when it has fewer than 60.</li>` +
+    `<li>On the lowest timeframe read, the bias by itself adds very little: a call there needs the timeframes above it.</li>`;
+
+  const yrs = t.bias_adds_by_year, tfs = ORDER.filter(tf => yrs.some(y => y[tf] != null));
+  table("by_year_adds", yrs, [["Year", r => r.year], ...tfs.map(tf => [esc(TFNAME[tf]), r => pts(r[tf], r[tf + "_n"])])]);
+
+  const W = t.with_the_timeframe_above.filter(r => r.nearer === "target"), keyW = r => r.kind + "|" + r.tf;
+  const pairs = [...new Set(W.map(keyW))].map(k => ({ k, same: W.find(r => keyW(r) === k && r.with_above), opp: W.find(r => keyW(r) === k && !r.with_above) }))
+    .map(x => ({ kind: (x.same || x.opp).kind, tf: (x.same || x.opp).tf, same: x.same, opp: x.opp })).sort((a, b) => a.kind.localeCompare(b.kind) || byTf(a, b));
+  const sh = r => r ? pct(r.true_share, r.true + r.undone) : '<span class="few">none</span>';
+  table("with_above", pairs, [["Kind of call", r => esc(KIND[r.kind])], ["Timeframe", r => esc(TFNAME[r.tf])], ["Timeframe above has the same bias", r => sh(r.same)],
+    ["Timeframe above has the opposite bias", r => sh(r.opp)], ["Difference", r => r.same && r.opp && r.same.true_share != null && r.opp.true_share != null ? pts(r.same.true_share - r.opp.true_share, Math.min(r.same.true + r.same.undone, r.opp.true + r.opp.undone)) : ""]]);
+
+  const M = t.made_in.filter(r => r.nearer === "target"), kinds = [...new Set(M.map(r => r.kind))];
+  table("made_in", kinds.map(k => ({ kind: k, l: M.find(r => r.kind === k && r.made_in === "london"), n: M.find(r => r.kind === k && r.made_in === "new york") })),
+    [["Kind of call", r => esc(KIND[r.kind])], ["Made at the start of London", r => sh(r.l)], ["Made at the start of New York", r => sh(r.n)]]);
+
+  table("by_instrument", t.by_instrument.filter(r => r.kind === "liquidity" && r.nearer === "target"),
+    [["Instrument", r => esc(r.asset)], ["Calls", r => r.calls.toLocaleString()], ["Came true", r => pct(r.true_share, r.true + r.undone)], ["Typical hours to resolve", r => r.median_hours ?? ""]]);
+
+  const H = t.resolved_hour, top = Math.max(...H.map(r => r.calls));
+  table("hours", H, [["Hour", r => String(r.resolved_hour).padStart(2, "0") + ":00"], ["Calls resolved", r => `<span class="bar" style="width:${Math.round(160 * r.calls / top)}px"></span>${r.calls.toLocaleString()}`],
+    ["Came true", r => r.true.toLocaleString()], ["Undone", r => r.undone.toLocaleString()]]);
+
+  const opts = { asset: g.assets, tf: ORDER, kind: Object.keys(KIND), outcome: ["true", "undone", "unresolved", "same candle", "open"], nearer: ["target", "undo"] };
+  const label = { asset: "any instrument here", tf: "any timeframe", kind: "any kind", outcome: "any ending", nearer: "either nearer" };
+  $("filters").innerHTML = Object.entries(opts).map(([k, v]) => `<select name="${k}"><option value="">${label[k]}</option>` +
+    v.map(x => `<option value="${esc(x)}">${esc(KIND[x] || TFNAME[x] || (k === "nearer" ? (x === "target" ? "target was nearer" : "what undoes it was nearer") : x))}</option>`).join("") + "</select>").join("");
+  document.querySelectorAll("#filters select").forEach(s => s.onchange = calls);
+  const set = (n, v) => { $("filters").querySelector(`[name=${n}]`).value = v; };
+  set("tf", "1D"); set("kind", "liquidity"); set("outcome", "undone"); set("nearer", "target");
+  calls();
+}
+
 (async function () {
   const t = await (await fetch("api/backtest/tables")).json();
-  if (!t.calls) { $("scope").textContent = "No backtest has been run yet. Run: uv run python v2/backtest/run.py <INSTRUMENT> --since YYYY-MM-DD"; return; }
-  $("scope").textContent = `${t.calls.toLocaleString()} calls · ${t.instruments.join(", ")} · ${t.years[0]}${t.years.length > 1 ? " to " + t.years[t.years.length - 1] : ""} · read at the start of the London and New York kill zones, on the monthly down to the 1-hour.`;
-  table("by_kind", t.by_kind, std([["Kind of call", r => esc(KIND[r.kind])], ["Timeframe", r => esc(r.tf)], ["At the time", r => esc(NEAR[r.nearer])]]));
-  table("bias_adds", t.what_the_bias_adds, [["Timeframe", r => esc(r.tf)], ["Nearer side was the bias's side: calls", r => r.nearer_was_bias_side],
-    ["…and it went first", r => r.nearer_went_first_share == null ? "" : Math.round(r.nearer_went_first_share * 100) + "%"],
-    ["Nearer side was the other side: calls", r => r.nearer_was_other_side],
-    ["…and it went first", r => r.nearer_went_first_share_other == null ? "" : Math.round(r.nearer_went_first_share_other * 100) + "%"]]);
-  table("with_above", t.with_the_timeframe_above, std([["Kind of call", r => esc(KIND[r.kind])], ["Timeframe", r => esc(r.tf)],
-    ["Timeframe above", r => r.with_above ? "same bias" : "opposite bias"], ["At the time", r => esc(NEAR[r.nearer])]]));
-  table("made_in", t.made_in, std([["Kind of call", r => esc(KIND[r.kind])], ["Made at the start of", r => esc(r.made_in)], ["At the time", r => esc(NEAR[r.nearer])]]));
-  table("hours", t.resolved_hour, [["Hour", r => String(r.resolved_hour).padStart(2, "0") + ":00"], ["Calls resolved", r => r.calls], ["Came true", r => r.true], ["Undone", r => r.undone]]);
-  table("by_year", t.by_year, std([["Kind of call", r => esc(KIND[r.kind])], ["Year", r => r.year], ["At the time", r => esc(NEAR[r.nearer])]]));
-  table("by_instrument", t.by_instrument, std([["Kind of call", r => esc(KIND[r.kind])], ["Instrument", r => esc(r.asset)], ["At the time", r => esc(NEAR[r.nearer])]]));
-  const opts = { asset: t.instruments, tf: ["1M", "1W", "1D", "4h", "1h"], kind: Object.keys(KIND), outcome: ["true", "undone", "unresolved", "same candle", "open"], nearer: ["target", "undo"] };
-  $("filters").innerHTML = Object.entries(opts).map(([k, v]) => `<select name="${k}"><option value="">any ${k === "tf" ? "timeframe" : k === "asset" ? "instrument" : k}</option>` +
-    v.map(x => `<option value="${esc(x)}">${esc(KIND[x] || x)}</option>`).join("") + "</select>").join("");
-  document.querySelectorAll("#filters select").forEach(s => s.onchange = calls);
-  $("filters").querySelector("[name=outcome]").value = "undone";
-  calls();
+  if (!t.calls) { $("scope").textContent = "No backtest has been run yet. Run: uv run python v2/backtest/run.py"; return; }
+  $("scope").textContent = "The concept tools reading old data twice a day, at the start of the London and New York kill zones, on the monthly down to the 1-hour chart.";
+  const have = t.instruments, rest = have.filter(a => !TRADED.includes(a) && !METALS.includes(a));
+  groups = [{ name: "The indices we trade", assets: TRADED.filter(a => have.includes(a)) }, { name: "Gold, with silver beside it", assets: METALS.filter(a => have.includes(a)) },
+    { name: "Test charts (not traded)", assets: rest }].filter(g => g.assets.length).concat(have.map(a => ({ name: a, assets: [a] })));
+  $("groups").innerHTML = groups.map(g => `<button data-g="${esc(g.name)}">${esc(g.name)}</button>`).join("");
+  document.querySelectorAll("#groups button").forEach(b => b.onclick = () => show(groups.find(g => g.name === b.dataset.g)));
+  show(groups[0]);
 })();
 </script>
 </body>

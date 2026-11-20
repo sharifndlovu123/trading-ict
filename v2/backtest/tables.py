@@ -54,10 +54,38 @@ def nearer_side(df: pd.DataFrame) -> list[dict]:
     return rows
 
 
-def tables(df: pd.DataFrame) -> dict:
+def picture(df: pd.DataFrame, order: list[str]) -> list[dict]:
+    """One row per timeframe, highest first: for each kind of call, how often it came true when the target was the
+    nearer level and when it was the farther one; and what the bias adds to a liquidity call. This is the table he
+    asked to be noticed: "the higher timeframes have higher percentages than below… it's very important." """
+    if df.empty:
+        return []
+    adds, rows = {r["tf"]: r for r in nearer_side(df)}, []
+    for tf in [t for t in order if t in set(df["tf"])]:
+        g = df[df["tf"] == tf]
+        row = {"tf": tf, "calls": len(g)}
+        for kind in ("liquidity", "bias", "imbalance"):
+            for nearer in ("target", "undo"):
+                d = g[(g["kind"] == kind) & (g["nearer"] == nearer) & g["outcome"].isin(DONE)]
+                row[f"{kind}_{nearer}"] = round(float((d["outcome"] == "true").mean()), 3) if len(d) else None
+                row[f"{kind}_{nearer}_n"] = len(d)
+        a = adds.get(tf, {})
+        with_bias, other = a.get("nearer_went_first_share"), a.get("nearer_went_first_share_other")
+        row.update(bias_side=with_bias, bias_side_n=a.get("nearer_was_bias_side", 0), other_side=other, other_side_n=a.get("nearer_was_other_side", 0),
+                   bias_adds=None if with_bias is None or other is None else round(with_bias - other, 3))
+        rows.append(row)
+    return rows
+
+
+def tables(df: pd.DataFrame, order: list[str] | None = None) -> dict:
     if df.empty:
         return {"calls": 0}
     return {"calls": len(df), "instruments": sorted(df["asset"].unique()), "years": sorted(int(y) for y in df["year"].unique()),
+            "outcomes": {k: int(v) for k, v in df["outcome"].value_counts().items()},
+            "picture": picture(df, order or sorted(df["tf"].unique())),
+            "bias_adds_by_year": [{"year": int(y), **{r["tf"]: r["bias_adds"] for r in picture(g, order or sorted(df["tf"].unique()))},
+                                   **{r["tf"] + "_n": r["bias_side_n"] + r["other_side_n"] for r in picture(g, order or sorted(df["tf"].unique()))}}
+                                  for y, g in df.groupby("year")],
             "by_kind": count(df, ["kind", "tf", "nearer"]),
             "what_the_bias_adds": nearer_side(df),
             "with_the_timeframe_above": count(df[df["with_above"].notna()], ["kind", "tf", "with_above", "nearer"]),

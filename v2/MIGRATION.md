@@ -68,7 +68,7 @@ coming after liquidity.
 | The old version's folder deleted, when he says | [ ] |
 
 ## Waiting on Sharif
-- [ ] **Tools backtest, paused by him on 20 Nov 2026:** the full run is done (the three indices, gold and silver, and three test charts; 114,138 calls; tables at `/backtest` on the chart server). Next: he opens the calls the tools got wrong (start with an index, the daily, liquidity with the bias, undone, target nearer) and says what the tool missed. Nothing in any tool was changed because of the numbers
+- [ ] **Tools backtest, for when he is back (20 Nov 2026):** he asked, while away, for the data to be sorted (done: every instrument now runs from late 2019 with no missing months; gold and silver were filled in from the free feed), the backtest carried on, and `/backtest` made informative enough to look at together (done: it leads with the picture he marked as very important, the higher timeframes being stronger, and is grouped by what he trades). Next with him: go through the page, then open the calls the tools got wrong and say what each missed. Nothing in any tool was changed because of the numbers
 - [ ] **Trading range as a tool:** later (20 Nov 2026: "consider it later; it's tricky, but keep the fluidity in your mind"). Read by eye until then
 - [ ] **Range as a tool:** taught by eye and shown back on 20 Nov 2026; the test is confirmed ("that's correct"). Not in the tool: "a few turns" and "some time" are not numbers he has given
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)

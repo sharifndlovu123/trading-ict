@@ -3,7 +3,7 @@ import json
 
 import pandas as pd
 
-from tables import call_marks, count, nearer_side, pick, tables
+from tables import call_marks, count, nearer_side, pick, picture, tables
 
 
 def row(**kw):
@@ -58,3 +58,14 @@ def test_the_whole_set_of_tables_is_made_and_an_empty_run_is_not_an_error():
     assert tables(pd.DataFrame()) == {"calls": 0}
     t = tables(frame(row(), row(outcome="undone", nearer="undo")))
     assert t["calls"] == 2 and t["by_kind"] and t["by_year"] and t["by_instrument"]
+
+
+def test_the_picture_lists_the_timeframes_highest_first_with_what_the_bias_adds_on_each():
+    """On the higher timeframe here the nearer side goes first 4 in 4 for the bias and 1 in 2 against it; on the lower
+    one it is 1 in 2 both ways, so the bias adds a half above and nothing below."""
+    hi = [row(tf="up", nearer="target") for _ in range(4)] + [row(tf="up", nearer="undo", outcome=o) for o in ("undone", "true")]
+    lo = [row(tf="down", nearer="target", outcome=o) for o in ("true", "undone")] + [row(tf="down", nearer="undo", outcome=o) for o in ("undone", "true")]
+    got = picture(frame(*lo, *hi), ["up", "down", "not there"])
+    assert [r["tf"] for r in got] == ["up", "down"]
+    assert got[0]["bias_adds"] == 0.5 and got[1]["bias_adds"] == 0.0
+    assert got[0]["liquidity_target"] == 1.0 and got[0]["liquidity_target_n"] == 4
