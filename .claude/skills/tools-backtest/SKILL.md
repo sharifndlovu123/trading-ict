@@ -26,7 +26,8 @@ No entries, stops or targets. "DON'T look at the exact entries and details in de
 
 ```bash
 uv run python v2/backtest/run.py US30 --since 2025-01-01 --until 2025-12-31    # one instrument, part of the data
-uv run python v2/backtest/run.py --all                                          # everything (at most 8 at once)
+uv run python v2/backtest/run.py                                                # what he trades (the default)
+uv run python v2/backtest/run.py --all                                          # every instrument in the data
 ```
 
 About two minutes per instrument per year. Results go to `v2/backtest/out/` (not in git; rebuilt by running).
@@ -47,6 +48,9 @@ About two minutes per instrument per year. Results go to `v2/backtest/out/` (not
    such in each tool. A bad number may be measuring one of those and not his teaching.
 4. **Never an edge, never a rule.** Point at what is interesting; a pattern is "might be".
 5. Instruments that move together (the three US indices) are not three separate confirmations.
+6. **Focus on what he trades.** "When it comes to backtesting focus more on what we're trading with": US100, US500
+   and US30 first, then gold with silver beside it. Other instruments are fine for building and checking tools, and
+   are shown apart, labelled as tests.
 
 ## What it must never do
 

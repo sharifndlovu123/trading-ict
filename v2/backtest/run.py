@@ -3,6 +3,7 @@ tools read each higher timeframe, make their calls, and each call is followed un
 out of time. Design: v2/specs/2026-11-20-higher-timeframe-backtest.md.
 
     uv run python v2/backtest/run.py US30 --since 2025-01-01 --until 2025-12-31
+    uv run python v2/backtest/run.py                            # what he trades: the three indices, gold and silver
     uv run python v2/backtest/run.py --all                      # every instrument, all the data (at most 8 at once)
 
 This is the runner, so it is the one place the timeframes are named: he set them ("this backtest will be higher
@@ -36,6 +37,9 @@ LADDER = ["1M", "1W", "1D", "4h", "1h"]          # highest first; the last is th
 FINE = LADDER[-1]                                # what price traded to, and in what order, is taken from this one
 KEEP = {"1M": 600, "1W": 600, "1D": 600, "4h": 600, "1h": 600}      # how many closed candles a read is given
 HORIZON = 20
+# What he trades (20 Nov 2026): "when I say indices, stick to 100, 500 and 30… gold and silver is just for a different
+# chart, and silver is to have something to compare against gold." A backtest runs on these unless others are named.
+TRADED = ["US100", "US500", "US30", "XAUUSD", "XAGUSD"]
 EPOCH = pd.Timestamp("1970-01-01")
 
 
@@ -127,13 +131,11 @@ def save(asset: str, since: str | None, until: str | None) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("assets", nargs="*", choices=sorted(cd.FOLDERS) + [[]])
-    ap.add_argument("--all", action="store_true", help="every instrument")
+    ap.add_argument("--all", action="store_true", help="every instrument in the data, including the ones kept only for testing")
     ap.add_argument("--since")
     ap.add_argument("--until")
     a = ap.parse_args()
-    names = sorted(cd.FOLDERS) if a.all else a.assets
-    if not names:
-        ap.error("name an instrument, or use --all")
+    names = sorted(cd.FOLDERS) if a.all else a.assets or TRADED          # with nothing named: what he trades
     if len(names) == 1:
         print(save(names[0], a.since, a.until))
         return
