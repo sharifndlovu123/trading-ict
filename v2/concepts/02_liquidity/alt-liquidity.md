@@ -27,6 +27,30 @@ marked as mine.
 FVG and IFVG were taken last "because they're PD arrays": they are also traded from. This file covers only their role
 as a draw; trading from them is a later concept.
 
+## A draw from outside and from inside (taught 20 Nov 2026, on a chart I had read that morning)
+
+He pointed me at something my read had missed: "notice the wick gaps" between two candles on the highest timeframe.
+I found the space between the two bodies that only wicks cover and asked whether that was it. "You found it, nice,
+and you got it perfect: it's a volume imbalance."
+
+- **It is alt-liquidity like the rest.** "VI are like alt-liq… those type of things are what price is drawn to" when
+  the move is already heading that way.
+- **Where price is now decides how the area is used.** I had written that price must be inside the area before
+  anything is looked for. He: "That's correct, but remember current context is important: if that's a possible draw
+  area, and price is currently above and far from it, we would look to move into it. Once we're inside it, that's
+  where context is watching what's going on inside it."
+  - Far from it: it is where the move may be heading, so the trade is looked for **into** it.
+  - Almost at it: trading into it "isn't so wise, it's almost already there" (his words on the same day, about
+    displacement; see lesson 03).
+  - Inside it: watch what plays out there.
+- **Imbalances of two timeframes inside each other.** "Notice how our VI and our BISI on weekly are within each
+  other. It doesn't mean a total change, but it sometimes just highlights a section which is imbalanced further."
+- **How deep the next liquidity is matters to the picture.** On that chart "the only sellside was deep", far below
+  the area, on the highest timeframe.
+
+**My mistake, kept:** when I listed the imbalances near price I only looked for FVGs. A volume imbalance is looked
+for on every timeframe too, starting from the highest.
+
 ## Links
 
 Drafted on 20 Nov 2026 from what he had already said in this lesson; the when / then wording is mine. He read them
@@ -39,6 +63,11 @@ the same day: "perfect".
 | price trades through an imbalance and comes back to it | an inversion: the same area acting the other way | stated by Sharif, 17 Nov 2026 |
 | a new week or day opens with a gap | the opening gap, marked on the lowest timeframe available | stated by Sharif, 17 Nov 2026 |
 | an imbalance sits on a higher timeframe | more weight than one on a lower timeframe | stated by Sharif, 17 Nov 2026 |
+| a draw area is far from price and the move is heading toward it | a trade into it: the area is the target | stated by Sharif, 20 Nov 2026 |
+| price is almost at a draw area | little room left to trade into it; wait to see what happens inside | stated by Sharif, 20 Nov 2026 |
+| price is inside a draw area | what plays out there, inside a session | stated by Sharif, 20 Nov 2026 |
+| imbalances of two timeframes lie inside each other | the part they share, as the section imbalanced further; not a change by itself | stated by Sharif, 20 Nov 2026 |
+| the imbalances near price are being listed | volume imbalances as well as three-candle gaps, on every timeframe from the highest down | stated by Sharif, 20 Nov 2026 |
 
 ## My readings, confirmed by him on 19 Nov 2026
 - "Moving in their direction" = price is already heading toward the gap; an unfilled gap that price is moving away

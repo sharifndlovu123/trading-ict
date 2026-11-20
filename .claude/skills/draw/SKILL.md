@@ -20,7 +20,9 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
      monthly and far on the hourly. On each timeframe ask: from where price is now, what on *this* timeframe is close?
    - The higher timeframe's marks are what the lower ones sit inside: say so in the read (an hourly low inside a
      monthly imbalance is the point, not a detail).
-3. **Original liquidity before alt-liquidity.** Pools of stops first; imbalances second.
+3. **Original liquidity before alt-liquidity.** Pools of stops first; imbalances second. When listing imbalances, look
+   for volume imbalances as well as three-candle gaps, on every timeframe from the monthly down (missed once, 20 Nov
+   2026), and note where imbalances of two timeframes lie inside each other.
 4. **Only what is in the brain.** Draw with concepts that are in `v2/concepts/`, and nothing else.
 5. **Keep it readable.** Few marks. If the chart is busy, the read is not clear yet.
 6. **Mark the trading range that is relevant to now, on every read.** He, 20 Nov 2026: "keep marking it on the chart,

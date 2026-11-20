@@ -68,7 +68,6 @@ coming after liquidity.
 
 ## Waiting on Sharif
 - [ ] **Trading range as a tool:** later (20 Nov 2026: "consider it later; it's tricky, but keep the fluidity in your mind"). Read by eye until then
-- [ ] **REMIND HIM:** on 20 Nov 2026, looking at US30 (1h, London morning), he found "one thing that's interesting" and asked to be reminded to teach it later. He has not said what it is. Not part of what is being confirmed now
 - [ ] **Range:** how to find it better. Held for later (19 Nov 2026): "mark range for later as something to find better, I'll try get examples for you; it is difficult to mark out." Until then range is read by eye and the tool does not say it
 - [ ] Gap and trendline: his to show next time
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
@@ -80,6 +79,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 20 Nov 2026 | Alt-liquidity: the thing he found on the Dow was a volume imbalance on the highest timeframe, lying inside a lower timeframe's imbalance. Taught: a draw is traded into from outside and watched from inside. Sessions got a tool and tests; the context check's reading was done for 01, 02 and 04; links for 01 and 02 |
 | 20 Nov 2026 | Concepts 03 and 04 confirmed on a chart I had not seen (the Dow, London morning): "so far so good, your read is solid". On 19 Nov: his answers to the open questions written into all four lessons; the bias tool looks two timeframes up, finds the level behind as the pullback the break was built on, and can read a line chart; range held for his examples |
 | 19 Nov 2026 | Lesson 03 shown back on gold and the Nasdaq; his corrections written in as "The bigger trade" (missed trades, the fluid range, an area's own timeframe, the 50% against the imbalance, knowing what was swept). Concept 04, sessions, written from what he confirmed. Chart: Claude's read tick and answers under his notes; a Same TF switch |
 | 18 Nov 2026 | Concept 03, bias and liquidity working together: taught on the Russell 2000 from the monthly down to the 5-minute; lesson and links written when he said it was done. Chart: trading range and 50% marks |
