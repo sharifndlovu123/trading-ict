@@ -35,7 +35,7 @@
   .true { color:var(--good); } .undone { color:var(--bad); }
   ul { margin:4px 0 10px; padding-left:20px; color:var(--dim); max-width:78ch; }
   .call { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:12px 0; }
-  .call a b { color:var(--accent); } .call h3 { margin:0 0 4px; font-size:15px; } .call p { margin:2px 0 8px; }
+  .call a b { color:var(--accent); } .tag { display:inline-block; border-radius:5px; padding:1px 9px; font-size:12px; font-weight:700; color:#fff; margin-right:8px; vertical-align:1px; } .tag.miss { background:var(--bad); } .tag.hit { background:var(--good); } .call h3 { margin:0 0 4px; font-size:15px; } .call p { margin:2px 0 8px; }
   .call textarea { width:100%; min-height:54px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
   .call button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:5px 14px; margin:6px 6px 0 0; cursor:pointer; font:inherit; }
   .call button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
@@ -55,6 +55,7 @@
   <h1>Check ten calls</h1>
   <p><a id="back" href="../backtest">Back to the tables</a></p>
   <p>Ten calls where two timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside the higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
+  <div class="note"><b>HIT</b> = price reached the target the call named before anything undid it. <b>MISS</b> = the call was undone first, although the target was the nearer level. That is only how it ended, as the backtest counts it: whether the <b>read</b> was right is yours to say.</div>
   <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
   <div id="list"><p>Loading…</p></div>
 </main>
@@ -82,7 +83,7 @@ async function say(id, verdict) {
   const rows = await (await fetch(BASE + "/api/backtest/check")).json();
   if (!rows.length) { $("list").innerHTML = "<p>No merged calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
   $("list").innerHTML = rows.map((c, i) => `<div class="call" data-id="${esc(c.id)}">
-    <h3>${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${c.merge === "momentum" ? "momentum followed" : "key area"} <span class="n">${when(c.moment)} New York</span></h3>
+    <h3><span class="tag ${c.outcome === "true" ? "hit" : "miss"}">${c.outcome === "true" ? "HIT" : "MISS"}</span>${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${c.merge === "momentum" ? "momentum followed" : "key area"} <span class="n">${when(c.moment)} New York</span></h3>
     <p>${esc(sentence(c))}</p>
     <p><a href="${BASE}/?call=${encodeURIComponent(c.id)}"><b>Open on the chart at that moment</b></a></p>
     <details><summary>What happened afterwards</summary>It ${c.outcome === "true" ? "came true" : "was undone"}${c.hours == null ? "" : " after " + Math.round(c.hours) + " hours"}. Nearer at the time: ${c.nearer === "target" ? "the target" : "what would undo it"}.</details>
