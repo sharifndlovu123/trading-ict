@@ -30,6 +30,11 @@ communicate to me." Drawing is the language in both modes. A mark is a claim he 
    looked for inside it (19 Nov 2026: "the trading range should be drawn when you're looking for a trade"; "normally
    try to show what's relevant to now"). Keep it fluid, and ask on each timeframe whether its trade has already
    passed (lesson 03, "The bigger trade").
+9. **An EQH or EQL is never marked by feel.** Run the liquidity tool on the stretch being looked at with his eye
+   setting (`equal_sets(view, near_from_view(view))`, 0.65% of that view's height) and mark only the sets it returns.
+   The two highs must each be a turn, and the mark is as thin as that measure. A high that goes past by more is a
+   sweep. (20 Nov 2026: four sets I had drawn by hand were three to eight times too big; he: "that EQH you marked is
+   way too big.")
 7. **Say what was swept, as well as what is resting.** Eaten liquidity comes off the chart, but the read names it:
    "you would have to know it was a sweep, because this was a time to get interesting price action."
 8. **An entry is only looked for inside his session times** (lesson 04). Outside them, read and mark; do not look
