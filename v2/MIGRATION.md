@@ -73,6 +73,7 @@ coming after liquidity.
 - [ ] **Range as a tool:** taught by eye and shown back on 20 Nov 2026; the test is confirmed ("that's correct"). Not in the tool: "a few turns" and "some time" are not numbers he has given
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
 - [ ] The brain's pulling design
+- [x] **Merging the timeframes (20 Nov 2026):** taught after he went through the first run ("there's a mix of timeframes to provide a result"; "where price is RIGHT NOW is always more important"); written into `03_bias_with_liquidity` with three links; context check passed. The backtest now also makes a merged call per timeframe with the one above it (`calls.merged`, tested); he asked for a second run with it. How the merge is decided is Claude's and waits for his look at the results.
 - [ ] The backtest skill: his reminder is `.claude/skills/backtest/README.md` ("that skill is very important")
 - [ ] Whether any skill from the old version is wanted in v2 (each would be rebuilt through a design with him)
 - [ ] Whether the ICT PDFs come into `references/`

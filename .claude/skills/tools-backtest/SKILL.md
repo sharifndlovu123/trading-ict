@@ -60,6 +60,15 @@ About two minutes per instrument per year. Results go to `v2/backtest/out/` (not
 to the most on the weekly. Lead with the higher timeframes when reading a result, and never judge a lower timeframe's
 call without the bias of the ones above it.
 
+## Two timeframes read together (his correction after the first run, 20 Nov 2026)
+
+He went through the first run and said the reads were right but stood side by side: "you're still looking at the
+chart itself from daily and that's one perspective, or monthly and that's one perspective… there's a mix of
+timeframes to provide a result." The lesson is in `03_bias_with_liquidity` ("Merging the timeframes"). So each
+timeframe below the top also makes one **merged** call with the timeframe above it: whatever is nearest from price
+now, on either of them (`calls.merged`). How "agree", "momentum" and "key area" are told apart is Claude's choice and
+is named so in the code. The single-timeframe calls are kept so the two can be compared (section 2 of the page).
+
 ## What it must never do
 
 - **Change a tool or a lesson.** What it shows goes to Sharif, the way hunt notes do. A tool changes only in learn,

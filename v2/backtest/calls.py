@@ -10,6 +10,10 @@ Three kinds of call, all for the timeframe being read:
   * ``bias``: the bias holds: the level ahead is closed through before the level behind;
   * ``imbalance``: price might reach the nearest unfilled imbalance in the bias's direction.
 
+A fourth kind, added 20 Nov 2026 after he went through the first run: ``merged`` (see ``merged`` below). He: "you're
+still looking at the chart itself from daily and that's one perspective, or monthly and that's one perspective… there's
+a mix of timeframes to provide a result." The first three are kept as they were, so the two ways can be compared.
+
 Everything that decides a call is the tools' own reading (bias, liquidity, alt-liquidity). What is mine, not his:
 which three calls are made, what undoes each, how long a call is given before it is left unresolved, how much of
 the chart is taken as "the picture being looked at" when his eye's measure for "very close" is applied, using the bias
@@ -51,10 +55,64 @@ def read(c: list[dict], parent: list[dict] | None = None, grand: list[dict] | No
     gaps = [g for g in fvgs(seen) + volume_imbalances(seen) if g["state"] != "filled"]
     up = min((g for g in gaps if g["bottom"] > top), key=lambda g: g["bottom"], default=None)
     down = max((g for g in gaps if g["top"] < bottom), key=lambda g: g["top"], default=None)
+    inside = next((g for g in reversed(gaps) if g["type"] in ("BISI", "SIBI") and g["bottom"] <= price <= g["top"]), None)
     return {"side": b["side"], "price": price, "near": near, "behind": b["change"]["price"],
             "ahead": b["ahead"]["price"] if b["ahead"] else None, "buyside": above and above["price"],
             "sellside": below and below["price"], "imbalance_above": up and (up["bottom"], up["top"], up["type"]),
-            "imbalance_below": down and (down["bottom"], down["top"], down["type"])}
+            "imbalance_below": down and (down["bottom"], down["top"], down["type"]),
+            "inside": inside and (inside["bottom"], inside["top"], inside["type"])}
+
+
+def merged(r: dict, above: dict | None) -> dict | None:
+    """One call from two timeframes read together: this one (``r``) and the one above it (``above``).
+
+    His (20 Nov 2026): the biases disagreeing is normal; the lower timeframe's momentum against the higher bias "must
+    be looked at"; "where price is RIGHT NOW is always more important, because it's drawn to something"; not a far
+    level but what is nearby; and when price has "retraced into a key area", "the current goal might be to reach a
+    nearby imbalance". From the lesson before it: a closed candle beyond the higher timeframe's area, against it,
+    favours the lower timeframe's side.
+
+    Mine, not his (he: "it's tricky to say it specifically"), so that it can be tested at all:
+      * ``agree``: both have the same bias: that is the way looked;
+      * ``momentum``: they disagree: the way looked is this timeframe's (the momentum now);
+      * ``key area``: they disagree and price is inside an unfilled FVG of the timeframe above that is on its bias's
+        side (a BISI when it is bull, a SIBI when bear): the way looked is the timeframe above's;
+      * the target is whatever is NEAREST from price now in that way, on either timeframe: resting liquidity or the
+        near edge of an unfilled imbalance;
+      * undone by: the nearest resting liquidity the other way (either timeframe) being eaten, or a body close beyond
+        this timeframe's level behind; for ``key area``, only a body close of this timeframe beyond the area.
+    ``None`` when there is no timeframe above, or nothing lies in that way."""
+    if above is None:
+        return None
+    price, hold = r["price"], above.get("inside")
+    if r["side"] == above["side"]:
+        side, how = r["side"], "agree"
+    elif hold and hold[2] == ("BISI" if above["side"] == "bull" else "SIBI"):
+        side, how = above["side"], "key area"
+    else:
+        side, how = r["side"], "momentum"
+    bull = side == "bull"
+    found = []
+    for who, x in (("own", r), ("above", above)):
+        liq, gap = (x["buyside"], x["imbalance_above"]) if bull else (x["sellside"], x["imbalance_below"])
+        if liq is not None:
+            found.append({"target": (liq, "eat"), "what": "buyside" if bull else "sellside", "whose": who, "gap": None})
+        if gap is not None:
+            found.append({"target": (gap[0] if bull else gap[1], "trade"), "what": gap[2], "whose": who, "gap": gap})
+    found = [f for f in found if (f["target"][0] > price) == bull and f["target"][0] != price]
+    if not found:
+        return None
+    best = min(found, key=lambda f: abs(f["target"][0] - price))
+    if how == "key area":
+        undo = [(hold[0] if bull else hold[1], "close")]
+    else:
+        other = [x["sellside"] if bull else x["buyside"] for x in (r, above)]
+        other = [p for p in other if p is not None and (p < price) == bull]
+        undo = ([(min(other, key=lambda p: abs(p - price)), "eat")] if other else []) + [(r["behind"], "close")]
+    d_t, d_u = abs(best["target"][0] - price), min(abs(u[0] - price) for u in undo)
+    return {"kind": "merged", "side": side, "price": price, "near": r["near"], "target": best["target"], "undo": undo,
+            "dist_target": d_t, "dist_undo": d_u, "nearer": "target" if d_t < d_u else "undo" if d_u < d_t else "level",
+            "merge": how, "what": best["what"], "whose": best["whose"], "gap": best["gap"]}
 
 
 def calls(r: dict) -> list[dict]:

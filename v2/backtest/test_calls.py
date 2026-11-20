@@ -2,7 +2,7 @@
 should. Hand-built candles and reads only; no price, date or instrument from any real chart."""
 import pytest
 
-from calls import calls, read, resolve
+from calls import calls, merged, read, resolve
 
 
 def bar(t, o, h, lo, c):
@@ -146,3 +146,66 @@ def test_the_forming_candle_changes_price_now_but_never_the_bias_or_its_levels()
     plain, with_forming = read(c), read(c, forming=quiet)
     assert {k: with_forming[k] for k in ("side", "behind", "ahead")} == {k: plain[k] for k in ("side", "behind", "ahead")}
     assert with_forming["price"] == 129 and with_forming["buyside"] == plain["buyside"]
+
+
+# ---- two timeframes read together (his correction, 20 Nov 2026: "there's a mix of timeframes to provide a result")
+def above_read(k=1.0, side="bull", **change):
+    """The timeframe above: its own liquidity and imbalances lie farther out than this timeframe's."""
+    bull = side == "bull"
+    return {"side": side, "price": 100 * k, "near": 2 * k, "behind": (60 if bull else 140) * k, "ahead": (150 if bull else 50) * k,
+            "buyside": 130 * k, "sellside": 80 * k, "imbalance_above": (125 * k, 128 * k, "SIBI"), "imbalance_below": (84 * k, 88 * k, "BISI"),
+            "inside": None} | change
+
+
+def test_no_merged_call_without_a_timeframe_above():
+    assert merged(a_read(), None) is None
+
+
+@pytest.mark.parametrize("k", [1.0, 0.0001, 300.0])
+def test_when_the_two_agree_the_target_is_whatever_is_nearest_that_way_on_either_timeframe(k):
+    m = merged(a_read(k), above_read(k))
+    assert (m["merge"], m["side"]) == ("agree", "bull")
+    assert m["target"] == (105 * k, "trade") and (m["what"], m["whose"]) == ("BISI", "own")       # the imbalance, nearer than the buyside
+    near_above = merged(a_read(k), above_read(k, imbalance_above=(102 * k, 103 * k, "SIBI")))
+    assert near_above["target"] == (102 * k, "trade") and near_above["whose"] == "above"            # the timeframe above's is nearer still
+
+
+def test_when_they_disagree_the_momentum_of_this_timeframe_is_the_way_looked():
+    """Disagreeing is normal: the lower timeframe's selling inside a bull timeframe above is looked at, not ignored."""
+    m = merged(a_read(side="bear"), above_read(side="bull"))
+    assert (m["merge"], m["side"]) == ("momentum", "bear")
+    assert m["target"] == (98, "trade")                                   # nearest below price, not the far buyside above
+    assert m["undo"] == [(110, "eat"), (110, "close")]                    # nearest liquidity the other way, and this timeframe's level behind
+
+
+def test_inside_the_key_area_of_the_timeframe_above_the_way_looked_is_its_bias():
+    """Price has retraced into an imbalance on the side of the bias above: the goal might be something nearby its way."""
+    m = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "BISI")))
+    assert (m["merge"], m["side"]) == ("key area", "bull")
+    assert m["target"] == (105, "trade")
+    assert m["undo"] == [(97, "close")]                                   # only a body close beyond the area undoes it
+    against = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "SIBI")))
+    assert against["merge"] == "momentum"                                  # an imbalance against the bias above is not its key area
+
+
+def test_a_merged_call_is_followed_like_any_other_and_a_wick_through_the_area_undoes_nothing():
+    m = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "BISI")))
+    fine = walk([100, 96, 95, 99, 105.5])                                  # trades under the area, comes back, reaches the target
+    assert resolve(m, fine, [(4 * 3600, 105.5)], 20)["outcome"] == "true"
+    assert resolve(m, walk([100, 96, 95]), [(2 * 3600, 95.0)], 20)["outcome"] == "undone"       # a body closed under it
+
+
+def test_no_merged_call_when_nothing_lies_that_way():
+    r = a_read() | {"buyside": None, "imbalance_above": None}
+    assert merged(r, above_read(buyside=None, imbalance_above=None)) is None
+
+
+def test_the_read_says_when_price_is_inside_an_unfilled_fvg():
+    """Three candles leave a gap between the first one's high and the third one's low; price comes back into it."""
+    c = walk([100, 101, 102, 101, 100, 101, 102, 103, 104, 105, 104, 103, 104, 105, 106], wick=0.2)
+    t = len(c) * 3600
+    c += [bar(t, 106, 107, 105.8, 107), bar(t + 3600, 107, 112, 107, 112), bar(t + 7200, 112, 113, 110, 112.5),
+          bar(t + 10800, 112.5, 112.6, 108.5, 109)]
+    r = read(c)
+    assert r is not None and r["inside"] == (107, 110, "BISI")
+    assert read(c[:-1])["inside"] is None                                 # one candle earlier price had not come back into it

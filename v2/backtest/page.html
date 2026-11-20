@@ -51,27 +51,32 @@
   <div class="wrap" id="picture"></div>
   <ul id="picture_says"></ul>
 
-  <h2>2. What the bias adds, year by year</h2>
+  <h2>2. Two timeframes read together</h2>
+  <p>Sharif, 20 Nov 2026, after going through the first run: <b>"You're still looking at the chart itself from daily and that's one perspective, or monthly and that's one perspective to a result. There's a mix of timeframes to provide a result."</b> And: <b>"Where price is RIGHT NOW is always more important, because it's drawn to something."</b></p>
+  <p>A merged call reads a timeframe together with the one above it and names whatever is nearest from price now, on either of them. <b>Agree</b>: both have the same bias. <b>Momentum</b>: they disagree, and the lower one's direction is followed. <b>Key area</b>: they disagree, but price is inside an imbalance of the timeframe above that is on its bias's side, so the higher one's direction is followed. How these three are told apart is Claude's choice, not his. The last column is the old single-timeframe liquidity call on the same timeframe, for comparison.</p>
+  <div class="wrap" id="merged"></div>
+
+  <h2>3. What the bias adds, year by year</h2>
   <p>The same last column, one year at a time, in points. A tool that only worked in one or two years would show here. Years with few calls are marked.</p>
   <div class="wrap" id="by_year_adds"></div>
 
-  <h2>3. With the timeframe above, and against it</h2>
+  <h2>4. With the timeframe above, and against it</h2>
   <p>The same calls, split by whether the timeframe above had the same bias. Only calls where the target was the nearer level, so the two columns are comparable.</p>
   <div class="wrap" id="with_above"></div>
 
-  <h2>4. London reads and New York reads</h2>
+  <h2>5. London reads and New York reads</h2>
   <p>Whether a call made at the start of one kill zone did better than the same kind made at the start of the other. Target nearer only.</p>
   <div class="wrap" id="made_in"></div>
 
-  <h2>5. Each instrument on its own</h2>
+  <h2>6. Each instrument on its own</h2>
   <p>Liquidity with the bias, target nearer. Instruments that move together are not separate confirmations of each other.</p>
   <div class="wrap" id="by_instrument"></div>
 
-  <h2>6. The hour of the day a call resolved (4-hour and 1-hour calls, New York time)</h2>
+  <h2>7. The hour of the day a call resolved (4-hour and 1-hour calls, New York time)</h2>
   <p>When targets get reached. A call decided by a body close can only resolve when a candle closes, so those hours stand out for that reason alone.</p>
   <div class="wrap" id="hours"></div>
 
-  <h2>7. Calls to open on the chart</h2>
+  <h2>8. Calls to open on the chart</h2>
   <p>Each opens the chart at the moment the call was made, with the tools' marks as they stood and nothing after it shown. Step the replay forward to see what happened. The most useful ones to look at are calls that were <b>undone although the target was nearer</b>: the tools' clear misses.</p>
   <div id="filters"></div>
   <div class="wrap" id="calls"></div>
@@ -79,7 +84,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw" };
+const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw", merged: "two timeframes together" };
 const TFNAME = { "1M": "Monthly", "1W": "Weekly", "1D": "Daily", "4h": "4-hour", "1h": "1-hour" }, ORDER = ["1M", "1W", "1D", "4h", "1h"];
 const TRADED = ["US100", "US500", "US30"], METALS = ["XAUUSD", "XAGUSD"];
 const pct = (v, n) => v == null ? '<span class="few">none</span>' : `${Math.round(v * 100)}%<span class="n">${(n ?? "").toLocaleString()}</span>` + (n != null && n < 30 ? ' <span class="few">few</span>' : "");
@@ -107,7 +112,7 @@ async function calls() {
 async function show(g) {
   group = g; document.querySelectorAll("#groups button").forEach(b => b.classList.toggle("on", b.dataset.g === g.name));
   const t = await (await fetch("api/backtest/tables?assets=" + g.assets.join(","))).json();
-  if (!t.calls) { $("cards").innerHTML = ""; ["picture", "by_year_adds", "with_above", "made_in", "by_instrument", "hours", "calls"].forEach(id => $(id).innerHTML = '<p style="padding:10px 12px">No calls for this group.</p>'); return; }
+  if (!t.calls) { $("cards").innerHTML = ""; ["picture", "merged", "by_year_adds", "with_above", "made_in", "by_instrument", "hours", "calls"].forEach(id => $(id).innerHTML = '<p style="padding:10px 12px">No calls for this group.</p>'); return; }
   const o = t.outcomes, done = (o.true || 0) + (o.undone || 0);
   $("cards").innerHTML = [[t.calls.toLocaleString(), "calls"], [`${t.years[0]} to ${t.years[t.years.length - 1]}`, "years covered"], [t.instruments.join(", "), "instruments"],
     [Math.round(100 * (o.true || 0) / done) + "%", "came true, of those resolved (all calls together: mostly distance)"], [((o.unresolved || 0) + (o.open || 0) + (o["same candle"] || 0)).toLocaleString(), "not resolved either way"]]
@@ -128,6 +133,15 @@ async function show(g) {
     `<li>${rising ? "<b>Yes: in this group the bias adds more on every step up the ladder</b>" : "<b>In this group the bias does not add more on every step up</b>"}, from ${solid.map(r => `${TFNAME[r.tf].toLowerCase()} ${r.bias_adds > 0 ? "+" : ""}${Math.round(r.bias_adds * 100)}`).reverse().join(", ")} points.</li>` +
     `<li>The monthly has too few calls to judge and is left out of that sentence when it has fewer than 60.</li>` +
     `<li>On the lowest timeframe read, the bias by itself adds very little: a call there needs the timeframes above it.</li>`;
+
+  const MG = t.merged || [], mk = r => r.tf + "|" + r.merge, mrows = [...new Set(MG.map(mk))].map(k => ({ tf: k.split("|")[0], merge: k.split("|")[1],
+    near: MG.find(r => mk(r) === k && r.nearer === "target"), far: MG.find(r => mk(r) === k && r.nearer === "undo") }))
+    .sort((a, b) => byTf(a, b) || a.merge.localeCompare(b.merge));
+  const msh = r => r ? pct(r.true_share, r.true + r.undone) : '<span class="few">none</span>';
+  table("merged", mrows, [["Timeframe (read with the one above)", r => esc(TFNAME[r.tf])], ["The two timeframes", r => esc({ agree: "agree", momentum: "disagree: momentum followed", "key area": "disagree: price in the higher one's key area" }[r.merge] || r.merge)],
+    ["Came true when the target was nearer", r => msh(r.near)], ["…when it was farther", r => msh(r.far)],
+    ["Old single-timeframe liquidity call, target nearer", r => { const o = P.find(x => x.tf === r.tf); return o ? pct(o.liquidity_target, o.liquidity_target_n) : ""; }],
+    ["…farther", r => { const o = P.find(x => x.tf === r.tf); return o ? pct(o.liquidity_undo, o.liquidity_undo_n) : ""; }]]);
 
   const yrs = t.bias_adds_by_year, tfs = ORDER.filter(tf => yrs.some(y => y[tf] != null));
   table("by_year_adds", yrs, [["Year", r => r.year], ...tfs.map(tf => [esc(TFNAME[tf]), r => pts(r[tf], r[tf + "_n"])])]);

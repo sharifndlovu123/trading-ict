@@ -10,6 +10,9 @@ This is the runner, so it is the one place the timeframes are named: he set them
 timeframes, so lowest tf is probably hourly or 4h"). It changes no tool and no lesson. What it writes
 (``v2/backtest/out/``) is rebuilt by running it and is not kept in git.
 
+Since 20 Nov 2026 each timeframe below the top also makes one ``merged`` call, read together with the timeframe above
+(his correction after the first run; see ``calls.merged``). The single-timeframe calls are kept beside it.
+
 Mine, not his: two reads a day at the kill-zone starts; a call is not made again while the same call (same timeframe,
 same kind, same target and level behind) is still open; a call is given 20 candles of its own timeframe.
 """
@@ -29,7 +32,7 @@ for folder in sorted((HERE.parent / "concepts").glob("[0-9]*_*")) + [HERE, HERE.
 
 import candles as cd  # noqa: E402
 import pandas as pd  # noqa: E402
-from calls import calls, read, resolve  # noqa: E402
+from calls import calls, merged, read, resolve  # noqa: E402
 from sessions import KILL_ZONES, sessions  # noqa: E402
 
 OUT = HERE / "out"
@@ -96,9 +99,11 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                 k, r = reads[tf]
                 if r is None:
                     continue
-                up_side = reads[LADDER[i - 1]][1]["side"] if i and reads[LADDER[i - 1]][1] else None
+                up = reads[LADDER[i - 1]][1] if i else None
+                up_side = up["side"] if up else None
+                both = merged(r, up)                                                # the two timeframes read together
                 closes = [(t[tf][n + 1], c[tf][n]["close"]) for n in range(k, min(k + HORIZON + 1, len(c[tf]) - 1))]
-                for call in calls(r):
+                for call in calls(r) + ([both] if both else []):
                     same = (round(call["target"][0], 6), round(r["behind"], 6))
                     held = still.get((tf, call["kind"]))
                     if held and held[0] == same and moment < held[1]:
@@ -108,11 +113,13 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                     at = res["at"]
                     rows.append({
                         "id": f"{asset}-{tf}-{call['kind']}-{moment}", "asset": asset, "tf": tf, "kind": call["kind"], "moment": moment,
-                        "year": pd.Timestamp(moment, unit="s").year, "made_in": zone, "side": r["side"], "above": up_side,
-                        "with_above": None if up_side is None else up_side == r["side"], "price": r["price"], "near": r["near"],
+                        "year": pd.Timestamp(moment, unit="s").year, "made_in": zone, "side": call["side"], "above": up_side,
+                        "with_above": None if up_side is None else up_side == call["side"], "own_side": r["side"],
+                        "merge": call.get("merge"), "what": call.get("what"), "whose": call.get("whose"),
+                        "whose_tf": None if call.get("whose") is None else tf if call["whose"] == "own" else LADDER[i - 1], "price": r["price"], "near": r["near"],
                         "target": call["target"][0], "target_how": call["target"][1], "undo": json.dumps(call["undo"]),
                         "behind": r["behind"], "ahead": r["ahead"], "buyside": r["buyside"], "sellside": r["sellside"],
-                        "imbalance": json.dumps(r["imbalance_above"] if r["side"] == "bull" else r["imbalance_below"]),
+                        "imbalance": json.dumps(call["gap"] if call["kind"] == "merged" else r["imbalance_above"] if r["side"] == "bull" else r["imbalance_below"]),
                         "dist_target": call["dist_target"], "dist_undo": call["dist_undo"], "nearer": call["nearer"],
                         "outcome": res["outcome"], "at": at, "candles": res["candles"],
                         "hours": None if at is None else (at + step - moment) / 3600,

@@ -87,6 +87,8 @@ def tables(df: pd.DataFrame, order: list[str] | None = None) -> dict:
                                    **{r["tf"] + "_n": r["bias_side_n"] + r["other_side_n"] for r in picture(g, order or sorted(df["tf"].unique()))}}
                                   for y, g in df.groupby("year")],
             "by_kind": count(df, ["kind", "tf", "nearer"]),
+            "merged": count(df[df["kind"] == "merged"], ["tf", "merge", "nearer"]) if "merge" in df.columns else [],
+            "merged_whose": count(df[df["kind"] == "merged"], ["merge", "whose", "nearer"]) if "merge" in df.columns else [],
             "what_the_bias_adds": nearer_side(df),
             "with_the_timeframe_above": count(df[df["with_above"].notna()], ["kind", "tf", "with_above", "nearer"]),
             "made_in": count(df, ["kind", "made_in", "nearer"]),
@@ -100,7 +102,7 @@ def pick(df: pd.DataFrame, limit: int = 60, **want) -> list[dict]:
     for k, v in want.items():
         if v and k in df.columns:
             df = df[df[k].astype(str) == str(v)]
-    cols = ["id", "asset", "tf", "kind", "moment", "side", "nearer", "outcome", "hours", "made_in"]
+    cols = [c for c in ["id", "asset", "tf", "kind", "moment", "side", "nearer", "outcome", "hours", "made_in", "merge", "what", "whose_tf"] if c in df.columns]
     return json.loads(df.sort_values("moment", ascending=False).head(limit)[cols].to_json(orient="records"))
 
 
@@ -117,16 +119,23 @@ def call_marks(row: dict) -> dict:
     level("level ahead", row["ahead"])
     level("buyside", row["buyside"])
     level("sellside", row["sellside"])
+    is_merged = row["kind"] == "merged"
+    at_tf = row.get("whose_tf") if is_merged and isinstance(row.get("whose_tf"), str) else tf       # a merged call's target may belong to the timeframe above
     gap = json.loads(row["imbalance"]) if isinstance(row.get("imbalance"), str) else None
     if gap:
-        marks.append({"shape": "zone", "kind": gap[2] if gap[2] in ("BISI", "SIBI") else "VI", "tf": tf, "bottom": gap[0], "top": gap[1], "t0": t0 - 5 * 86400, "t1": None})
+        marks.append({"shape": "zone", "kind": gap[2] if gap[2] in ("BISI", "SIBI") else "VI", "tf": at_tf, "bottom": gap[0], "top": gap[1], "t0": t0 - 5 * 86400, "t1": None})
+    elif is_merged and at_tf != tf:
+        marks.append({"shape": "level", "kind": row["what"], "tf": at_tf, "price": float(row["target"]), "t0": t0 - 40 * 86400, "t1": None})
     marks.append({"shape": "vline", "kind": "→ bull" if row["side"] == "bull" else "→ bear", "tf": tf, "t0": t0, "t1": t0})
     names = {"liquidity": "buyside" if row["side"] == "bull" else "sellside", "bias": "level ahead", "imbalance": "the imbalance"}
+    how = {"agree": f"the {tf} and the timeframe above agree ({row['side']})", "momentum": f"the {tf} is {row['side']} against the timeframe above: its momentum is followed",
+           "key area": f"the timeframe above is {row['side']} and price is inside its imbalance, though the {tf} is against it"}.get(row.get("merge"))
     ended = {"true": "It came true", "undone": "It was undone", "unresolved": "It was left unresolved", "open": "It is still open",
              "same candle": "Both were reached inside one candle, so the order is not known"}[row["outcome"]]
     took = "" if row.get("hours") is None or pd.isna(row["hours"]) else f" after {row['hours']:.0f} hours"
     return {"asset": row["asset"], "tf": tf, "moment": t0, "marks": marks, "bias": {tf: row["side"]},
-            "interesting": [f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might draw to [{names[row['kind']]} {tf}]." if row["kind"] != "imbalance"
+            "interesting": [f"A merged call from the tools backtest, made at this moment: {how}. Nearest from price now: [{row['what']} {at_tf}]; price might draw to it." if is_merged
+                            else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might draw to [{names[row['kind']]} {tf}]." if row["kind"] != "imbalance"
                             else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might reach the imbalance in its direction.",
                             "Step the replay forward to see what happened."],
             "considering": [f"{ended}{took}.", "Nearer at the time: " + {"target": "the target", "undo": "what would undo it", "level": "neither", None: "nothing to undo it"}[row.get("nearer")] + "."]}
