@@ -34,6 +34,13 @@
   select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:0 6px 8px 0; font:inherit; }
   .true { color:var(--good); } .undone { color:var(--bad); }
   ul { margin:4px 0 10px; padding-left:20px; color:var(--dim); max-width:78ch; }
+  @media (max-width: 700px) {
+    main { padding:14px 12px 60px; } h1 { font-size:20px; }
+    th, td { padding:8px 9px; } select { padding:9px 10px; font-size:16px; margin-bottom:8px; }
+    .tabs button { padding:9px 14px; }
+    .call button { padding:10px 14px; margin-top:8px; } .call textarea { font-size:16px; min-height:80px; }
+    .call a b { display:inline-block; padding:8px 0; }
+  }
 </style>
 </head>
 <body>

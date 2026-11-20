@@ -97,6 +97,39 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 .noteedit .row { display:flex; gap:6px; align-items:center; margin-top:6px; }
 .noteedit button { background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:2px 9px; cursor:pointer; }
 .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; }
+#toolsbtn, #sideclose { display:none; }
+/* on a phone (Sharif, 20 Nov 2026: "ensure the chart on mobile is easy enough"): the chart keeps the screen, the side
+   panel is a sheet under it and not on top of it, and everything pressed is big enough for a thumb */
+@media (hover: none) { .pbtn { display:flex; } .pbtn button { height:30px; padding:0 10px; } }
+@media (max-width: 700px) {
+  html, body { height:100dvh; }
+  body { font-size:14px; }
+  #top { height:48px; gap:4px; padding:0 4px; scrollbar-width:none; } #top::-webkit-scrollbar, #bottom::-webkit-scrollbar { display:none; }
+  .tb, #sym { height:40px; padding:5px 11px; } #sym { font-size:16px; }
+  #tfs .tb { min-width:40px; justify-content:center; }
+  /* what is used most on a phone comes first; the rest is a swipe along the bar */
+  #toolsbtn, #tabs #sideclose { display:inline-flex; align-items:center; justify-content:center; }
+  #sym { order:-7; } #readbtn { order:-6; } #toolsbtn { order:-5; } #tfs { order:-4; } #replaybtn { order:-3; } #ctype { order:-2; } #fsbtn { order:-1; }
+  #top .sep, #top .sp, #modewho { display:none; }
+  /* as TradingView does on a phone: the chart has the whole screen; the drawing tools are a bar that is called up
+     and put away; the side panel, when opened, takes the whole screen and is closed again with its ✕ */
+  #mid { position:relative; }
+  #grid { grid-template-columns:minmax(0, 1fr) !important; }
+  #tools { display:none; position:absolute; left:0; top:0; bottom:0; z-index:15; width:46px; overflow-y:auto; scrollbar-width:none; border-right:1px solid var(--line); box-shadow:4px 0 14px rgba(0,0,0,.35); }
+  body.toolson #tools { display:flex; } #tools .tl { width:40px; height:40px; flex:none; font-size:18px; }
+  #fly { position:fixed; left:50px; top:56px !important; max-height:calc(100dvh - 120px); overflow:auto; }
+  #side, #side.on { position:fixed; inset:0; top:0; bottom:0; width:100%; height:100dvh; z-index:40; border:0; }
+  #tabs button { padding:14px 4px; } #tabs #sideclose { flex:none; width:52px; font-size:18px; }
+  #read { font-size:15px; }
+  #notetext { height:110px; min-height:80px; font-size:16px; }
+  #noteadd { padding:11px; }
+  #watch .w { padding:11px 12px; }
+  .legend b { font-size:13px; } .legend { gap:6px; font-size:12px; }
+  #bottom { height:48px; padding:0 4px; scrollbar-width:none; } #bottom .tb { min-width:42px; justify-content:center; }
+  #at { height:38px; font-size:15px; max-width:186px; } #eqshare { width:150px; }
+  #menu .it, #fly .it { padding:11px 10px; }
+  .noteedit { width:min(270px, 86vw); } .noteedit textarea { font-size:16px; } .noteedit button { padding:7px 12px; }
+}
 </style>
 <script>   // the page's theme, before anything is drawn: what he chose last, else what the device prefers
   (function () { let t = null; try { t = JSON.parse(localStorage.getItem("charts-v2") || "{}").theme; } catch (e) {}
@@ -129,13 +162,14 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   <button class="tb" id="refresh" title="read the candles and the marks again (Shift+R). Alt+R re-centres the charts">↻</button>
   <button class="tb" id="fsbtn" title="the chart you last touched on the whole screen (Shift+F)">⛶</button>
   <button class="tb" id="readbtn" title="the side panel: watchlist, your notes, Claude's read (W)">☰</button>
+  <button class="tb" id="toolsbtn" title="the drawing tools: show or put away">✎</button>
 </div>
 <div id="modebar"></div>
 <div id="mid">
   <div id="tools"></div>
   <div id="grid"></div>
   <aside id="side">
-    <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="read">Claude's read</button></div>
+    <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="read">Claude's read</button><button id="sideclose" title="back to the chart">✕</button></div>
     <div class="tab" id="tab-watch"><div id="watch"></div></div>
     <div class="tab" id="tab-notes">
       <div id="notekind" class="dim"></div>
@@ -554,6 +588,8 @@ function theme() { const t = document.documentElement.dataset.theme; $("theme").
 $("theme").onclick = () => { const d = document.documentElement; d.dataset.theme = d.dataset.theme === "light" ? "dark" : "light"; save(); theme(); build(); };     // the charts are rebuilt in the new colours
 theme();
 $("readbtn").onclick = () => { st.side = !st.side; save(); side(); };
+$("sideclose").onclick = e => { e.stopPropagation(); st.side = false; save(); side(); };            // phone: the panel has the whole screen, this gives it back
+$("toolsbtn").onclick = () => { $("toolsbtn").classList.toggle("on", document.body.classList.toggle("toolson")); };
 $("fsbtn").onclick = () => full(cur());
 $("ovon").onchange = () => st.panes.forEach(p => p.layer && p.layer.redraw());
 $("sametf").checked = !!keep.sameTf;
@@ -651,7 +687,7 @@ document.addEventListener("keydown", e => {
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
   let call = null;                                    // ?call=<id>: one call of the tools backtest, shown as it stood at its own moment
   if (q.get("call")) { try { const r = await fetch("api/backtest/call?id=" + encodeURIComponent(q.get("call"))); if (r.ok) call = await r.json(); } catch (e) {} }
-  if (call) { st.call = q.get("call"); st.cfg = [{ asset: call.asset, tf: TFS.includes(call.tf) ? call.tf : "1D" }]; st.cols = 0; st.tab = "read"; st.side = true; }
+  if (call) { st.call = q.get("call"); st.cfg = [{ asset: call.asset, tf: TFS.includes(call.tf) ? call.tf : "1D" }]; st.cols = 0; st.tab = "read"; st.side = innerWidth > 700; }      // on a phone the chart comes first; ☰ opens the read
   const ok = (st.cfg || []).filter(c => st.assets.includes(c.asset) && TFS.includes(c.tf));
   st.cfg = ok.length ? ok : [{ asset: st.assets[0], tf: "1D" }];
   build(); side(); watch(); loadNotes(); pollMode(); if (st.live) liveBeat().then(status); eqAll();

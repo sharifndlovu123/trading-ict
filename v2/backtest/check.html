@@ -35,12 +35,19 @@
   .true { color:var(--good); } .undone { color:var(--bad); }
   ul { margin:4px 0 10px; padding-left:20px; color:var(--dim); max-width:78ch; }
   .call { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:12px 0; }
-  .call h3 { margin:0 0 4px; font-size:15px; } .call p { margin:2px 0 8px; }
+  .call a b { color:var(--accent); } .call h3 { margin:0 0 4px; font-size:15px; } .call p { margin:2px 0 8px; }
   .call textarea { width:100%; min-height:54px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
   .call button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:5px 14px; margin:6px 6px 0 0; cursor:pointer; font:inherit; }
   .call button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
   .call .said { color:var(--good); font-size:12px; margin-left:6px; }
   details { color:var(--dim); margin:4px 0 8px; } summary { cursor:pointer; }
+  @media (max-width: 700px) {
+    main { padding:14px 12px 60px; } h1 { font-size:20px; }
+    th, td { padding:8px 9px; } select { padding:9px 10px; font-size:16px; margin-bottom:8px; }
+    .tabs button { padding:9px 14px; }
+    .call button { padding:10px 14px; margin-top:8px; } .call textarea { font-size:16px; min-height:80px; }
+    .call a b { display:inline-block; padding:8px 0; }
+  }
 </style>
 </head>
 <body>
