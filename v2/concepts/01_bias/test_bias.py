@@ -238,3 +238,20 @@ def test_the_pullback_is_not_known_before_it_happened():
     early = c[:k]
     r = bias_levels(early, above(early))
     assert r["side"] == "bear"
+
+
+def test_a_lower_high_closed_through_inside_a_rise_is_a_smaller_piece():
+    """Mine, named in the lesson: after a break, only the highest significant high since then continues the trend. Here
+    price pulls back, makes a lower high, pulls back again and closes above that lower high while still under the top:
+    nothing is continued and the level behind does not move."""
+    before = read(RISE + [(150, 15), (160, 15), (148, 15)])
+    after = read(RISE + [(150, 15), (160, 15), (148, 15), (165, 15)])          # above the lower high, under the top
+    assert after["side"] == "bull" and after["change"] == before["change"]
+    assert [e["kind"] for e in after["events"]] == [e["kind"] for e in before["events"]]
+
+
+def test_with_no_timeframe_above_the_chart_is_read_on_its_own_turns():
+    """Mine, named in the lesson: the highest timeframe has nothing above it, so its own turns are the levels."""
+    c = above(path(RISE))                                                    # stands for the highest timeframe
+    r = bias_levels(c)
+    assert r["side"] == "bull" and r["break"]["price"] == pytest.approx(140.5)

@@ -137,3 +137,11 @@ def test_the_eye_gives_the_same_sets_at_any_price_scale(k):
     c = mk(SET[:5], k=k)
     g = equal_sets(c, near_from_view(c, 0.05))
     assert len(g) == 1 and g[0]["count"] == 2 and g[0]["top"] == pytest.approx(110.3 * k)
+
+
+def test_equal_highs_join_neighbour_to_neighbour_so_a_group_can_be_wider_than_one_step():
+    """Mine, named in the tool: each high only has to be very close to the next one, so three in a row make one group
+    even though the first and the last are further apart than "very close"."""
+    lv = [{"side": "high", "price": p, "t": i} for i, p in enumerate([100.0, 100.4, 100.8])]
+    g = equal(lv, near=0.5)
+    assert [(x["count"], x["bottom"], x["top"]) for x in g] == [(3, 100.0, 100.8)]
