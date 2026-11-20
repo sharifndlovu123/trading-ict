@@ -28,6 +28,9 @@ uv run python .claude/skills/context-check/check.py 02_liquidity # one
   states what price "is doing".
 - A lesson with no links is reported as "no links yet". That is not a failure: links are added in learn, when he
   states them.
+- A tool that reads only the clock (sessions) has no price scale or timeframe to test and nothing to look ahead at.
+  The script asks it for a test of the clock in summer and in winter instead. Session times are the one place a
+  clock time is a rule (his word, 19 Nov 2026); a clock time anywhere else is still a give-away.
 - `JUDGE` lines are for step 2.
 - The script also runs `pytest v2`. Failing tests fail the check.
 

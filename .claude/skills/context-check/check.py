@@ -96,6 +96,12 @@ def numbers(text: str) -> set[str]:
     return out
 
 
+def reads_prices(src: str) -> bool:
+    """Does a tool's code touch a candle's prices? One that never does (it reads the clock only) is tested differently."""
+    code = "\n".join(line.split("#")[0] for line in re.sub(r'"""(?:.|\n)*?"""', "", src).splitlines())
+    return bool(re.search(r"""["'](open|high|low|close|price)["']""", code))
+
+
 def literals(path: Path) -> list[tuple[int, object]]:
     out = []
     for node in ast.walk(ast.parse(path.read_text())):
@@ -156,8 +162,15 @@ def check(folder: Path, migration_text: str | None = None) -> tuple[list[str], l
         lifted = sorted(n for n in lesson_numbers if re.search(rf"(?<![\d.]){re.escape(n)}(?![\d.])", src))
         if lifted:
             fail.append(f"{t.name}: value(s) from the lesson's examples appear in the tests: {', '.join(lifted)}")
-        (ok if re.search(r"parametrize\([\"']k[\"']", src) and re.search(r"parametrize\([\"']step[\"']", src) else fail).append(f"{t.name}: same shape at several price scales and timeframes")
-        (ok if re.search(r"def test_\w*(before_it_happened|look_?ahead|not_known)", src) else fail).append(f"{t.name}: a no-look-ahead test")
+        tool = folder / t.name[len("test_"):]
+        if tool.exists() and not reads_prices(tool.read_text()):
+            # a tool that reads only the clock (sessions) has no price scale, no timeframe and nothing to look ahead at;
+            # what it must prove instead is that its clock is right on both sides of the clock change
+            ok.append(f"{t.name}: its tool reads the clock only, so price-scale, timeframe and look-ahead tests do not apply")
+            (ok if re.search(r"def test_\w*(summer|winter|clock_change|daylight)", src) else fail).append(f"{t.name}: a test of the clock in summer and in winter")
+        else:
+            (ok if re.search(r"parametrize\([\"']k[\"']", src) and re.search(r"parametrize\([\"']step[\"']", src) else fail).append(f"{t.name}: same shape at several price scales and timeframes")
+            (ok if re.search(r"def test_\w*(before_it_happened|look_?ahead|not_known)", src) else fail).append(f"{t.name}: a no-look-ahead test")
         n = len(re.findall(r"^def test_", src, re.M))
         (ok if n >= 5 else judge).append(f"{t.name}: {n} tests" + ("" if n >= 5 else " (few: does each sentence of the lesson have one?)"))
     if tools and not tests:

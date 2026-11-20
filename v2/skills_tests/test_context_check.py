@@ -92,3 +92,32 @@ def test_hunt_notes_are_scanned_for_flat_statements(tmp_path):
     assert any("is buying" in x.lower() for x in cc.check_notes(n))
     n.write_text('# Hunt notes\n\n- He: "this is missing, look at the low again."\n- An interesting low sits under the hourly range.\n')
     assert cc.check_notes(n) == []
+
+
+CLOCK_TOOL = "def window(minute):\n    return 60 <= minute < 120\n"
+PRICE_TOOL = "def top(c):\n    return max(x['high'] for x in c)\n"
+FIVE = "".join(f"def test_{i}():\n    assert True\n" for i in range(5))
+SEASONS = "def test_the_clock_in_summer_and_in_winter():\n    assert True\n"
+
+
+def with_tool(tmp_path, tool, tests):
+    f = concept(tmp_path)
+    (f / "thing.py").write_text(tool)
+    (f / "test_thing.py").write_text(tests)
+    return f
+
+
+def test_a_tool_that_reads_only_the_clock_needs_a_summer_and_winter_test_not_price_scales(tmp_path):
+    fail, _, ok = run(with_tool(tmp_path, CLOCK_TOOL, FIVE + SEASONS))
+    assert fail == [] and any("clock only" in x for x in ok)
+
+
+def test_a_clock_tool_without_a_summer_and_winter_test_fails(tmp_path):
+    fail, _, _ = run(with_tool(tmp_path, CLOCK_TOOL, FIVE))
+    assert any("summer and in winter" in x for x in fail)
+
+
+def test_a_tool_that_reads_prices_still_needs_price_scales_and_no_look_ahead(tmp_path):
+    """The clock exception must not become a way round the candle tests."""
+    fail, _, _ = run(with_tool(tmp_path, PRICE_TOOL, FIVE + SEASONS))
+    assert any("price scales" in x for x in fail) and any("no-look-ahead" in x for x in fail)

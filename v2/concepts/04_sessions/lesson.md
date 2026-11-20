@@ -68,10 +68,24 @@ On my unconfirmed link about the early move: "this is just to keep in mind; as I
 it's good to be aware of it. When we backtest you will notice, if you skip 8:30 and start looking just before 9:30
 it might be a bit easier, because some trickery has already been pushed out."
 
-## Left to the reading (no tool yet)
-No tool was written. A tool that says which session a moment falls in would be simple, and it would carry these clock
-times as his definitions; it waits for his word, and for the context check to be taught that session times are
-allowed where other clock times are not.
+## The tool and its tests (20 Nov 2026)
+`sessions.py`, tests `test_sessions.py`, beside this file. He asked whether sessions need a tool and tests; they do,
+because "is this a time to look for an entry?" is a question with one right answer.
+
+- `stance(minute)` says what may be done at a minute of the New York clock: **entry** (inside a kill zone or one of
+  his windows), **manage** (the New York PM session or the Asian hours: hold or close only), or **read** (anything
+  else: read the chart, look for no trade).
+- `his_window`, `kill_zone`, `sessions` and `pm_sweet_spot` answer the smaller questions; `new_york_clock` turns a
+  moment into the New York clock, right in summer and in winter.
+- Every clock time in the code is one of his definitions above. No candles or prices are read.
+
+**Mine, not his, and named in the code:** joining the kill zones and his own windows into one answer; taking the later
+of the two ends he gave for London; using the commonly used London kill zone and not the wider one from the later
+lesson; where the Asian hours and London overlap, London decides; saying nothing about the day of the week.
+
+The tests check every edge of every window, the overlap, and the clock on both sides of the clock change. They do not
+use price scales or timeframes, because the tool reads none; the context check was taught that a clock-only tool is
+tested this way (with tests of its own, so that a tool that reads prices cannot use the same door).
 
 ## Links
 
@@ -84,3 +98,7 @@ allowed where other clock times are not.
 
 ## Open questions for him
 - "End of the trading day" for closing: the exact time he means.
+- Whether a trade may be opened anywhere inside a session ("you're allowed to open a trade during the session") or
+  only inside a kill zone or one of his windows ("your entries or trigger mode should only initiate within the kill
+  zones / special times"). The tool takes the second.
+- "About an hour before a session": before which start, for New York.

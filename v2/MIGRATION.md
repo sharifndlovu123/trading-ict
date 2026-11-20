@@ -20,7 +20,7 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 | 01 | Bias | [x] | [x] | [x] drafted from his words, read by him 20 Nov 2026 ("perfect") | [x] | [ ] |
 | 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [x] drafted from his words, read by him 20 Nov 2026 ("perfect") | [x] | [ ] |
 | 03 | Bias and liquidity working together (favouring, the sequence, the trading range and its 50%, targets by timeframe and by bias, the bigger trade) | [x] 20 Nov 2026, a top-down read of the Dow he did not correct: "so far so good, your read is solid" | [x] | [x] 13 stated by him | none yet: read on the chart | [ ] |
-| 04 | Sessions: when a trade is looked for (his times, the reference definitions, locked time) | [x] 20 Nov 2026, the same read, made inside the London morning with the session in it from the start | [x] | [x] 4 stated by him | none yet | [ ] |
+| 04 | Sessions: when a trade is looked for (his times, the reference definitions, locked time) | [x] 20 Nov 2026, the same read, made inside the London morning with the session in it from the start | [x] | [x] 4 stated by him | [x] `sessions.py`, 11 tests (20 Nov 2026) | [ ] |
 
 Note on 01: the tool agrees fully with his confirmed read on the DAX, on direction on the dollar index, and differs
 on the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
