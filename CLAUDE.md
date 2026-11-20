@@ -93,6 +93,10 @@ is "might be".
 
 ## Standing rules
 
+- **What is traded** (his words, 20 Nov 2026): "when I say indices, stick to 100, 500 and 30. Those are what we trade.
+  Gold and silver is just for a different chart, and silver is to have something to compare against gold. When we
+  are trading live etc, we never touch anything else." The other instruments in the data are for testing tools and
+  for unseen-chart checks, never for trading; in results they are shown apart and labelled as tests.
 - All times are New York time (America/New_York), DST-aware.
 - Secrets live in `.env` (never print, echo or commit them; never ask him to paste one in chat). Free data only.
 - The chart page on port 8776 is the only thing that may listen on the network (with its password); anything else
