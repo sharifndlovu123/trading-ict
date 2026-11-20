@@ -49,7 +49,7 @@ coming after liquidity.
 | `context-check` | Context, not the example: lessons, links, tools, tests, hunt notes | [x] in use; 11 tests |
 | `draw`, `brain-write`, `speak` | Marks on the chart; how a lesson and its links are written; wording | [x] built |
 | backtest pipeline | Runs the hunt pipeline over old data and assesses it | [ ] later, after the eyes |
-| `tools-backtest` | The tools reading old data on the higher timeframes: calls about where price might draw to, each followed to see whether it came true; tables (the first pattern finder); any call opens on the chart in replay | [x] built 20 Nov 2026 (`v2/backtest/`, 40 tests); first run on one instrument and one year; waiting for his look before a full run |
+| `tools-backtest` | The tools reading old data on the higher timeframes: calls about where price might draw to, each followed to see whether it came true; tables (the first pattern finder); any call opens on the chart in replay | [x] built 20 Nov 2026 (`v2/backtest/`, 40 tests); full run done 20 Nov 2026 on what he trades and three test charts; waiting for him to look at the misses |
 | pattern finder | Finds patterns inside the sessions on old data (displacement around his times, for one) | [ ] later, on his request, with backtesting (20 Nov 2026: "I want to build your foundations, then when I ask you to backtest on old data I'll request you build a pattern finder skill") |
 
 ## The system
@@ -68,6 +68,7 @@ coming after liquidity.
 | The old version's folder deleted, when he says | [ ] |
 
 ## Waiting on Sharif
+- [ ] **Tools backtest, paused by him on 20 Nov 2026:** the full run is done (the three indices, gold and silver, and three test charts; 114,138 calls; tables at `/backtest` on the chart server). Next: he opens the calls the tools got wrong (start with an index, the daily, liquidity with the bias, undone, target nearer) and says what the tool missed. Nothing in any tool was changed because of the numbers
 - [ ] **Trading range as a tool:** later (20 Nov 2026: "consider it later; it's tricky, but keep the fluidity in your mind"). Read by eye until then
 - [ ] **Range as a tool:** taught by eye and shown back on 20 Nov 2026; the test is confirmed ("that's correct"). Not in the tool: "a few turns" and "some time" are not numbers he has given
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
