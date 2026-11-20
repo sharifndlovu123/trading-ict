@@ -106,3 +106,30 @@ def test_what_he_says_about_a_call_is_added_and_the_latest_is_what_shows(tmp_pat
     assert len(f.read_text().splitlines()) == 3                          # nothing he said is ever overwritten
     with pytest.raises(ValueError):
         add_review(f, "m1", "maybe", "", 13.0)
+
+
+# ---- a call shows what EVERY timeframe was reading, not only its own ("we don't see it, we just see the smaller portion")
+def a_ladder():
+    high = {"side": "bull", "behind": 60.0, "ahead": 150.0, "buyside": 130.0, "sellside": 80.0, "imbalance_above": None,
+            "imbalance_below": (84.0, 88.0, "BISI"), "inside": None}
+    low = {"side": "bear", "behind": 110.0, "ahead": 80.0, "buyside": 110.0, "sellside": 95.0, "imbalance_above": (105.0, 107.0, "BISI"),
+           "imbalance_below": None, "inside": None}
+    return {"t3": high, "t2": None, "t1": low}
+
+
+def test_a_call_draws_and_says_what_the_other_timeframes_were_reading():
+    got = call_marks(merged_row(1, tf="t1", side="bear", target=95.0), a_ladder())
+    assert got["bias"] == {"t3": "bull", "t1": "bear"}                   # every timeframe that has a bias, not only the call's
+    upper = {(m["kind"], m.get("price", m.get("top"))) for m in got["marks"] if m["tf"] == "t3"}
+    assert upper == {("level behind", 60.0), ("level ahead", 150.0), ("buyside", 130.0), ("sellside", 80.0), ("BISI", 88.0)}
+    assert [line.split(":")[0] for line in got["ladder"]] == ["t3", "t2", "t1"]         # highest first
+    assert "bull" in got["ladder"][0] and "[BISI t3]" in got["ladder"][0] and "no bias" in got["ladder"][1]
+    assert any("top to bottom" in s for s in got["interesting"])
+
+
+def test_a_call_without_the_other_timeframes_is_drawn_as_before_and_nothing_is_drawn_twice():
+    alone = call_marks(merged_row(1, tf="t1", side="bear", target=95.0))
+    assert alone["bias"] == {"t1": "bear"} and alone["ladder"] == []
+    both = call_marks(merged_row(1, tf="t1", side="bear", target=95.0), a_ladder())
+    keys = [(m["kind"], m["tf"], m.get("price"), m.get("top")) for m in both["marks"]]
+    assert len(keys) == len(set(keys))

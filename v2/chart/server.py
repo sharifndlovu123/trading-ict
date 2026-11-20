@@ -35,6 +35,7 @@ sys.path.insert(0, str(HERE.parent / "concepts" / "02_liquidity"))
 import liquidity  # noqa: E402     the concept's own tool: the chart only shows what it finds
 
 sys.path.insert(0, str(HERE.parent / "backtest"))
+import run as backtest_run  # noqa: E402    the runner: used here only to read every timeframe at the moment of one call
 import tables as backtest  # noqa: E402     the tools backtest: its tables, and one call as marks for replay
 
 MARKS, SAVES, PAGE, NOTES, MODE = HERE / "marks.json", HERE / "saves.jsonl", HERE / "page.html", HERE / "notes.jsonl", HERE / "mode.json"
@@ -44,6 +45,7 @@ STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 BACKTEST_PAGE = HERE.parent / "backtest" / "page.html"
 CHECK_PAGE = HERE.parent / "backtest" / "check.html"
 _calls: dict = {"stamp": None, "df": None}
+_ladders: dict = {}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
 _cache: dict[str, tuple] = {}
@@ -259,7 +261,17 @@ def backtest_calls():
 def backtest_call(call_id: str) -> dict | None:
     df = backtest_calls()
     hit = df[df["id"] == call_id] if len(df) else df
-    return backtest.call_marks(hit.iloc[0].to_dict()) if len(hit) else None
+    if not len(hit):
+        return None
+    row = hit.iloc[0].to_dict()
+    try:                                        # every timeframe's read at that moment, so the higher ones are seen too
+        if row["asset"] not in _ladders:
+            _ladders.clear()                    # one instrument's candles are kept at a time: they are large
+            _ladders[row["asset"]] = backtest_run.prepare(row["asset"])
+        ladder = {tf: r for tf, (_, r) in backtest_run.reads_at(_ladders[row["asset"]], int(row["moment"])).items()}
+    except Exception:
+        ladder = None
+    return backtest.call_marks(row, ladder)
 
 
 def marks_for(asset: str) -> dict:

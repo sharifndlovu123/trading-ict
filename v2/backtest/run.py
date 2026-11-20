@@ -60,19 +60,43 @@ def owners(m_index: pd.DatetimeIndex, tf: str, labels: pd.DatetimeIndex) -> list
     """For each lowest-timeframe candle, the index of the ``tf`` candle it belongs to (the same grouping the candle
     reader uses, so a daily candle starts at the evening reopen and not at midnight)."""
     if tf in cd.MINUTES:
-        return [bisect_right(secs(labels), t) - 1 for t in secs(m_index)]
+        at = secs(labels)                                # once, not once per candle
+        return [bisect_right(at, t) - 1 for t in secs(m_index)]
     day = cd.trading_day(m_index)
     key = day if tf == "1D" else day - pd.to_timedelta(day.day_of_week, unit="D") if tf == "1W" else day.to_period("M").to_timestamp()
     where = {int(v): i for i, v in enumerate(secs(labels))}
     return [where[t] for t in secs(pd.DatetimeIndex(key))]
 
 
-def run_asset(asset: str, since: str | None = None, until: str | None = None) -> pd.DataFrame:
+def prepare(asset: str) -> dict:
+    """An instrument's candles on every timeframe of the ladder, ready to be read at any moment."""
     m = cd.load_1m(asset)
     frames = {tf: cd.resample(m, tf) for tf in LADDER}
     c = {tf: cd.to_candles(frames[tf]) for tf in LADDER}
     t = {tf: [x["time"] for x in c[tf]] for tf in LADDER}
     own = {tf: owners(frames[FINE].index, tf, frames[tf].index) for tf in LADDER}
+    return {"c": c, "t": t, "own": own}
+
+
+def reads_at(p: dict, moment: int) -> dict:
+    """What the tools see on EVERY timeframe of the ladder at one moment, highest first: ``{tf: (index of the candle
+    forming, the read or None)}``. Each is read with the two timeframes above it, from candles that had closed, plus
+    what its own forming candle has done so far."""
+    c, t, own = p["c"], p["t"], p["own"]
+    fine, j, reads = c[FINE], bisect_left(t[FINE], moment), {}
+    for i, tf in enumerate(LADDER):
+        k = forming_index(t[tf], moment)
+        above = [c[u][max(0, forming_index(t[u], moment) - KEEP[u]):forming_index(t[u], moment)] for u in LADDER[max(0, i - 2):i]]
+        parent = above[-1] if above else None
+        grand = above[-2] if len(above) == 2 else None
+        since_close = [fine[n] for n in range(max(0, j - 800), j) if own[tf][n] == k]       # what the forming candle has done
+        reads[tf] = (k, read(c[tf][max(0, k - KEEP[tf]):k], parent, grand, since_close))
+    return reads
+
+
+def run_asset(asset: str, since: str | None = None, until: str | None = None) -> pd.DataFrame:
+    p = prepare(asset)
+    c, t = p["c"], p["t"]
     fine, ft = c[FINE], t[FINE]
     step = 3600
     starts = sorted(span[0] * 60 for span in KILL_ZONES.values())               # seconds after midnight, New York clock
@@ -87,14 +111,7 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
             if not (lo <= moment < hi) or j >= len(ft) or ft[j] != moment:      # the market must be trading at that hour
                 continue
             zone = next(name for name, span in KILL_ZONES.items() if span[0] * 60 == start)
-            reads = {}
-            for i, tf in enumerate(LADDER):
-                k = forming_index(t[tf], moment)
-                above = [c[u][max(0, forming_index(t[u], moment) - KEEP[u]):forming_index(t[u], moment)] for u in LADDER[max(0, i - 2):i]]
-                parent = above[-1] if above else None
-                grand = above[-2] if len(above) == 2 else None
-                since_close = [fine[n] for n in range(max(0, j - 800), j) if own[tf][n] == k]       # what the forming candle has done
-                reads[tf] = (k, read(c[tf][max(0, k - KEEP[tf]):k], parent, grand, since_close))
+            reads = reads_at(p, moment)
             for i, tf in enumerate(LADDER):
                 k, r = reads[tf]
                 if r is None:

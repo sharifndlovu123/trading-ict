@@ -164,10 +164,41 @@ def reviews(path: Path) -> dict:
     return out
 
 
-def call_marks(row: dict) -> dict:
+def ladder_marks(ladder: dict, skip: str, t0: int) -> tuple[list, dict, list]:
+    """What every OTHER timeframe was reading at the moment of a call (he: "we would need to see what the higher
+    frames are reading at least, because we don't see it"): each one's bias, its two levels, the nearest liquidity
+    each side and the nearest imbalance each side, as marks labelled with their timeframe, and one line of words per
+    timeframe, highest first. ``ladder``: ``{tf: read or None}``, highest first; ``skip``: the call's own timeframe,
+    which the call draws itself."""
+    marks, bias, lines = [], {}, []
+    for tf, r in ladder.items():
+        if r is None:
+            lines.append(f"{tf}: no bias read yet.")
+            continue
+        bias[tf] = r["side"]
+        near = [f"[{k} {tf}]" for k in ("buyside", "sellside") if r.get(k) is not None]
+        gaps = [g for g in (r.get("imbalance_above"), r.get("imbalance_below"), r.get("inside")) if g]
+        near += [f"[{g[2]} {tf}]" for g in gaps]
+        lines.append(f"{tf}: {r['side']}." + (" Nearest from price: " + ", ".join(dict.fromkeys(near)) + "." if near else " Nothing resting nearby.")
+                     + (" Price is inside an imbalance of this timeframe." if r.get("inside") else ""))
+        if tf == skip:
+            continue
+        back = t0 - (400 if tf == "1M" else 120 if tf == "1W" else 30 if tf == "1D" else 6) * 86400
+        for kind in ("level behind", "level ahead", "buyside", "sellside"):
+            price = r.get(kind.replace("level ", ""))
+            if price is not None:
+                marks.append({"shape": "level", "kind": kind, "tf": tf, "price": float(price), "t0": back, "t1": None})
+        for g in {tuple(g) for g in gaps}:
+            marks.append({"shape": "zone", "kind": g[2] if g[2] in ("BISI", "SIBI") else "VI", "tf": tf, "bottom": g[0], "top": g[1], "t0": back, "t1": None})
+    return marks, bias, lines
+
+
+def call_marks(row: dict, ladder: dict | None = None) -> dict:
     """One call as marks for the chart, as the tools saw things at that moment: the bias's two levels, the liquidity
-    each side, the imbalance, and which of them the call was about."""
+    each side, the imbalance, and which of them the call was about. With ``ladder`` (every timeframe's read at that
+    moment), what the other timeframes were reading is drawn and written too."""
     tf, t0, marks = row["tf"], int(row["moment"]), []
+    others, all_bias, lines = ladder_marks(ladder, tf, t0) if ladder else ([], {}, [])
 
     def level(kind, price):
         if price is not None and not pd.isna(price):
@@ -191,9 +222,13 @@ def call_marks(row: dict) -> dict:
     ended = {"true": "It came true", "undone": "It was undone", "unresolved": "It was left unresolved", "open": "It is still open",
              "same candle": "Both were reached inside one candle, so the order is not known"}[row["outcome"]]
     took = "" if row.get("hours") is None or pd.isna(row["hours"]) else f" after {row['hours']:.0f} hours"
-    return {"asset": row["asset"], "tf": tf, "moment": t0, "marks": marks, "bias": {tf: row["side"]},
+    drawn = {(m["kind"], m["tf"], m.get("price"), m.get("top")) for m in marks}
+    marks += [m for m in others if (m["kind"], m["tf"], m.get("price"), m.get("top")) not in drawn]
+    return {"asset": row["asset"], "tf": tf, "moment": t0, "marks": marks, "bias": all_bias or {tf: row["side"]},
+            "ladder": lines,
             "interesting": [f"A merged call from the tools backtest, made at this moment: {how}. Nearest from price now: [{row['what']} {at_tf}]; price might draw to it." if is_merged
                             else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might draw to [{names[row['kind']]} {tf}]." if row["kind"] != "imbalance"
                             else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might reach the imbalance in its direction.",
+                            *(["What each timeframe was reading at that moment, top to bottom:"] + lines if lines else []),
                             "Step the replay forward to see what happened."],
             "considering": [f"{ended}{took}.", "Nearer at the time: " + {"target": "the target", "undo": "what would undo it", "level": "neither", None: "nothing to undo it"}[row.get("nearer")] + "."]}
