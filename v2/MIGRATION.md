@@ -67,6 +67,7 @@ coming after liquidity.
 | The old version's folder deleted, when he says | [ ] |
 
 ## Waiting on Sharif
+- [ ] **Trading range as a tool:** later (20 Nov 2026: "consider it later; it's tricky, but keep the fluidity in your mind"). Read by eye until then
 - [ ] **REMIND HIM:** on 20 Nov 2026, looking at US30 (1h, London morning), he found "one thing that's interesting" and asked to be reminded to teach it later. He has not said what it is. Not part of what is being confirmed now
 - [ ] **Range:** how to find it better. Held for later (19 Nov 2026): "mark range for later as something to find better, I'll try get examples for you; it is difficult to mark out." Until then range is read by eye and the tool does not say it
 - [ ] Gap and trendline: his to show next time
