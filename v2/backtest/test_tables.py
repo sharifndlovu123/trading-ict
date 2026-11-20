@@ -3,7 +3,9 @@ import json
 
 import pandas as pd
 
-from tables import call_marks, count, nearer_side, pick, picture, tables
+import pytest
+
+from tables import add_review, call_marks, check, count, nearer_side, pick, picture, reviews, tables
 
 
 def row(**kw):
@@ -69,3 +71,38 @@ def test_the_picture_lists_the_timeframes_highest_first_with_what_the_bias_adds_
     assert [r["tf"] for r in got] == ["up", "down"]
     assert got[0]["bias_adds"] == 0.5 and got[1]["bias_adds"] == 0.0
     assert got[0]["liquidity_target"] == 1.0 and got[0]["liquidity_target_n"] == 4
+
+
+# ---- the short list he goes through on the chart, and what he says about each call
+def merged_row(i, **kw):
+    return row(id=f"m{i}", kind="merged", asset="US100", tf="1D", moment=1000 + i * 30 * 86400, merge="momentum", outcome="undone",
+               own_side="bear", above="bull", what="sellside", whose_tf="1D") | kw
+
+
+def test_the_check_list_is_short_and_only_calls_where_the_timeframes_disagreed_on_what_he_trades():
+    rows = [merged_row(i, asset=a, merge=m, outcome=o) for i, (a, m, o) in enumerate(
+        (a, m, o) for _ in range(6) for a in ("US100", "US500", "US30", "ELSE") for m in ("momentum", "key area", "agree") for o in ("undone", "true"))]
+    got = check(frame(*rows, row()))
+    assert len(got) == 10 and {c["merge"] for c in got} == {"momentum", "key area"}
+    assert "ELSE" not in {c["asset"] for c in got} and len({c["asset"] for c in got}) == 3
+    assert sum(c["merge"] == "momentum" for c in got) == 5
+    assert sum(c["outcome"] == "undone" for c in got) > sum(c["outcome"] == "true" for c in got) > 0
+    assert check(frame(*rows)) == got                                    # the same list every time it is asked for
+
+
+def test_the_check_list_does_not_show_one_stretch_of_market_twice_and_is_empty_without_merged_calls():
+    close_together = [merged_row(i, moment=1000 + i * 86400) for i in range(8)]
+    assert len(check(frame(*close_together))) == 1
+    assert check(frame(row(), row())) == [] and check(pd.DataFrame()) == []
+
+
+def test_what_he_says_about_a_call_is_added_and_the_latest_is_what_shows(tmp_path):
+    f = tmp_path / "reviews.jsonl"
+    assert reviews(f) == {}
+    add_review(f, "m1", "wrong", "it missed the weekly", 10.0)
+    add_review(f, "m2", "right", "", 11.0)
+    add_review(f, "m1", "not sure", "looking again", 12.0)
+    assert reviews(f)["m1"]["verdict"] == "not sure" and reviews(f)["m2"]["verdict"] == "right"
+    assert len(f.read_text().splitlines()) == 3                          # nothing he said is ever overwritten
+    with pytest.raises(ValueError):
+        add_review(f, "m1", "maybe", "", 13.0)

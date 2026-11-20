@@ -106,6 +106,64 @@ def pick(df: pd.DataFrame, limit: int = 60, **want) -> list[dict]:
     return json.loads(df.sort_values("moment", ascending=False).head(limit)[cols].to_json(orient="records"))
 
 
+TRADED_INDICES = ("US100", "US500", "US30")       # his: "when I say indices, stick to 100, 500 and 30"
+REVIEWS = Path(__file__).resolve().parent / "reviews.jsonl"       # what he says about a call: his words, only ever added to
+VERDICTS = ("right", "wrong", "not sure")
+
+
+def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs: tuple = ("1D", "4h")) -> list[dict]:
+    """A short list for him to go through on the chart: merged calls where the two timeframes DISAGREED (``momentum``
+    and ``key area``), on the indices he trades. He: "review all those bias calls with the momentum and key areas…
+    max 10, and then if it's too far off we will have to do more later on."
+
+    Mine: half of each; of each half, more that were undone with the target nearer (the clear misses) than that came
+    true; newest first; no two from the same instrument within a fortnight, so one stretch of market is not seen ten
+    times; the two higher timeframes that have enough of both."""
+    if df.empty or "merge" not in df.columns:
+        return []
+    pool = df[(df["kind"] == "merged") & df["asset"].isin(assets) & df["tf"].isin(tfs)].sort_values(["moment", "id"], ascending=False)
+    each, out = limit // 2, []
+    for how in ("momentum", "key area"):
+        misses = pool[(pool["merge"] == how) & (pool["outcome"] == "undone") & (pool["nearer"] == "target")]
+        hits = pool[(pool["merge"] == how) & (pool["outcome"] == "true")]
+        for part, want in ((misses, each - each // 3), (hits, each // 3)):
+            got = 0
+            for r in part.to_dict("records"):
+                if got == want:
+                    break
+                if any(o["asset"] == r["asset"] and abs(o["moment"] - r["moment"]) < 14 * 86400 for o in out):
+                    continue
+                if sum(o["asset"] == r["asset"] for o in out) >= -(-limit // len(assets)):
+                    continue
+                out.append(r)
+                got += 1
+    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "nearer", "outcome", "hours"]
+    return json.loads(pd.DataFrame(out)[[c for c in cols if c in pool.columns]].to_json(orient="records")) if out else []
+
+
+def add_review(path: Path, call_id: str, verdict: str, text: str, now: float) -> dict:
+    """He says whether the read was right, and what it missed. Appended; nothing is ever rewritten."""
+    if verdict not in VERDICTS:
+        raise ValueError("the verdict is right, wrong or not sure")
+    row = {"saved": int(now), "id": str(call_id)[:120], "verdict": verdict, "text": str(text)[:4000]}
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+    return row
+
+
+def reviews(path: Path) -> dict:
+    """The latest thing he said about each call, by call id."""
+    out = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            try:
+                r = json.loads(line)
+                out[r["id"]] = r
+            except Exception:
+                continue
+    return out
+
+
 def call_marks(row: dict) -> dict:
     """One call as marks for the chart, as the tools saw things at that moment: the bias's two levels, the liquidity
     each side, the imbalance, and which of them the call was about."""

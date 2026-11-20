@@ -42,6 +42,7 @@ REPLIES = HERE / "replies.jsonl"          # Claude's answers to his notes: Claud
 MODES = ("learn", "hunt", "")          # "" = no session
 STATIC = {"/marks.js": ("marks.js", "text/javascript; charset=utf-8")}
 BACKTEST_PAGE = HERE.parent / "backtest" / "page.html"
+CHECK_PAGE = HERE.parent / "backtest" / "check.html"
 _calls: dict = {"stamp": None, "df": None}
 LAST = {"1m": 1500, "5m": 1500, "15m": 1500, "1h": 2000, "4h": 2000}      # how many candles of the small timeframes are sent
 LOCAL = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
@@ -323,6 +324,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"marks": [], "read": [], **call} if call and call["asset"] == q.get("asset") else marks_for(q.get("asset", "")))
             elif u.path == "/backtest":
                 self._send(200, BACKTEST_PAGE.read_bytes(), "text/html; charset=utf-8")
+            elif u.path == "/backtest/check":
+                self._send(200, CHECK_PAGE.read_bytes(), "text/html; charset=utf-8")
+            elif u.path == "/api/backtest/check":                                    # ten merged calls for him to go through
+                said = backtest.reviews(backtest.REVIEWS)
+                self._json([{**c, "review": said.get(c["id"])} for c in backtest.check(backtest_calls())])
             elif u.path == "/api/backtest/tables":
                 df = backtest_calls()
                 names = [n for n in q.get("assets", "").split(",") if n]            # ?assets=A,B: only those instruments
@@ -370,11 +376,16 @@ class Handler(BaseHTTPRequestHandler):
         if not self._ok():
             return
         path = urlparse(self.path).path
-        if path not in ("/api/save", "/api/note", "/api/mode", "/api/live"):
+        if path not in ("/api/save", "/api/note", "/api/mode", "/api/live", "/api/backtest/review"):
             return self._send(404, b"not found", "text/plain")
         body = self._body()
         if body is None:
             return
+        if path == "/api/backtest/review":
+            try:
+                return self._json(backtest.add_review(backtest.REVIEWS, body.get("id", ""), str(body.get("verdict", "")), body.get("text", ""), time.time()))
+            except ValueError as e:
+                return self._json({"error": str(e)}, 400)
         if path == "/api/live":
             return self._json(live_set(LIVE, bool(body.get("on")), [str(a) for a in body.get("assets", []) if isinstance(a, str)], time.time()))
         if path == "/api/mode":

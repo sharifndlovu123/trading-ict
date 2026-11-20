@@ -69,6 +69,10 @@ timeframe below the top also makes one **merged** call with the timeframe above 
 now, on either of them (`calls.merged`). How "agree", "momentum" and "key area" are told apart is Claude's choice and
 is named so in the code. The single-timeframe calls are kept so the two can be compared (section 2 of the page).
 
+**Checking calls with him:** `/backtest/check` lists ten merged calls where the timeframes disagreed (`tables.check`),
+each opening on the chart at its moment. What he says about a call is saved in `v2/backtest/reviews.jsonl`: his file,
+read it, never edit it. His corrections there go through learn.
+
 ## What it must never do
 
 - **Change a tool or a lesson.** What it shows goes to Sharif, the way hunt notes do. A tool changes only in learn,

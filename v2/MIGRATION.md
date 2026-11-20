@@ -74,6 +74,7 @@ coming after liquidity.
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
 - [ ] The brain's pulling design
 - [x] **Merging the timeframes (20 Nov 2026):** taught after he went through the first run ("there's a mix of timeframes to provide a result"; "where price is RIGHT NOW is always more important"); written into `03_bias_with_liquidity` with three links; context check passed. The backtest now also makes a merged call per timeframe with the one above it (`calls.merged`, tested); he asked for a second run with it. How the merge is decided is Claude's and waits for his look at the results.
+- [ ] **Check ten calls with him (20 Nov 2026, his request):** `/backtest/check` on the chart server lists ten merged calls where the timeframes disagreed (momentum and key area) on the three indices; each opens on the chart at its moment; he says whether the read was right and what it missed (kept in `v2/backtest/reviews.jsonl`, his file: read, never edit). "If it's too far off we will have to do more later on." What he says goes through learn. Also waiting: making the key-area call's undo comparable with the others (asked, not answered).
 - [ ] The backtest skill: his reminder is `.claude/skills/backtest/README.md` ("that skill is very important")
 - [ ] Whether any skill from the old version is wanted in v2 (each would be rebuilt through a design with him)
 - [ ] Whether the ICT PDFs come into `references/`

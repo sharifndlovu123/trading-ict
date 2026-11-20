@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check ten calls</title>
+<style>
+  :root { --bg:#0f1320; --panel:#161b2b; --line:#262d42; --ink:#dfe4f0; --dim:#8a93a6; --good:#2bb673; --bad:#e5534b; --accent:#5b8cff; --soft:#1d2438; color-scheme:dark; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f6f7fa; --panel:#fff; --line:#dfe3ec; --ink:#1b2130; --dim:#5d6678; --accent:#2962ff; --soft:#eef1f7; color-scheme:light; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 system-ui, sans-serif; }
+  main { max-width:1120px; margin:0 auto; padding:20px 16px 70px; }
+  h1 { font-size:22px; margin:0 0 4px; } h2 { font-size:17px; margin:34px 0 4px; }
+  p { margin:4px 0 10px; color:var(--dim); max-width:78ch; } p b, li b { color:var(--ink); }
+  a { color:var(--accent); }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 6px; }
+  .tabs button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; font:inherit; }
+  .tabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .wrap { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { padding:6px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--dim); font-weight:600; background:var(--panel); vertical-align:bottom; white-space:normal; }
+  th:first-child, td:first-child { text-align:left; }
+  tr:last-child td { border-bottom:0; }
+  .n { color:var(--dim); font-size:12px; margin-left:4px; }
+  .bar { display:inline-block; height:8px; border-radius:4px; background:var(--good); vertical-align:middle; margin-right:6px; }
+  .bar.neg { background:var(--bad); }
+  .few { color:var(--dim); }
+  .note { border:1px solid var(--line); border-left:4px solid var(--accent); background:var(--panel); padding:10px 14px; border-radius:6px; margin:12px 0; }
+  .note.warn { border-left-color:var(--bad); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:12px 0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .card b { display:block; font-size:20px; } .card span { color:var(--dim); font-size:12px; }
+  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:0 6px 8px 0; font:inherit; }
+  .true { color:var(--good); } .undone { color:var(--bad); }
+  ul { margin:4px 0 10px; padding-left:20px; color:var(--dim); max-width:78ch; }
+  .call { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:12px 0; }
+  .call h3 { margin:0 0 4px; font-size:15px; } .call p { margin:2px 0 8px; }
+  .call textarea { width:100%; min-height:54px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
+  .call button { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:5px 14px; margin:6px 6px 0 0; cursor:pointer; font:inherit; }
+  .call button.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .call .said { color:var(--good); font-size:12px; margin-left:6px; }
+  details { color:var(--dim); margin:4px 0 8px; } summary { cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Check ten calls</h1>
+  <p><a href="../backtest">Back to the tables</a></p>
+  <p>Ten calls where two timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside the higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
+  <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
+  <div id="list"><p>Loading…</p></div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TF = { "1M": "monthly", "1W": "weekly", "1D": "daily", "4h": "4-hour", "1h": "1-hour" };
+const when = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
+function sentence(c) {
+  const low = TF[c.tf] || c.tf, target = `[${c.what} ${c.whose_tf}]`;
+  return c.merge === "momentum"
+    ? `The ${low} was ${c.own_side} and the timeframe above was ${c.above}. The ${low}'s momentum was followed: nearest from price then, ${c.side === "bull" ? "above" : "below"}, was ${target}; price might draw to it.`
+    : `The ${low} was ${c.own_side} and the timeframe above was ${c.above}, but price was inside an imbalance of the timeframe above on its bias's side. The higher bias was followed: nearest ${c.side === "bull" ? "above" : "below"} was ${target}; price might draw to it.`;
+}
+async function say(id, verdict) {
+  const box = document.querySelector(`[data-id="${CSS.escape(id)}"]`), text = box.querySelector("textarea").value;
+  const r = await fetch("../api/backtest/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, verdict, text }) });
+  if (!r.ok) { box.querySelector(".said").textContent = "not saved"; return; }
+  box.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === verdict));
+  box.querySelector(".said").textContent = "saved";
+}
+(async function () {
+  const rows = await (await fetch("../api/backtest/check")).json();
+  if (!rows.length) { $("list").innerHTML = "<p>No merged calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
+  $("list").innerHTML = rows.map((c, i) => `<div class="call" data-id="${esc(c.id)}">
+    <h3>${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${c.merge === "momentum" ? "momentum followed" : "key area"} <span class="n">${when(c.moment)} New York</span></h3>
+    <p>${esc(sentence(c))}</p>
+    <p><a href="../?call=${encodeURIComponent(c.id)}" target="_blank"><b>Open on the chart at that moment</b></a></p>
+    <details><summary>What happened afterwards</summary>It ${c.outcome === "true" ? "came true" : "was undone"}${c.hours == null ? "" : " after " + Math.round(c.hours) + " hours"}. Nearer at the time: ${c.nearer === "target" ? "the target" : "what would undo it"}.</details>
+    <textarea placeholder="What did the read miss? (optional)">${esc(c.review ? c.review.text : "")}</textarea>
+    ${["right", "wrong", "not sure"].map(v => `<button data-v="${v}" class="${c.review && c.review.verdict === v ? "on" : ""}">The read was ${v === "not sure" ? "… not sure" : v}</button>`).join("")}
+    <span class="said">${c.review ? "saved" : ""}</span></div>`).join("");
+  document.querySelectorAll(".call button").forEach(b => b.onclick = () => say(b.closest(".call").dataset.id, b.dataset.v));
+})();
+</script>
+</body>
+</html>
