@@ -47,7 +47,7 @@
 <main>
   <h1>Tools backtest</h1>
   <p id="scope">Loading…</p>
-  <p><a href="backtest/check"><b>Check ten calls together</b></a>: the calls where two timeframes disagreed (momentum and key area), to open on the chart and say whether the read was right.</p>
+  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls where two timeframes disagreed (momentum and key area), to open on the chart and say whether the read was right.</p>
   <div class="tabs" id="groups"></div>
   <div class="cards" id="cards"></div>
 
@@ -90,6 +90,7 @@
   <div class="wrap" id="calls"></div>
 </main>
 <script>
+const BASE = location.protocol + "//" + location.host;      // links are written out in full (http://…): a phone browser was turning the short ones into https
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw", merged: "two timeframes together" };
@@ -112,7 +113,7 @@ async function calls() {
   let rows = [];
   for (const a of assets) rows = rows.concat(await (await fetch("api/backtest/calls?limit=60&asset=" + a + Object.entries(sel).filter(([k, v]) => v && k !== "asset").map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join(""))).json());
   rows.sort((a, b) => b.moment - a.moment);
-  table("calls", rows.slice(0, 80), [["Call", r => `<a href="./?call=${encodeURIComponent(r.id)}" target="_blank">open on the chart</a>`], ["Made (New York)", r => when(r.moment)],
+  table("calls", rows.slice(0, 80), [["Call", r => `<a href="${BASE}/?call=${encodeURIComponent(r.id)}">open on the chart</a>`], ["Made (New York)", r => when(r.moment)],
     ["Instrument", r => esc(r.asset)], ["Timeframe", r => esc(TFNAME[r.tf] || r.tf)], ["Kind", r => esc(KIND[r.kind] || r.kind)], ["Bias", r => esc(r.side)],
     ["Nearer at the time", r => r.nearer === "target" ? "the target" : r.nearer === "undo" ? "what undoes it" : ""], ["Ended", r => `<span class="${esc(r.outcome)}">${esc(r.outcome)}</span>`], ["Hours", r => r.hours == null ? "" : Math.round(r.hours)]]);
 }
@@ -183,6 +184,7 @@ async function show(g) {
 }
 
 (async function () {
+  $("checklink").href = BASE + "/backtest/check";
   const t = await (await fetch("api/backtest/tables")).json();
   if (!t.calls) { $("scope").textContent = "No backtest has been run yet. Run: uv run python v2/backtest/run.py"; return; }
   $("scope").textContent = "The concept tools reading old data twice a day, at the start of the London and New York kill zones, on the monthly down to the 1-hour chart.";

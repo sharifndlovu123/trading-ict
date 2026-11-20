@@ -53,12 +53,13 @@
 <body>
 <main>
   <h1>Check ten calls</h1>
-  <p><a href="../backtest">Back to the tables</a></p>
+  <p><a id="back" href="../backtest">Back to the tables</a></p>
   <p>Ten calls where two timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside the higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
   <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
   <div id="list"><p>Loading…</p></div>
 </main>
 <script>
+const BASE = location.protocol + "//" + location.host;      // links are written out in full (http://…): a phone browser was turning the short ones into https
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const TF = { "1M": "monthly", "1W": "weekly", "1D": "daily", "4h": "4-hour", "1h": "1-hour" };
@@ -71,18 +72,19 @@ function sentence(c) {
 }
 async function say(id, verdict) {
   const box = document.querySelector(`[data-id="${CSS.escape(id)}"]`), text = box.querySelector("textarea").value;
-  const r = await fetch("../api/backtest/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, verdict, text }) });
+  const r = await fetch(BASE + "/api/backtest/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, verdict, text }) });
   if (!r.ok) { box.querySelector(".said").textContent = "not saved"; return; }
   box.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === verdict));
   box.querySelector(".said").textContent = "saved";
 }
 (async function () {
-  const rows = await (await fetch("../api/backtest/check")).json();
+  $("back").href = BASE + "/backtest";
+  const rows = await (await fetch(BASE + "/api/backtest/check")).json();
   if (!rows.length) { $("list").innerHTML = "<p>No merged calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
   $("list").innerHTML = rows.map((c, i) => `<div class="call" data-id="${esc(c.id)}">
     <h3>${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${c.merge === "momentum" ? "momentum followed" : "key area"} <span class="n">${when(c.moment)} New York</span></h3>
     <p>${esc(sentence(c))}</p>
-    <p><a href="../?call=${encodeURIComponent(c.id)}" target="_blank"><b>Open on the chart at that moment</b></a></p>
+    <p><a href="${BASE}/?call=${encodeURIComponent(c.id)}"><b>Open on the chart at that moment</b></a></p>
     <details><summary>What happened afterwards</summary>It ${c.outcome === "true" ? "came true" : "was undone"}${c.hours == null ? "" : " after " + Math.round(c.hours) + " hours"}. Nearer at the time: ${c.nearer === "target" ? "the target" : "what would undo it"}.</details>
     <textarea placeholder="What did the read miss? (optional)">${esc(c.review ? c.review.text : "")}</textarea>
     ${["right", "wrong", "not sure"].map(v => `<button data-v="${v}" class="${c.review && c.review.verdict === v ? "on" : ""}">The read was ${v === "not sure" ? "… not sure" : v}</button>`).join("")}
