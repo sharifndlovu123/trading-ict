@@ -60,7 +60,11 @@ def read(c: list[dict], parent: list[dict] | None = None, grand: list[dict] | No
             "ahead": b["ahead"]["price"] if b["ahead"] else None, "buyside": above and above["price"],
             "sellside": below and below["price"], "imbalance_above": up and (up["bottom"], up["top"], up["type"]),
             "imbalance_below": down and (down["bottom"], down["top"], down["type"]),
-            "inside": inside and (inside["bottom"], inside["top"], inside["type"])}
+            "inside": inside and (inside["bottom"], inside["top"], inside["type"]),
+            # when each of those was made (the candle's time), so a mark can start at the candle it belongs to
+            "when": {"behind": b["change"]["t"], "ahead": b["ahead"]["t"] if b["ahead"] else None, "buyside": above and above["t"],
+                     "sellside": below and below["t"], "imbalance_above": up and up["t"], "imbalance_below": down and down["t"],
+                     "inside": inside and inside["t"]}}
 
 
 def merged(r: dict, above: dict | None) -> dict | None:

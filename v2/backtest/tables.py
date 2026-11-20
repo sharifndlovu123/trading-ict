@@ -164,32 +164,33 @@ def reviews(path: Path) -> dict:
     return out
 
 
-def ladder_marks(ladder: dict, skip: str, t0: int) -> tuple[list, dict, list]:
-    """What every OTHER timeframe was reading at the moment of a call (he: "we would need to see what the higher
-    frames are reading at least, because we don't see it"): each one's bias, its two levels, the nearest liquidity
-    each side and the nearest imbalance each side, as marks labelled with their timeframe, and one line of words per
-    timeframe, highest first. ``ladder``: ``{tf: read or None}``, highest first; ``skip``: the call's own timeframe,
-    which the call draws itself."""
+def ladder_marks(ladder: dict, t0: int) -> tuple[list, dict, list]:
+    """What EVERY timeframe was reading at the moment of a call (he: "we would need to see what the higher frames are
+    reading at least, because we don't see it"): each one's bias, its two levels, the nearest liquidity each side and
+    the nearest imbalance each side, as marks labelled with their timeframe, and one line of words per timeframe,
+    highest first. ``ladder``: ``{tf: read or None}``, highest first.
+
+    Every mark starts at the candle it belongs to (the candle that made the high, the middle candle of the gap, the
+    candle of the break) and ends at the moment of the call: nothing floats where no candle made it."""
     marks, bias, lines = [], {}, []
     for tf, r in ladder.items():
         if r is None:
             lines.append(f"{tf}: no bias read yet.")
             continue
         bias[tf] = r["side"]
+        when = r.get("when") or {}
         near = [f"[{k} {tf}]" for k in ("buyside", "sellside") if r.get(k) is not None]
-        gaps = [g for g in (r.get("imbalance_above"), r.get("imbalance_below"), r.get("inside")) if g]
-        near += [f"[{g[2]} {tf}]" for g in gaps]
-        lines.append(f"{tf}: {r['side']}." + (" Nearest from price: " + ", ".join(dict.fromkeys(near)) + "." if near else " Nothing resting nearby.")
+        gaps = {tuple(r[k]) + (when.get(k),) for k in ("imbalance_above", "imbalance_below", "inside") if r.get(k)}
+        near += sorted({f"[{g[2]} {tf}]" for g in gaps})
+        lines.append(f"{tf}: {r['side']}." + (" Nearest from price: " + ", ".join(near) + "." if near else " Nothing resting nearby.")
                      + (" Price is inside an imbalance of this timeframe." if r.get("inside") else ""))
-        if tf == skip:
-            continue
-        back = t0 - (400 if tf == "1M" else 120 if tf == "1W" else 30 if tf == "1D" else 6) * 86400
         for kind in ("level behind", "level ahead", "buyside", "sellside"):
-            price = r.get(kind.replace("level ", ""))
-            if price is not None:
-                marks.append({"shape": "level", "kind": kind, "tf": tf, "price": float(price), "t0": back, "t1": None})
-        for g in {tuple(g) for g in gaps}:
-            marks.append({"shape": "zone", "kind": g[2] if g[2] in ("BISI", "SIBI") else "VI", "tf": tf, "bottom": g[0], "top": g[1], "t0": back, "t1": None})
+            key = kind.replace("level ", "")
+            if r.get(key) is not None and when.get(key) is not None:
+                marks.append({"shape": "level", "kind": kind, "tf": tf, "price": float(r[key]), "t0": int(when[key]), "t1": t0})
+        for bottom, top, kind, made in sorted(gaps, key=lambda g: g[0]):
+            if made is not None:
+                marks.append({"shape": "zone", "kind": kind if kind in ("BISI", "SIBI") else "VI", "tf": tf, "bottom": bottom, "top": top, "t0": int(made), "t1": t0})
     return marks, bias, lines
 
 
@@ -198,10 +199,11 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
     each side, the imbalance, and which of them the call was about. With ``ladder`` (every timeframe's read at that
     moment), what the other timeframes were reading is drawn and written too."""
     tf, t0, marks = row["tf"], int(row["moment"]), []
-    others, all_bias, lines = ladder_marks(ladder, tf, t0) if ladder else ([], {}, [])
+    others, all_bias, lines = ladder_marks(ladder, t0) if ladder else ([], {}, [])
+    own = not ladder or ladder.get(tf) is None        # with the ladder, the call's own timeframe is drawn from it too (it knows the candle of each mark)
 
     def level(kind, price):
-        if price is not None and not pd.isna(price):
+        if own and price is not None and not pd.isna(price):
             marks.append({"shape": "level", "kind": kind, "tf": tf, "price": float(price), "t0": t0 - 40 * 86400 if tf in ("1M", "1W") else t0 - 5 * 86400, "t1": None})
 
     level("level behind", row["behind"])
@@ -211,9 +213,9 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
     is_merged = row["kind"] == "merged"
     at_tf = row.get("whose_tf") if is_merged and isinstance(row.get("whose_tf"), str) else tf       # a merged call's target may belong to the timeframe above
     gap = json.loads(row["imbalance"]) if isinstance(row.get("imbalance"), str) else None
-    if gap:
+    if gap and own:
         marks.append({"shape": "zone", "kind": gap[2] if gap[2] in ("BISI", "SIBI") else "VI", "tf": at_tf, "bottom": gap[0], "top": gap[1], "t0": t0 - 5 * 86400, "t1": None})
-    elif is_merged and at_tf != tf:
+    elif is_merged and at_tf != tf and own:
         marks.append({"shape": "level", "kind": row["what"], "tf": at_tf, "price": float(row["target"]), "t0": t0 - 40 * 86400, "t1": None})
     marks.append({"shape": "vline", "kind": "→ bull" if row["side"] == "bull" else "→ bear", "tf": tf, "t0": t0, "t1": t0})
     names = {"liquidity": "buyside" if row["side"] == "bull" else "sellside", "bias": "level ahead", "imbalance": "the imbalance"}
@@ -222,8 +224,7 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
     ended = {"true": "It came true", "undone": "It was undone", "unresolved": "It was left unresolved", "open": "It is still open",
              "same candle": "Both were reached inside one candle, so the order is not known"}[row["outcome"]]
     took = "" if row.get("hours") is None or pd.isna(row["hours"]) else f" after {row['hours']:.0f} hours"
-    drawn = {(m["kind"], m["tf"], m.get("price"), m.get("top")) for m in marks}
-    marks += [m for m in others if (m["kind"], m["tf"], m.get("price"), m.get("top")) not in drawn]
+    marks += others
     return {"asset": row["asset"], "tf": tf, "moment": t0, "marks": marks, "bias": all_bias or {tf: row["side"]},
             "ladder": lines,
             "interesting": [f"A merged call from the tools backtest, made at this moment: {how}. Nearest from price now: [{row['what']} {at_tf}]; price might draw to it." if is_merged

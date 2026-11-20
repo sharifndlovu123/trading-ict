@@ -111,25 +111,34 @@ def test_what_he_says_about_a_call_is_added_and_the_latest_is_what_shows(tmp_pat
 # ---- a call shows what EVERY timeframe was reading, not only its own ("we don't see it, we just see the smaller portion")
 def a_ladder():
     high = {"side": "bull", "behind": 60.0, "ahead": 150.0, "buyside": 130.0, "sellside": 80.0, "imbalance_above": None,
-            "imbalance_below": (84.0, 88.0, "BISI"), "inside": None}
+            "imbalance_below": (84.0, 88.0, "BISI"), "inside": None,
+            "when": {"behind": 100, "ahead": 200, "buyside": 300, "sellside": 400, "imbalance_above": None, "imbalance_below": 500, "inside": None}}
     low = {"side": "bear", "behind": 110.0, "ahead": 80.0, "buyside": 110.0, "sellside": 95.0, "imbalance_above": (105.0, 107.0, "BISI"),
-           "imbalance_below": None, "inside": None}
+           "imbalance_below": None, "inside": (99.0, 101.0, "SIBI"),
+           "when": {"behind": 700, "ahead": 710, "buyside": 720, "sellside": 730, "imbalance_above": 740, "imbalance_below": None, "inside": 750}}
     return {"t3": high, "t2": None, "t1": low}
 
 
-def test_a_call_draws_and_says_what_the_other_timeframes_were_reading():
-    got = call_marks(merged_row(1, tf="t1", side="bear", target=95.0), a_ladder())
+def test_a_call_draws_and_says_what_every_timeframe_was_reading():
+    got = call_marks(merged_row(1, tf="t1", side="bear", target=95.0, moment=1000), a_ladder())
     assert got["bias"] == {"t3": "bull", "t1": "bear"}                   # every timeframe that has a bias, not only the call's
     upper = {(m["kind"], m.get("price", m.get("top"))) for m in got["marks"] if m["tf"] == "t3"}
     assert upper == {("level behind", 60.0), ("level ahead", 150.0), ("buyside", 130.0), ("sellside", 80.0), ("BISI", 88.0)}
     assert [line.split(":")[0] for line in got["ladder"]] == ["t3", "t2", "t1"]         # highest first
     assert "bull" in got["ladder"][0] and "[BISI t3]" in got["ladder"][0] and "no bias" in got["ladder"][1]
-    assert any("top to bottom" in s for s in got["interesting"])
+    assert "inside an imbalance" in got["ladder"][2] and any("top to bottom" in s for s in got["interesting"])
 
 
-def test_a_call_without_the_other_timeframes_is_drawn_as_before_and_nothing_is_drawn_twice():
+def test_every_mark_of_a_call_starts_at_the_candle_that_made_it_and_ends_at_the_moment():
+    """Nothing floats: a gap is drawn from its own candle, a level from the candle that made the high or low."""
+    got = call_marks(merged_row(1, tf="t1", side="bear", target=95.0, moment=1000), a_ladder())
+    spans = {(m["kind"], m["tf"]): (m["t0"], m["t1"]) for m in got["marks"] if m["shape"] != "vline"}
+    assert spans[("BISI", "t3")] == (500, 1000) and spans[("buyside", "t3")] == (300, 1000) and spans[("level behind", "t1")] == (700, 1000)
+    assert spans[("SIBI", "t1")] == (750, 1000) and spans[("BISI", "t1")] == (740, 1000)
+    keys = [(m["kind"], m["tf"], m.get("price"), m.get("top")) for m in got["marks"]]
+    assert len(keys) == len(set(keys))                                   # and nothing is drawn twice
+
+
+def test_a_call_without_the_other_timeframes_is_drawn_as_before():
     alone = call_marks(merged_row(1, tf="t1", side="bear", target=95.0))
-    assert alone["bias"] == {"t1": "bear"} and alone["ladder"] == []
-    both = call_marks(merged_row(1, tf="t1", side="bear", target=95.0), a_ladder())
-    keys = [(m["kind"], m["tf"], m.get("price"), m.get("top")) for m in both["marks"]]
-    assert len(keys) == len(set(keys))
+    assert alone["bias"] == {"t1": "bear"} and alone["ladder"] == [] and any(m["kind"] == "sellside" for m in alone["marks"])
