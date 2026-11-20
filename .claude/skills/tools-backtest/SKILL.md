@@ -51,6 +51,7 @@ About two minutes per instrument per year. Results go to `v2/backtest/out/` (not
 6. **Focus on what he trades.** "When it comes to backtesting focus more on what we're trading with": US100, US500
    and US30 first, then gold with silver beside it. Other instruments are fine for building and checking tools, and
    are shown apart, labelled as tests.
+   Why: "these backtesting tools are validating for trades you're expected to make in the future yourself."
 
 ## What it must never do
 
