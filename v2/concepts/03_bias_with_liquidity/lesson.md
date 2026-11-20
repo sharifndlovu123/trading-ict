@@ -6,7 +6,8 @@ kind of mark except the trading range and its 50%.
 
 **Shown back on 19 Nov 2026 on two charts I had not seen** (gold and the Nasdaq). He: "the read so far has been pretty
 good", "so far not so bad", "nice catch", with the corrections below under "The bigger trade". He said that part
-was done the same day. A read on an unseen chart with no corrections has not happened yet.
+was done the same day. **Confirmed on 20 Nov 2026** on a third chart I had not seen (the Dow, read top to bottom in the
+London morning): "so far so good, your read is solid."
 
 ## Know the bias first (his emphasis when closing the lesson)
 
@@ -235,4 +236,3 @@ as something to pick out mechanically, so it is read on the chart for now. The c
   (19 Nov 2026: "drop"). They are off the chart's tools; the plain line tool is now called "line".
 
 - "Deep enough" for a retracement to move the end of a range: 50% as a working number; to be worked on over time.
-- A read on an unseen chart with no corrections.

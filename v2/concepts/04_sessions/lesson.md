@@ -1,8 +1,9 @@
 # Sessions: when a trade is looked for
 
 Confirmed by Sharif on 19 Nov 2026, during the show-back of lesson 03. First taught on 16 Nov 2026, before the
-rebuild; on 19 Nov I read my old note back to him and he confirmed it ("yes it's right") and added to it. Not yet
-shown back on a chart: no read of mine has yet been made with the sessions in it from the start.
+rebuild; on 19 Nov I read my old note back to him and he confirmed it ("yes it's right") and added to it. **Confirmed in use
+on 20 Nov 2026:** a read of a chart I had not seen, made inside the London morning with the session named from the
+start: "so far so good, your read is solid."
 
 **All times are New York time.**
 

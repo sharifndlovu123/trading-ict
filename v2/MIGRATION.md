@@ -19,8 +19,8 @@ Update whenever a box changes. `[x]` done · `[~]` partly (see the note) · `[ ]
 |---|---|---|---|---|---|---|
 | 01 | Bias | [x] | [x] | [ ] | [x] | [ ] |
 | 02 | Liquidity, with alt-liquidity (imbalances as draws) | [x] | [x] | [ ] | [x] | [ ] |
-| 03 | Bias and liquidity working together (favouring, the sequence, the trading range and its 50%, targets by timeframe and by bias, the bigger trade) | [ ] shown back on two unseen charts on 19 Nov 2026 with corrections ("not so bad", "nice catch"); a read with no corrections still to come | [x] | [x] 12 stated by him, 1 of mine unconfirmed | none yet: read on the chart | [ ] |
-| 04 | Sessions: when a trade is looked for (his times, the reference definitions, locked time) | [ ] confirmed in his words; not yet used in a read from the start | [x] | [x] 3 stated by him, 1 of mine unconfirmed | none yet | [ ] |
+| 03 | Bias and liquidity working together (favouring, the sequence, the trading range and its 50%, targets by timeframe and by bias, the bigger trade) | [x] 20 Nov 2026, a top-down read of the Dow he did not correct: "so far so good, your read is solid" | [x] | [x] 13 stated by him | none yet: read on the chart | [ ] |
+| 04 | Sessions: when a trade is looked for (his times, the reference definitions, locked time) | [x] 20 Nov 2026, the same read, made inside the London morning with the session in it from the start | [x] | [x] 4 stated by him | none yet | [ ] |
 
 Note on 01: the tool agrees fully with his confirmed read on the DAX, on direction on the dollar index, and differs
 on the FTSE. The open questions are in `concepts/01_bias/lesson.md`.
@@ -79,6 +79,7 @@ coming after liquidity.
 ## Log
 | Date | What changed |
 |---|---|
+| 20 Nov 2026 | Concepts 03 and 04 confirmed on a chart I had not seen (the Dow, London morning): "so far so good, your read is solid". On 19 Nov: his answers to the open questions written into all four lessons; the bias tool looks two timeframes up, finds the level behind as the pullback the break was built on, and can read a line chart; range held for his examples |
 | 19 Nov 2026 | Lesson 03 shown back on gold and the Nasdaq; his corrections written in as "The bigger trade" (missed trades, the fluid range, an area's own timeframe, the 50% against the imbalance, knowing what was swept). Concept 04, sessions, written from what he confirmed. Chart: Claude's read tick and answers under his notes; a Same TF switch |
 | 18 Nov 2026 | Concept 03, bias and liquidity working together: taught on the Russell 2000 from the monthly down to the 5-minute; lesson and links written when he said it was done. Chart: trading range and 50% marks |
 | 18 Nov 2026 | "Very close" is judged by eye, from far (his words). Tool: close = a share of the chart's height; a slider on the chart (≈) shows the equal highs and lows found for any share, so he can set it by eye |
