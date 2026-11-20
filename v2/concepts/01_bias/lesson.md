@@ -104,12 +104,36 @@ price has swung between it and the low below with no body beyond either). He: "y
 **How it is said in a read (mine):** the bias per timeframe stays bull or bear; where a range is building, that is
 added with its two edges. "Range" does not replace the bias.
 
-**No tool yet.** How many swings make a range, and when a pullback becomes one, he has not said, so the tool still
-gives only the bias. It stays read by eye.
+### Shown back on real charts, and corrected (20 Nov 2026)
+I looked for ranges on charts I had not read and showed him several. "You're getting it." Then, on a weekly he
+pointed me to, I marked two stretches as ranges and he corrected one:
+
+- **Making highs is not a range.** "B isn't a range really; notice how it was making highs." Each new top there went
+  clearly above the last, while the lows looked flat. That is price moving up with deep pullbacks. A range makes no new
+  highs and no new lows.
+- **A sweep is not an equal high.** I had marked two highs as equal that were far apart. "The EQHs you marked… those
+  are clearly not; the wicks are separated from each other quite far"; the first high "swept it quite deep enough, the
+  second sweep was already too deep"; "that EQH you marked is way too big." I had judged by feel and not used his
+  eye's measure (lesson 02). Checked afterwards against the tool: five of six equal sets I had drawn by hand in two
+  days were not equal.
+- **Where to look for one.** "With range it's often harder to see it on higher timeframes, but if you're on 4-hourly
+  and using a small timeframe, you'll find ranges easier."
+- **It lasts.** Of the stretch that was a range: "notice how price was inside that range for some time too."
+
+**The test I gave back, which he confirmed ("that's correct"):**
+1. Find the most recent important high and low.
+2. Price has turned at least a few times between them, over some time.
+3. No high clearly above the top and no low clearly below the bottom, judged by his eye's measure for "very close".
+   A smidge within that measure is an equal high or low.
+4. It ends with a body closing beyond an edge.
+
+**No tool yet.** "A few times" and "some time" are not numbers he has given, so the tool still gives only the bias.
+It stays read by eye, with the test above.
 
 ## Open questions for him
-- Range for a machine: when a pullback has become a range (how many swings, how long). Taught by eye in the section
-  above; the tool does not say it yet.
+- Range for a machine: how many turns are "a few", and how long is "some time". The rest of the test is confirmed.
+- Some of the lower-timeframe examples I showed him had a low clearly under the bottom edge; by the confirmed test
+  those stopped being ranges at that candle. He has not looked at each one.
 - **A close under by a small amount, answered 19 Nov 2026:** "You're right, it was a small close, but if you're
   confused, take a look at that same chart on daily; I don't think you'll be confused by those two lows." When a
   higher timeframe's close beyond a level is marginal, the timeframe below shows whether it was clean. (The second

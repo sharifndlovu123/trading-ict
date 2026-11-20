@@ -68,7 +68,7 @@ coming after liquidity.
 
 ## Waiting on Sharif
 - [ ] **Trading range as a tool:** later (20 Nov 2026: "consider it later; it's tricky, but keep the fluidity in your mind"). Read by eye until then
-- [ ] **Range as a tool:** taught by eye on 20 Nov 2026 with his own drawing (a moment inside the bias; a smidge past an edge is an equal low or high; it ends like a break of bias). Not in the tool: when a pullback has become a range is not defined yet
+- [ ] **Range as a tool:** taught by eye and shown back on 20 Nov 2026; the test is confirmed ("that's correct"). Not in the tool: "a few turns" and "some time" are not numbers he has given
 - [ ] Gap and trendline: his to show next time
 - [x] The three open bias questions: answered 19 Nov 2026 (range defined and held for examples; significance is relative, two up; a marginal close is checked one timeframe down)
 - [ ] The brain's pulling design
