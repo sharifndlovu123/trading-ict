@@ -70,6 +70,50 @@ timeframes' momentum are stated together; then what is nearby from where price s
 timeframes, is what price might be drawn to; whether the lower move is part of the bigger move or the start of a
 change is left unsaid until a candle of the higher timeframe has closed.
 
+### At an interesting zone: the closed candle, on the zone's own timeframe (taught 20 and 23 Nov 2026)
+
+Taught through his review of ten merged calls from the tools backtest (20 Nov 2026, his words kept in
+`v2/backtest/reviews.jsonl`) and his answers on 23 Nov 2026. He said the lesson was done on 23 Nov. **Shown back the
+same day on two charts** (one I had not read before; one I had seen once for another lesson, and I had seen the
+candles after the moment while finding it, which I told him); he: "thanks, nice work."
+
+- **Price works with where we are now, and at the zone we watch.** "Remember price works with currently where we
+  are. So when we reach an interesting zone we watch what happens."
+- **What is expected of the zone.** "If we are looking for higher pricing, we expect price to not break the
+  interesting zone below with a closed candle, nor break below within that same timeframe of the interesting zone.
+  If it fails to break or close below, our buying is stronger." The same thinking the other way round when looking
+  for lower prices: "if we are expecting lower prices, a closed candle below that BISI would have been key. The close
+  should have been below."
+- **The close is judged on the timeframe of the zone.** "Remember: a close through that imbalance, relative to the
+  timeframe of the break and the imbalance itself." Wicks are not a break: the zone "still stood strong; it had wicks
+  playing below, but no breaks on the same timeframe."
+- **Once the zone is closed through, the other side has support.** "We don't dictate how deep and how far, but once
+  you saw the break above our key area, it could've supported buys." A candle that "closed above" an imbalance and
+  then "retraced back into it" is "showing it's important".
+- **An opposing imbalance on the way is watched too.** "You should have been watching what's happening there: price
+  respected it and sold lower. If it had broken above it would've supported our buys, but it didn't."
+- **It is a set of moves, not one candle.** "We keep our eyes open for a set of moves to play out" (the sequence
+  under "What something playing out looks like", below).
+- **A read can be right and the target still not be reached.** "You expected the lower sellside to be swept but it
+  didn't happen, that's how it is; in my eyes good trade, in fact a win still."
+- **Unknown territory.** Price "pushing up into new ground: there's nothing on the left side to work with." Looking
+  for a move from there has nothing to be read from.
+- **Putting it together is the point.** "Your bias markers are correct. This is where building important things
+  together and context are important."
+
+**What I got wrong, and what he said.** In the backtest's "key area" calls I stayed with the higher timeframe's
+imbalance for as long as price sat inside it, and did not look at whether a candle had closed through it. He judged
+most of those reads wrong while the bias marks were right. The "momentum" reads he judged right, including ones the
+backtest had counted as undone: the backtest's count of how a call ended is not his judgement of the read.
+
+Mine, not his: on the show-back I said of each zone near price whether a candle of its own timeframe had closed
+beyond it (broken) or only wicked beyond it (standing), and that a zone whose own candle is still forming is not yet
+broken, even when lower-timeframe candles have closed beyond it. He accepted the show-back; the wording is mine.
+
+Named by him in the same review and **held on his word, not taught yet:** Fibonacci and its upper quadrants, "small
+piece trading" in a consolidating market, extra timeframes for a tricky read, and premium (relative to the trading
+range). Nothing here uses them.
+
 ## What "something playing out" looks like (the sequence he walked me through)
 
 1. "First thing you'd have to notice is anything of importance, such as liquidity marked out."
@@ -278,6 +322,10 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | the timeframes disagree on bias | where price is right now, and what is nearby that it might be drawn to (liquidity or an imbalance, on any of those timeframes); not a far level one timeframe's bias points at | stated by Sharif, 20 Nov 2026 |
 | the lower timeframe keeps breaking structure against the higher timeframe's bias | that momentum: it is looked at, not ignored; it might be part of the bigger move, or a change that shows on the higher timeframe later | stated by Sharif, 20 Nov 2026 |
 | price has retraced into a key area of the higher timeframe | a nearby imbalance as the current goal | stated by Sharif, 20 Nov 2026 |
+| price reaches an interesting zone while a direction is being looked for | whether a candle of the zone's own timeframe closes beyond it against that direction; if it fails to, the idea is stronger | stated by Sharif, 23 Nov 2026 |
+| a candle of the zone's own timeframe has closed beyond the zone | the other side: that close might support it, more so when price retraces back into the zone afterwards | stated by Sharif, 20 Nov 2026 |
+| price meets an opposing imbalance on the way to where it is expected | what happens there: respected, it might turn price back; closed through, it might support the idea | stated by Sharif, 20 Nov 2026 |
+| price pushes into new ground with nothing on the left side | nothing to read a target from: unknown territory | stated by Sharif, 23 Nov 2026 |
 
 ## Open questions for him
 
@@ -286,4 +334,8 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 
 - "Deep enough" for a retracement to move the end of a range: 50% as a working number; to be worked on over time.
 - Merging the timeframes: he has not said how to tell, while it is happening, whether the lower timeframe's move is
-  part of the bigger move or the start of a change ("it's tricky to say it specifically"). Not to be guessed.
+  part of the bigger move or the start of a change ("it's tricky to say it specifically"). Answered in part on
+  23 Nov 2026: what happens at the interesting zone, and the closed candle on the zone's own timeframe (above). Beyond
+  that, not to be guessed.
+- Fibonacci and its upper quadrants, "small piece trading", extra timeframes for a tricky read, premium: named by him
+  on 20 Nov 2026 and held until he teaches them.

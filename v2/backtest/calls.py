@@ -55,7 +55,9 @@ def read(c: list[dict], parent: list[dict] | None = None, grand: list[dict] | No
     gaps = [g for g in fvgs(seen) + volume_imbalances(seen) if g["state"] != "filled"]
     up = min((g for g in gaps if g["bottom"] > top), key=lambda g: g["bottom"], default=None)
     down = max((g for g in gaps if g["top"] < bottom), key=lambda g: g["top"], default=None)
-    inside = next((g for g in reversed(gaps) if g["type"] in ("BISI", "SIBI") and g["bottom"] <= price <= g["top"]), None)
+    # the zone price is in that still stands: no candle of THIS timeframe has closed beyond it (his, 23 Nov 2026: "a
+    # close through that imbalance, relative to the timeframe of the break and the imbalance itself"; wicks are no break)
+    inside = next((g for g in reversed(fvgs(seen)) if g["closed_through_at"] is None and g["bottom"] <= price <= g["top"]), None)
     return {"side": b["side"], "price": price, "near": near, "behind": b["change"]["price"],
             "ahead": b["ahead"]["price"] if b["ahead"] else None, "buyside": above and above["price"],
             "sellside": below and below["price"], "imbalance_above": up and (up["bottom"], up["top"], up["type"]),
@@ -67,56 +69,71 @@ def read(c: list[dict], parent: list[dict] | None = None, grand: list[dict] | No
                      "inside": inside and inside["t"]}}
 
 
-def merged(r: dict, above: dict | None) -> dict | None:
-    """One call from two timeframes read together: this one (``r``) and the one above it (``above``).
+def merged(r: dict, above: dict | list | None) -> dict | None:
+    """One call from the whole ladder read together: this timeframe (``r``) and every timeframe above it (``above``:
+    their reads, highest first; a timeframe with no read is ``None``; one read alone is taken as the one above).
 
     His (20 Nov 2026): the biases disagreeing is normal; the lower timeframe's momentum against the higher bias "must
     be looked at"; "where price is RIGHT NOW is always more important, because it's drawn to something"; not a far
     level but what is nearby; and when price has "retraced into a key area", "the current goal might be to reach a
-    nearby imbalance". From the lesson before it: a closed candle beyond the higher timeframe's area, against it,
-    favours the lower timeframe's side.
+    nearby imbalance". His (23 Nov 2026): at an interesting zone "we expect price to not break the interesting zone
+    below with a closed candle, nor break below within that same timeframe of the interesting zone"; "a close through
+    that imbalance, relative to the timeframe of the break and the imbalance itself". And always top to bottom.
 
     Mine, not his (he: "it's tricky to say it specifically"), so that it can be tested at all:
-      * ``agree``: both have the same bias: that is the way looked;
-      * ``momentum``: they disagree: the way looked is this timeframe's (the momentum now);
-      * ``key area``: they disagree and price is inside an unfilled FVG of the timeframe above that is on its bias's
-        side (a BISI when it is bull, a SIBI when bear): the way looked is the timeframe above's;
-      * the target is whatever is NEAREST from price now in that way, on either timeframe: resting liquidity or the
-        near edge of an unfilled imbalance;
-      * undone by: the nearest resting liquidity the other way (either timeframe) being eaten, or a body close beyond
-        this timeframe's level behind; for ``key area``, only a body close of this timeframe beyond the area.
-    ``None`` when there is no timeframe above, or nothing lies in that way."""
-    if above is None:
+      * ``key area``: price is inside a standing imbalance (``read``'s ``inside``: no candle of its own timeframe has
+        closed beyond it) of a timeframe above, on that timeframe's side (a BISI when it is bull, a SIBI when bear),
+        and this timeframe's bias is the other way: the way looked is that higher timeframe's. With several, the
+        highest timeframe's;
+      * ``agree``: otherwise, every timeframe above has this one's bias: that is the way looked;
+      * ``momentum``: otherwise: the way looked is this timeframe's (the momentum now);
+      * the target is whatever is NEAREST from price now in that way, on any of the timeframes: resting liquidity or
+        the near edge of an unfilled imbalance;
+      * undone by: the nearest resting liquidity the other way (any of the timeframes) being eaten, or a body close
+        beyond this timeframe's level behind; for ``key area``, only a body close of the AREA'S OWN timeframe beyond
+        the area (``"close area"``).
+    ``whose`` is "own" or "above", ``whose_i`` the place in ``above`` of the timeframe the target belongs to,
+    ``area_i`` the place of the timeframe whose area it is. ``None`` when nothing was read above, or nothing lies
+    that way."""
+    ups = [above] if isinstance(above, dict) else list(above or [])
+    if not any(ups):
         return None
-    price, hold = r["price"], above.get("inside")
-    if r["side"] == above["side"]:
+    price, area_i = r["price"], None
+    for i, x in enumerate(ups):
+        hold = x and x.get("inside")
+        if hold and x["side"] != r["side"] and hold[2] == ("BISI" if x["side"] == "bull" else "SIBI"):
+            area_i = i
+            break
+    if area_i is not None:
+        side, how, hold = ups[area_i]["side"], "key area", ups[area_i]["inside"]
+    elif all(x["side"] == r["side"] for x in ups if x):
         side, how = r["side"], "agree"
-    elif hold and hold[2] == ("BISI" if above["side"] == "bull" else "SIBI"):
-        side, how = above["side"], "key area"
     else:
         side, how = r["side"], "momentum"
     bull = side == "bull"
     found = []
-    for who, x in (("own", r), ("above", above)):
+    for i, x in [(None, r)] + [(i, x) for i, x in enumerate(ups) if x]:
+        who = "own" if i is None else "above"
         liq, gap = (x["buyside"], x["imbalance_above"]) if bull else (x["sellside"], x["imbalance_below"])
         if liq is not None:
-            found.append({"target": (liq, "eat"), "what": "buyside" if bull else "sellside", "whose": who, "gap": None})
+            found.append({"target": (liq, "eat"), "what": "buyside" if bull else "sellside", "whose": who, "whose_i": i, "gap": None})
         if gap is not None:
-            found.append({"target": (gap[0] if bull else gap[1], "trade"), "what": gap[2], "whose": who, "gap": gap})
+            found.append({"target": (gap[0] if bull else gap[1], "trade"), "what": gap[2], "whose": who, "whose_i": i, "gap": gap})
     found = [f for f in found if (f["target"][0] > price) == bull and f["target"][0] != price]
     if not found:
         return None
     best = min(found, key=lambda f: abs(f["target"][0] - price))
     if how == "key area":
-        undo = [(hold[0] if bull else hold[1], "close")]
+        undo = [(hold[0] if bull else hold[1], "close area")]
     else:
-        other = [x["sellside"] if bull else x["buyside"] for x in (r, above)]
+        other = [x["sellside"] if bull else x["buyside"] for x in [r] + [x for x in ups if x]]
         other = [p for p in other if p is not None and (p < price) == bull]
         undo = ([(min(other, key=lambda p: abs(p - price)), "eat")] if other else []) + [(r["behind"], "close")]
     d_t, d_u = abs(best["target"][0] - price), min(abs(u[0] - price) for u in undo)
     return {"kind": "merged", "side": side, "price": price, "near": r["near"], "target": best["target"], "undo": undo,
             "dist_target": d_t, "dist_undo": d_u, "nearer": "target" if d_t < d_u else "undo" if d_u < d_t else "level",
-            "merge": how, "what": best["what"], "whose": best["whose"], "gap": best["gap"]}
+            "merge": how, "what": best["what"], "whose": best["whose"], "whose_i": best["whose_i"], "area_i": area_i,
+            "gap": best["gap"]}
 
 
 def calls(r: dict) -> list[dict]:
@@ -144,10 +161,13 @@ def calls(r: dict) -> list[dict]:
     return out
 
 
-def _hit(level: tuple, up: bool, candle: dict | None, close: float | None, near: float) -> bool:
+def _hit(level: tuple, up: bool, candle: dict | None, close: float | None, near: float, area: float | None = None) -> bool:
     """Has this level been reached? ``up``: it lies above price. "eat" = traded clearly past it (his "clearly past");
-    "trade" = traded to it; "close" = a body closed beyond it (only when a candle of the call's timeframe closed)."""
+    "trade" = traded to it; "close" = a body closed beyond it (only when a candle of the call's timeframe closed);
+    "close area" = a body of the AREA'S timeframe closed beyond it (``area``: that close, when one has just closed)."""
     price, how = level
+    if how == "close area":
+        return area is not None and (area > price if up else area < price)
     if how == "close":
         return close is not None and (close > price if up else close < price)
     if candle is None:
@@ -156,17 +176,19 @@ def _hit(level: tuple, up: bool, candle: dict | None, close: float | None, near:
     return reach > near if how == "eat" else reach >= 0
 
 
-def resolve(call: dict, fine: list[dict], closes: list[tuple], horizon: int = 20) -> dict:
+def resolve(call: dict, fine: list[dict], closes: list[tuple], horizon: int = 20, area_closes: list[tuple] | None = None) -> dict:
     """What happened to a call. ``fine``: the lowest-timeframe candles from the moment of the call on (they show what
     price traded to, and in what order). ``closes``: ``(time the candle closed, its close)`` for candles of the call's
-    own timeframe that closed after the moment; a body close is judged on these only. The call is given ``horizon``
-    of its own candles (mine); after that it is ``unresolved``, and if the data ends first it is ``open``.
+    own timeframe that closed after the moment; a body close is judged on these only. ``area_closes``: the same for
+    the timeframe of a key area, which is what a "close area" is judged on. The call is given ``horizon`` of its own
+    candles (mine); after that it is ``unresolved``, and if the data ends first it is ``open``.
 
     Outcomes: ``true``, ``undone``, ``same candle`` (both reached inside one lowest-timeframe candle, so the order is
     not known), ``unresolved``, ``open``. Also ``at`` (when) and ``candles`` (how many of its own candles it took)."""
     bull = call["side"] == "bull"
     limit = closes[horizon - 1][0] if len(closes) >= horizon else None
-    k = 0
+    area_closes = area_closes or []
+    k = ka = 0
     for x in fine:
         if limit is not None and x["time"] >= limit:
             return {"outcome": "unresolved", "at": limit, "candles": horizon}
@@ -179,6 +201,9 @@ def resolve(call: dict, fine: list[dict], closes: list[tuple], horizon: int = 20
             k += 1
         while k < len(closes) and closes[k][0] <= end:
             k += 1
+        while ka < len(area_closes) and area_closes[ka][0] <= end:                  # the area's own timeframe closing
+            lost = lost or any(_hit(u, not bull, None, None, call["near"], area_closes[ka][1]) for u in call["undo"])
+            ka += 1
         if won or lost:
             return {"outcome": "same candle" if won and lost else "true" if won else "undone", "at": x["time"], "candles": k}
     return {"outcome": "open", "at": None, "candles": k}

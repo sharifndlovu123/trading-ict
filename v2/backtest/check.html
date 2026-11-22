@@ -54,7 +54,7 @@
 <main>
   <h1>Check ten calls</h1>
   <p><a id="back" href="../backtest">Back to the tables</a></p>
-  <p>Ten calls where two timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside the higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
+  <p>Ten calls where the timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside a higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
   <div class="note"><b>HIT</b> = price reached the target the call named before anything undid it. <b>MISS</b> = the call was undone first, although the target was the nearer level. That is only how it ended, as the backtest counts it: whether the <b>read</b> was right is yours to say.</div>
   <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
   <div id="list"><p>Loading…</p></div>
@@ -69,7 +69,7 @@ function sentence(c) {
   const low = TF[c.tf] || c.tf, target = `[${c.what} ${c.whose_tf}]`;
   return c.merge === "momentum"
     ? `The ${low} was ${c.own_side} and the timeframe above was ${c.above}. The ${low}'s momentum was followed: nearest from price then, ${c.side === "bull" ? "above" : "below"}, was ${target}; price might draw to it.`
-    : `The ${low} was ${c.own_side} and the timeframe above was ${c.above}, but price was inside an imbalance of the timeframe above on its bias's side. The higher bias was followed: nearest ${c.side === "bull" ? "above" : "below"} was ${target}; price might draw to it.`;
+    : `The ${low} was ${c.own_side} and the timeframe above was ${c.above}, but price was inside an imbalance of the ${TF[c.area_tf] || c.area_tf || "timeframe above"} on its bias's side, with no candle of that timeframe closed beyond it. That higher bias was followed: nearest ${c.side === "bull" ? "above" : "below"} was ${target}; price might draw to it.`;
 }
 async function say(id, verdict) {
   const box = document.querySelector(`[data-id="${CSS.escape(id)}"]`), text = box.querySelector("textarea").value;

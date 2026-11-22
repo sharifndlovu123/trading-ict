@@ -10,8 +10,9 @@ This is the runner, so it is the one place the timeframes are named: he set them
 timeframes, so lowest tf is probably hourly or 4h"). It changes no tool and no lesson. What it writes
 (``v2/backtest/out/``) is rebuilt by running it and is not kept in git.
 
-Since 20 Nov 2026 each timeframe below the top also makes one ``merged`` call, read together with the timeframe above
-(his correction after the first run; see ``calls.merged``). The single-timeframe calls are kept beside it.
+Since 20 Nov 2026 each timeframe below the top also makes one ``merged`` call (his correction after the first run; see
+``calls.merged``); since 23 Nov 2026 it is read with EVERY timeframe above it, and a key area ends on a body close of
+the area's own timeframe (his review of ten merged calls). The single-timeframe calls are kept beside it.
 
 Mine, not his: two reads a day at the kill-zone starts; a call is not made again while the same call (same timeframe,
 same kind, same target and level behind) is still open; a call is given 20 candles of its own timeframe.
@@ -118,14 +119,17 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                     continue
                 up = reads[LADDER[i - 1]][1] if i else None
                 up_side = up["side"] if up else None
-                both = merged(r, up)                                                # the two timeframes read together
+                both = merged(r, [reads[u][1] for u in LADDER[:i]])                 # the whole ladder above, read together
+                area_tf = LADDER[both["area_i"]] if both and both["area_i"] is not None else None
+                ka = reads[area_tf][0] if area_tf else 0                            # a key area ends on a close of ITS timeframe
+                area_closes = [(t[area_tf][n + 1], c[area_tf][n]["close"]) for n in range(ka, len(c[area_tf]) - 1)] if area_tf else None
                 closes = [(t[tf][n + 1], c[tf][n]["close"]) for n in range(k, min(k + HORIZON + 1, len(c[tf]) - 1))]
                 for call in calls(r) + ([both] if both else []):
                     same = (round(call["target"][0], 6), round(r["behind"], 6))
                     held = still.get((tf, call["kind"]))
                     if held and held[0] == same and moment < held[1]:
                         continue                                                    # the same call is still open: not made twice
-                    res = resolve(call, fine[j:], closes, HORIZON)
+                    res = resolve(call, fine[j:], closes, HORIZON, area_closes if call["kind"] == "merged" else None)
                     still[(tf, call["kind"])] = (same, res["at"] if res["at"] is not None else float("inf"))
                     at = res["at"]
                     rows.append({
@@ -133,7 +137,8 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                         "year": pd.Timestamp(moment, unit="s").year, "made_in": zone, "side": call["side"], "above": up_side,
                         "with_above": None if up_side is None else up_side == call["side"], "own_side": r["side"],
                         "merge": call.get("merge"), "what": call.get("what"), "whose": call.get("whose"),
-                        "whose_tf": None if call.get("whose") is None else tf if call["whose"] == "own" else LADDER[i - 1], "price": r["price"], "near": r["near"],
+                        "whose_tf": None if call.get("whose") is None else tf if call["whose"] == "own" else LADDER[call["whose_i"]],
+                        "area_tf": area_tf if call["kind"] == "merged" else None, "price": r["price"], "near": r["near"],
                         "target": call["target"][0], "target_how": call["target"][1], "undo": json.dumps(call["undo"]),
                         "behind": r["behind"], "ahead": r["ahead"], "buyside": r["buyside"], "sellside": r["sellside"],
                         "imbalance": json.dumps(call["gap"] if call["kind"] == "merged" else r["imbalance_above"] if r["side"] == "bull" else r["imbalance_below"]),

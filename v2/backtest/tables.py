@@ -137,7 +137,7 @@ def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs
                     continue
                 out.append(r)
                 got += 1
-    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "nearer", "outcome", "hours"]
+    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "area_tf", "nearer", "outcome", "hours"]
     return json.loads(pd.DataFrame(out)[[c for c in cols if c in pool.columns]].to_json(orient="records")) if out else []
 
 
@@ -219,8 +219,8 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
         marks.append({"shape": "level", "kind": row["what"], "tf": at_tf, "price": float(row["target"]), "t0": t0 - 40 * 86400, "t1": None})
     marks.append({"shape": "vline", "kind": "→ bull" if row["side"] == "bull" else "→ bear", "tf": tf, "t0": t0, "t1": t0})
     names = {"liquidity": "buyside" if row["side"] == "bull" else "sellside", "bias": "level ahead", "imbalance": "the imbalance"}
-    how = {"agree": f"the {tf} and the timeframe above agree ({row['side']})", "momentum": f"the {tf} is {row['side']} against the timeframe above: its momentum is followed",
-           "key area": f"the timeframe above is {row['side']} and price is inside its imbalance, though the {tf} is against it"}.get(row.get("merge"))
+    how = {"agree": f"the {tf} and every timeframe above it agree ({row['side']})", "momentum": f"the {tf} is {row['side']} and the timeframes above do not all agree: its momentum is followed",
+           "key area": f"the {row.get('area_tf') or 'timeframe above'} is {row['side']} and price is inside its imbalance, which no candle of that timeframe has closed beyond, though the {tf} is against it"}.get(row.get("merge"))
     ended = {"true": "It came true", "undone": "It was undone", "unresolved": "It was left unresolved", "open": "It is still open",
              "same candle": "Both were reached inside one candle, so the order is not known"}[row["outcome"]]
     took = "" if row.get("hours") is None or pd.isna(row["hours"]) else f" after {row['hours']:.0f} hours"

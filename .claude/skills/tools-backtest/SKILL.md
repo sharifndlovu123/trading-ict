@@ -65,8 +65,10 @@ call without the bias of the ones above it.
 He went through the first run and said the reads were right but stood side by side: "you're still looking at the
 chart itself from daily and that's one perspective, or monthly and that's one perspective… there's a mix of
 timeframes to provide a result." The lesson is in `03_bias_with_liquidity` ("Merging the timeframes"). So each
-timeframe below the top also makes one **merged** call with the timeframe above it: whatever is nearest from price
-now, on either of them (`calls.merged`). How "agree", "momentum" and "key area" are told apart is Claude's choice and
+timeframe below the top also makes one **merged** call with every timeframe above it, top to bottom: whatever is
+nearest from price now, on any of them (`calls.merged`). After his review of ten of them (20 and 23 Nov 2026) a key
+area is an imbalance no candle of its own timeframe has closed beyond, and it ends on such a close ("a close through
+that imbalance, relative to the timeframe of the break and the imbalance itself"). How "agree", "momentum" and "key area" are told apart is Claude's choice and
 is named so in the code. The single-timeframe calls are kept so the two can be compared (section 2 of the page).
 
 **Checking calls with him:** `/backtest/check` lists ten merged calls where the timeframes disagreed (`tables.check`),

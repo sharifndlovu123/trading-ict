@@ -47,7 +47,7 @@
 <main>
   <h1>Tools backtest</h1>
   <p id="scope">Loading…</p>
-  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls where two timeframes disagreed (momentum and key area), to open on the chart and say whether the read was right.</p>
+  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls where the timeframes disagreed (momentum and key area), to open on the chart and say whether the read was right.</p>
   <div class="tabs" id="groups"></div>
   <div class="cards" id="cards"></div>
 
@@ -61,7 +61,7 @@
 
   <h2>2. Two timeframes read together</h2>
   <p>Sharif, 20 Nov 2026, after going through the first run: <b>"You're still looking at the chart itself from daily and that's one perspective, or monthly and that's one perspective to a result. There's a mix of timeframes to provide a result."</b> And: <b>"Where price is RIGHT NOW is always more important, because it's drawn to something."</b></p>
-  <p>A merged call reads a timeframe together with the one above it and names whatever is nearest from price now, on either of them. <b>Agree</b>: both have the same bias. <b>Momentum</b>: they disagree, and the lower one's direction is followed. <b>Key area</b>: they disagree, but price is inside an imbalance of the timeframe above that is on its bias's side, so the higher one's direction is followed. How these three are told apart is Claude's choice, not his. The last column is the old single-timeframe liquidity call on the same timeframe, for comparison.</p>
+  <p>A merged call reads a timeframe together with every timeframe above it, top to bottom, and names whatever is nearest from price now on any of them. <b>Agree</b>: all of them have the same bias. <b>Momentum</b>: they do not all agree, and this timeframe's direction is followed. <b>Key area</b>: price is inside an imbalance of a higher timeframe, on that timeframe's side, that no candle of that timeframe has closed beyond, so the higher one's direction is followed; it ends when a candle of the area's own timeframe closes beyond it (his, 23 Nov 2026). How these three are told apart is Claude's choice, not his. The last column is the old single-timeframe liquidity call on the same timeframe, for comparison.</p>
   <div class="wrap" id="merged"></div>
 
   <h2>3. What the bias adds, year by year</h2>
@@ -93,7 +93,7 @@
 const BASE = location.protocol + "//" + location.host;      // links are written out in full (http://…): a phone browser was turning the short ones into https
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw", merged: "two timeframes together" };
+const KIND = { liquidity: "liquidity with the bias", bias: "the bias holds", imbalance: "imbalance as a draw", merged: "the timeframes together" };
 const TFNAME = { "1M": "Monthly", "1W": "Weekly", "1D": "Daily", "4h": "4-hour", "1h": "1-hour" }, ORDER = ["1M", "1W", "1D", "4h", "1h"];
 const TRADED = ["US100", "US500", "US30"], METALS = ["XAUUSD", "XAGUSD"];
 const pct = (v, n) => v == null ? '<span class="few">none</span>' : `${Math.round(v * 100)}%<span class="n">${(n ?? "").toLocaleString()}</span>` + (n != null && n < 30 ? ' <span class="few">few</span>' : "");
@@ -147,7 +147,7 @@ async function show(g) {
     near: MG.find(r => mk(r) === k && r.nearer === "target"), far: MG.find(r => mk(r) === k && r.nearer === "undo") }))
     .sort((a, b) => byTf(a, b) || a.merge.localeCompare(b.merge));
   const msh = r => r ? pct(r.true_share, r.true + r.undone) : '<span class="few">none</span>';
-  table("merged", mrows, [["Timeframe (read with the one above)", r => esc(TFNAME[r.tf])], ["The two timeframes", r => esc({ agree: "agree", momentum: "disagree: momentum followed", "key area": "disagree: price in the higher one's key area" }[r.merge] || r.merge)],
+  table("merged", mrows, [["Timeframe (read with all above it)", r => esc(TFNAME[r.tf])], ["The timeframes", r => esc({ agree: "all agree", momentum: "disagree: momentum followed", "key area": "disagree: price in a higher one's key area" }[r.merge] || r.merge)],
     ["Came true when the target was nearer", r => msh(r.near)], ["…when it was farther", r => msh(r.far)],
     ["Old single-timeframe liquidity call, target nearer", r => { const o = P.find(x => x.tf === r.tf); return o ? pct(o.liquidity_target, o.liquidity_target_n) : ""; }],
     ["…farther", r => { const o = P.find(x => x.tf === r.tf); return o ? pct(o.liquidity_undo, o.liquidity_undo_n) : ""; }]]);
