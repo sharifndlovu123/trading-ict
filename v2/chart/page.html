@@ -80,6 +80,16 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 .pane { background:var(--bg); display:flex; flex-direction:column; min-width:0; min-height:140px; position:relative; }
 .pane.active { box-shadow:inset 0 0 0 1px var(--accent); }
 .pane .c { flex:1; min-height:0; position:relative; }
+/* the tools on the chart itself, when one chart has the whole screen (the page's own bars are not there then) */
+.fsbar { display:none; position:absolute; top:44px; left:50%; transform:translateX(-50%); z-index:9; align-items:center; gap:1px; padding:3px 4px; border-radius:9px; background:var(--panel); border:1px solid var(--line); box-shadow:0 4px 16px rgba(0,0,0,.35); width:max-content; max-width:96vw; flex-wrap:wrap; }
+.pane:fullscreen .fsbar { display:flex; } .pane:fullscreen .pbtn { display:none !important; }
+.fsbar button, .fsbar select { height:30px; min-width:30px; border:0; border-radius:6px; background:none; color:var(--ink); cursor:pointer; font:inherit; font-size:15px; padding:0 5px; }
+.fsbar select { font-size:13px; border:1px solid var(--line); } .fsbar select option { color:#111; }
+.fsbar button:hover { background:var(--panel2); } .fsbar button.on { color:var(--accent); background:var(--panel2); }
+.fsbar .grip { cursor:grab; color:var(--ink2); touch-action:none; } .fsbar .ln { width:1px; height:20px; background:var(--line); margin:0 3px; }
+.fsbar .fsfly { position:absolute; top:38px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:4px; box-shadow:0 6px 18px rgba(0,0,0,.4); min-width:170px; }
+.fsbar .fsfly div { padding:6px 9px; border-radius:5px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:13px; } .fsbar .fsfly div:hover, .fsbar .fsfly div.on { background:var(--panel2); }
+.fsbar .fsfly .sw { width:10px; height:10px; border-radius:50%; }
 .legend { position:absolute; left:8px; top:6px; z-index:5; display:flex; gap:8px; align-items:baseline; pointer-events:none; white-space:nowrap; max-width:calc(100% - 90px); overflow:hidden; }
 .legend b { font-size:14px; } .legend .tf { color:var(--ink2); }
 .pbtn { position:absolute; right:62px; top:4px; z-index:6; display:none; gap:2px; } .pane:hover .pbtn { display:flex; }
@@ -289,7 +299,8 @@ function setNoteTool(on) { st.noteTool = on; if (on && st.hideNotes) { st.hideNo
 const shownMarks = () => [...new Set(st.cfg.map(c => c.asset))].flatMap(a => myMarks(a));
 const allLocked = () => { const m = shownMarks(); return m.length > 0 && m.every(x => x.locked); };
 function toggleSnap() { st.snap = !st.snap; save(); tools(); }
-function tools() {                                       // the toolbar down the left
+function tools() { toolsLeft(); fsbars(); }               // the page's toolbar, and the one on a full-screen chart, always say the same
+function toolsLeft() {                                   // the toolbar down the left
   const on = g => st.place && g[2].includes(st.place.kind);
   $("tools").innerHTML = `<button class="tl ${!st.place && !st.grab && !st.noteTool ? "on" : ""}" id="t-cur" title="cursor (Esc)">✛</button>` +
     `<button class="tl ${st.grab ? "on" : ""}" id="t-grab" title="grab (G): the charts hold still; press near any of your marks to move it">✋</button><span class="ln"></span>` +
@@ -385,9 +396,10 @@ function build() {
   if (st.pct) { tools(); topbar(); return buildPct(g); }
   st.cfg.forEach((c, i) => {
     const el = document.createElement("div"); el.className = "pane";
-    el.innerHTML = `<div class="legend"></div><div class="pbtn"><button class="solo" title="this chart alone on the page; again: all back">⤢</button><button class="x" title="remove this chart">✕</button></div><div class="c"></div>`;
+    el.innerHTML = `<div class="legend"></div><div class="fsbar"></div><div class="pbtn"><button class="solo" title="this chart alone on the page; again: all back">⤢</button><button class="x" title="remove this chart">✕</button></div><div class="c"></div>`;
     g.appendChild(el);
     const box = el.lastChild, chart = mkChart(box);
+    el.addEventListener("fullscreenchange", () => fsbar(p));
     const series = chart.addCandlestickSeries({ upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
     const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const p = { c, el, box, infoEl: el.firstChild, chart, series, lineS, times: [], data: [] };
@@ -421,6 +433,35 @@ function build() {
   st.active = st.panes[0]; st.panes.forEach(q => q.el.classList.toggle("active", q === st.active && st.panes.length > 1));
   tools(); topbar(); layout(); fill(true);
 }
+// ---- the tools on the chart when it has the whole screen: the same tools as the page's bars, within reach
+function fsbar(p) {
+  const b = p.el.querySelector(".fsbar"); if (!b) return;
+  if (document.fullscreenElement !== p.el) { b.innerHTML = ""; return; }
+  const on = g => st.place && g[2].includes(st.place.kind), B = (id, icon, title, lit) => `<button data-f="${id}" class="${lit ? "on" : ""}" title="${title}">${icon}</button>`;
+  b.innerHTML = `<button class="grip" title="drag this bar anywhere">⠿</button>` + B("cur", "✛", "cursor (Esc)", !st.place && !st.noteTool && !st.grab) +
+    GROUPS.map((g, i) => `<button data-g="${i}" class="${on(g) ? "on" : ""}" title="${g[1]}">${g[0]}</button>`).join("") +
+    B("note", "T", "write on the chart", st.noteTool) + B("measure", "📏", "measure", st.place && st.place.shape === "measure") + `<span class="ln"></span>` +
+    B("stay", "📌", "stay in drawing mode", st.stay) + B("snap", "🧲", "snap to a candle's open, high, low or close", st.snap) + B("hideall", st.hideAll ? "🙈" : "👁", "hide or show everything I drew", st.hideAll) +
+    `<span class="ln"></span>` + B("undo", "↶", "undo (Ctrl+Z)") + B("redo", "↷", "redo (Ctrl+Shift+Z)") + B("save", "💾", "save my marks and notes") + `<span class="ln"></span>` +
+    `<select data-f="tf" title="timeframe">${TFS.map(t => `<option value="${t}" ${t === p.c.tf ? "selected" : ""}>${TFNAME[t] || t}</option>`).join("")}</select>` +
+    B("back", "◀", "one candle back (replay)") + B("fwd", "▶", "one candle forward (replay)") + (st.until != null ? B("now", "⏭", "leave replay: the newest candles") : "") +
+    `<span class="ln"></span>` + B("exit", "✕", "leave full screen (Esc)");
+  const act = { cur: () => { setPlace(null); setGrab(false); setNoteTool(false); }, note: () => setNoteTool(!st.noteTool), measure: () => $("t-measure").click(), stay: () => $("t-stay").click(),
+    snap: () => toggleSnap(), hideall: () => $("t-hideall").click(), undo: () => travel(-1), redo: () => travel(1), save: () => $("t-save").click(),
+    back: () => step("-1"), fwd: () => step("1"), now: () => $("now").click(), exit: () => document.exitFullscreen() };
+  b.querySelectorAll("button[data-f]").forEach(x => x.onclick = async () => { await act[x.dataset.f](); fsbar(p); });
+  b.querySelector("select").onchange = e => { activate(p); setTf(e.target.value); };
+  b.querySelectorAll("button[data-g]").forEach(x => x.onclick = () => { const old = b.querySelector(".fsfly"), g = GROUPS[+x.dataset.g]; if (old) { const same = old.dataset.g === x.dataset.g; old.remove(); if (same) return; }
+    const f = document.createElement("div"); f.className = "fsfly"; f.dataset.g = x.dataset.g; f.style.left = x.offsetLeft + "px";
+    f.innerHTML = g[2].map(k => `<div data-k="${esc(k)}" class="${st.place && st.place.kind === k ? "on" : ""}"><span class="sw" style="background:${markColor(k, "#888")}"></span>${esc(k)}</div>`).join("");
+    f.querySelectorAll("div").forEach(d => d.onclick = () => { const k = KIND[d.dataset.k]; setPlace(st.place && st.place.kind === k.kind ? null : k); fsbar(p); });
+    b.appendChild(f); });
+  const grip = b.querySelector(".grip");                  // the bar can be dragged out of the way
+  grip.onpointerdown = e => { e.preventDefault(); grip.setPointerCapture(e.pointerId); const r = b.getBoundingClientRect(), pr = p.el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    grip.onpointermove = m => { b.style.transform = "none"; b.style.left = Math.max(0, Math.min(pr.width - 60, m.clientX - pr.left - dx)) + "px"; b.style.top = Math.max(0, Math.min(pr.height - 40, m.clientY - pr.top - dy)) + "px"; };
+    grip.onpointerup = () => { grip.onpointermove = null; }; };
+}
+const fsbars = () => st.panes.forEach(p => document.fullscreenElement === p.el && fsbar(p));
 function full(p) { if (document.fullscreenElement) document.exitFullscreen(); else if (p && p.el.requestFullscreen) p.el.requestFullscreen().catch(() => {}); }
 // charts on the same timeframe show the same stretch of time as chart p (a 1h and a 5m chart keep their own zoom)
 function follow(p) {
