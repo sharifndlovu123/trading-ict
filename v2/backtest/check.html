@@ -54,7 +54,7 @@
 <main>
   <h1>Check ten calls</h1>
   <p><a id="back" href="../backtest">Back to the tables</a></p>
-  <p>Ten calls where the timeframes <b>disagreed</b>, on the three indices: five where the lower timeframe's <b>momentum</b> was followed, five where price was inside a higher timeframe's <b>key area</b> and its bias was followed. Most are ones that went wrong although the target was the nearer level. How the two timeframes were joined is Claude's choice, not Sharif's: that is what is being checked.</p>
+  <p>Ten calls made around a higher timeframe's <b>interesting area</b>, on the three indices: five where price was outside it and the lower timeframe was moving <b>into the area</b>, five where price was inside it and the lower timeframe had turned the higher one's way (<b>from the area</b>). While price is inside an area and the lower timeframe is still against it, no call is made: that is watching. Open each on the chart and say whether the read was right.</p>
   <div class="note">The tag on a call is <b>your</b> verdict on the read, once you have given one. The backtest's own count (did price reach the exact target before the exact level that undoes it) is folded under "What happened afterwards": it is not a judgement of the read. You, 23 Nov 2026: "most of the time it won't always go your way, but you can find success still."</div>
   <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
   <div id="list"><p>Loading…</p></div>
@@ -66,10 +66,10 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const TF = { "1M": "monthly", "1W": "weekly", "1D": "daily", "4h": "4-hour", "1h": "1-hour" };
 const when = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
 function sentence(c) {
-  const low = TF[c.tf] || c.tf, target = `[${c.what} ${c.whose_tf}]`;
-  return c.merge === "momentum"
-    ? `The ${low} was ${c.own_side} and the timeframe above was ${c.above}. The ${low}'s momentum was followed: nearest from price then, ${c.side === "bull" ? "above" : "below"}, was ${target}; price might draw to it.`
-    : `The ${low} was ${c.own_side} and the timeframe above was ${c.above}, but price was inside an imbalance of the ${TF[c.area_tf] || c.area_tf || "timeframe above"} on its bias's side, with no candle of that timeframe closed beyond it. That higher bias was followed: nearest ${c.side === "bull" ? "above" : "below"} was ${target}; price might draw to it.`;
+  const low = TF[c.tf] || c.tf, hi = TF[c.area_tf] || c.area_tf || "timeframe above", way = c.side === "bull" ? "above" : "below";
+  return c.merge === "into area"
+    ? `The ${low} was ${c.own_side}, against the ${hi}. The ${hi}'s area, [${c.what} ${c.whose_tf}], lay ${way} price: the ${low}'s move might be drawn into it.`
+    : `Price was inside an area of the ${hi}, and the ${low} had the same bias (${c.own_side}). Nearest ${way} was [${c.what} ${c.whose_tf}]; price might draw to it.`;
 }
 async function say(id, verdict) {
   const box = document.querySelector(`[data-id="${CSS.escape(id)}"]`), text = box.querySelector("textarea").value;
@@ -83,7 +83,7 @@ async function say(id, verdict) {
   const rows = await (await fetch(BASE + "/api/backtest/check")).json();
   if (!rows.length) { $("list").innerHTML = "<p>No merged calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
   $("list").innerHTML = rows.map((c, i) => `<div class="call" data-id="${esc(c.id)}">
-    <h3>${c.review ? `<span class="tag ${c.review.verdict === "right" ? "hit" : c.review.verdict === "wrong" ? "miss" : "unsure"}">YOU: ${esc(c.review.verdict.toUpperCase())}</span>` : ""}${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${c.merge === "momentum" ? "momentum followed" : "key area"} <span class="n">${when(c.moment)} New York</span></h3>
+    <h3>${c.review ? `<span class="tag ${c.review.verdict === "right" ? "hit" : c.review.verdict === "wrong" ? "miss" : "unsure"}">YOU: ${esc(c.review.verdict.toUpperCase())}</span>` : ""}${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${esc(c.merge)} <span class="n">${when(c.moment)} New York</span></h3>
     <p>${esc(sentence(c))}</p>
     <p><a href="${BASE}/?call=${encodeURIComponent(c.id)}"><b>Open on the chart at that moment</b></a></p>
     <details><summary>What happened afterwards</summary>${c.played === "true" ? "The bias played out: the area was reached before the bias changed" : c.played === "ended" ? "The bias changed before the area was reached" : c.played === "open" ? "Neither has happened yet" : "Both in the same hour"}${c.played_hours == null ? "" : " (" + Math.round(c.played_hours) + " hours)"}. The old exact count: it ${c.outcome === "true" ? "came true" : "was undone"}${c.hours == null ? "" : " after " + Math.round(c.hours) + " hours"}. Nearer at the time: ${c.nearer === "target" ? "the target" : "what would undo it"}.</details>

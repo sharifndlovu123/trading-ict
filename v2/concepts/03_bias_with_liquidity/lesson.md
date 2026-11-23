@@ -145,6 +145,44 @@ closes beyond the level behind, on the timeframe whose bias was stated, with no 
 bias changing as the end is his; reading "bias changing" as that close is from lesson 01. "Price goes so off" is not
 defined and is not counted.
 
+### The starting process: liquidity first, then the bias, then where price is (taught 23 Nov 2026)
+
+His answer to my question about which area a bias names, written by him on 23 Nov 2026. He confirmed my saying-back
+("yes, you got it") and accepted the show-back the same day on a chart I had not read for this (one of the indices he
+trades, as it stood then).
+
+- **Liquidity search is the habit to start with.** "The first thing you do is go from top timeframe to bottom,
+  looking for possible liquidity. Just get into the pattern of liquidity searching, and mark these points."
+- **Relative to price.** "Don't show me a monthly low from 5 years ago if it's nowhere near my current price or
+  somewhat relative. Focus on what's relative to what's closer to price currently: what's above and below price, and
+  mark those points."
+- **Then the bias, against those points.** "Then we can start to analyze the bias based on those liquidity points."
+  "Bias is first, but you should remember sometimes we can trade against the strongest bias for a short period, or
+  follow it."
+- **A retracement is what "kills bias for a bit".** The higher timeframes are bullish "but price is now selling" on
+  the lower ones "into an interesting zone; on the higher timeframes we are looking to buy from there, because it's a
+  retracement into an interesting area."
+- **Always trade with what's current.** "If we are just above the interesting area, sell into it; if we are inside
+  the area, watch what happens to build confidence for a buy or sell."
+- **Inside the area, what happens decides.** "If x or y happens it supports our theory for higher prices; if z or w
+  happens we are expecting deeper retracement. If we see deeper retracement, is there liquidity or alt-liquidity
+  below? If so, let's go there. If it's a major low, represented by higher timeframes, just keep it in mind: it could
+  break bias for a bit and switch."
+- **Then back to the start.** "We can start checking where is price right now in relation to those liquidity points,
+  anything interesting such as any imbalances."
+- **The nearest thing has its place.** "The nearest thing does play a point too, but nearest thing is normally when
+  you're just looking for what's the closest relative to where price is already going." When price has been drawing
+  towards a higher-timeframe imbalance for weeks "it would make sense to try sell into. But we need to see something,
+  or an important context, build and play in our current area supporting lower prices; if we don't see that, we
+  don't sell into it."
+
+Mine, not his (accepted by him on 23 Nov 2026 as the way the backtest decides, after the show-back): an "area" is an
+imbalance on its timeframe's own side that no candle of that timeframe has closed beyond; a lower timeframe against
+a higher one with that area ahead is called "into the area"; inside it and still against, nothing is called
+("watching"); inside it with the lower timeframe turned, "from the area". "Something supporting" and "something
+played out" are both taken to be the lower timeframe's own bias, which is thinner than what he described: the tools
+do not yet see the sequence.
+
 ## What "something playing out" looks like (the sequence he walked me through)
 
 1. "First thing you'd have to notice is anything of importance, such as liquidity marked out."
@@ -358,6 +396,9 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | price meets an opposing imbalance on the way to where it is expected | what happens there: respected, it might turn price back; closed through, it might support the idea | stated by Sharif, 20 Nov 2026 |
 | a zone that was marked to trade from is closed through | whether the bias itself has changed; if not, another route to the same area: a lower (or higher) imbalance, or equal lows / highs being built first | stated by Sharif, 23 Nov 2026 |
 | the bias of the timeframe the idea rests on changes, or price goes far off | the idea is over | stated by Sharif, 23 Nov 2026 |
+| a chart is opened | liquidity, from the top timeframe down: what rests above and below price, near it; then the bias against those points; then where price is among them and any imbalance nearby | stated by Sharif, 23 Nov 2026 |
+| the lower timeframes move against the higher bias and price is just outside the higher timeframe's interesting area | the move into that area, only when something has built where price is that supports it | stated by Sharif, 23 Nov 2026 |
+| price is inside the higher timeframe's interesting area | what happens there, before a buy or a sell; if it gives way, liquidity or alt-liquidity further on | stated by Sharif, 23 Nov 2026 |
 | price pushes into new ground with nothing on the left side | nothing to read a target from: unknown territory | stated by Sharif, 23 Nov 2026 |
 
 ## Open questions for him
@@ -371,5 +412,9 @@ as something to pick out mechanically, so it is read on the chart for now. The c
   23 Nov 2026: what happens at the interesting zone, and the closed candle on the zone's own timeframe (above). Beyond
   that, not to be guessed.
 - "Price goes so off" as an end to an idea (23 Nov 2026): how far is "so off" has not been said. Not to be guessed.
+- What "x or y" and "z or w" are inside an interesting area (23 Nov 2026): he gave them as placeholders. The sequence
+  under "What something playing out looks like" is the nearest thing taught; whether that is all of it is not known.
+- With no interesting area in play, which target a bias names: the backtest still uses the nearest thing; he was
+  told and has not changed it.
 - Fibonacci and its upper quadrants, "small piece trading", extra timeframes for a tricky read, premium: named by him
   on 20 Nov 2026 and held until he teaches them.

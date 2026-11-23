@@ -11,8 +11,8 @@ timeframes, so lowest tf is probably hourly or 4h"). It changes no tool and no l
 (``v2/backtest/out/``) is rebuilt by running it and is not kept in git.
 
 Since 20 Nov 2026 each timeframe below the top also makes one ``merged`` call (his correction after the first run; see
-``calls.merged``); since 23 Nov 2026 it is read with EVERY timeframe above it, and a key area ends on a body close of
-the area's own timeframe (his review of ten merged calls). The single-timeframe calls are kept beside it.
+``calls.merged``); since 23 Nov 2026 it is read with EVERY timeframe above it; since 23 Nov 2026 it follows his
+process around an interesting area (into it, watching inside it, from it) and is judged his way (``calls.played_out``). The single-timeframe calls are kept beside it.
 
 Mine, not his: two reads a day at the kill-zone starts; a call is not made again while the same call (same timeframe,
 same kind, same target and level behind) is still open; a call is given 20 candles of its own timeframe.
@@ -105,7 +105,7 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
     days = sorted({x - x % 86400 for x in ft})
     lo = int((pd.Timestamp(since) - EPOCH).total_seconds()) if since else days[0]
     hi = int((pd.Timestamp(until) - EPOCH).total_seconds()) + 86400 if until else days[-1] + 86400
-    rows, still = [], {}
+    rows, still, watching = [], {}, {}
     for day in days:
         for start in starts:
             moment = day + start
@@ -121,19 +121,20 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                 up = reads[LADDER[i - 1]][1] if i else None
                 up_side = up["side"] if up else None
                 both = merged(r, [reads[u][1] for u in LADDER[:i]])                 # the whole ladder above, read together
+                if both and both["target"] is None:                                 # inside a higher timeframe's area: watching, no call
+                    watching[tf] = watching.get(tf, 0) + 1
+                    both = None
                 area_tf = LADDER[both["area_i"]] if both and both["area_i"] is not None else None
-                ka = reads[area_tf][0] if area_tf else 0                            # a key area ends on a close of ITS timeframe
-                area_closes = [(t[area_tf][n + 1], c[area_tf][n]["close"]) for n in range(ka, len(c[area_tf]) - 1)] if area_tf else None
                 closes = [(t[tf][n + 1], c[tf][n]["close"]) for n in range(k, min(k + HORIZON + 1, len(c[tf]) - 1))]
                 for call in calls(r) + ([both] if both else []):
                     same = (round(call["target"][0], 6), round(r["behind"], 6))
                     held = still.get((tf, call["kind"]))
                     if held and held[0] == same and moment < held[1]:
                         continue                                                    # the same call is still open: not made twice
-                    res = resolve(call, fine[j:], closes, HORIZON, area_closes if call["kind"] == "merged" else None)
+                    res = resolve(call, fine[j:], closes, HORIZON)
                     still[(tf, call["kind"])] = (same, res["at"] if res["at"] is not None else float("inf"))
                     at = res["at"]
-                    bias_tf = area_tf if call["kind"] == "merged" and area_tf else tf     # the timeframe whose bias the call states
+                    bias_tf = tf                                                    # the timeframe whose bias the call states
                     po = (played_out(call["side"], call["target"], call.get("bias_behind", r["behind"]), call["near"], fine, j,
                                      p["closes"][bias_tf], reads[bias_tf][0]) if call["target"][1] != "close" else {"played": None, "played_at": None})
                     rows.append({
@@ -153,6 +154,7 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                         "hours": None if at is None else (at + step - moment) / 3600,
                         "resolved_in": None if at is None else "/".join(sessions((at % 86400) // 60)) or "outside",
                         "resolved_hour": None if at is None else (at % 86400) // 3600})
+    print(f"{asset}: moments spent watching inside a higher timeframe's area (no merged call): {watching}", flush=True)
     return pd.DataFrame(rows)
 
 

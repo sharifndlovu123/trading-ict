@@ -75,18 +75,18 @@ def test_the_picture_lists_the_timeframes_highest_first_with_what_the_bias_adds_
 
 # ---- the short list he goes through on the chart, and what he says about each call
 def merged_row(i, **kw):
-    return row(id=f"m{i}", kind="merged", asset="US100", tf="1D", moment=1000 + i * 30 * 86400, merge="momentum", outcome="undone",
+    return row(id=f"m{i}", kind="merged", asset="US100", tf="1D", moment=1000 + i * 30 * 86400, merge="into area", outcome="undone", played="ended",
                own_side="bear", above="bull", what="sellside", whose_tf="1D") | kw
 
 
 def test_the_check_list_is_short_and_only_calls_where_the_timeframes_disagreed_on_what_he_trades():
-    rows = [merged_row(i, asset=a, merge=m, outcome=o) for i, (a, m, o) in enumerate(
-        (a, m, o) for _ in range(6) for a in ("US100", "US500", "US30", "ELSE") for m in ("momentum", "key area", "agree") for o in ("undone", "true"))]
-    got = check(frame(*rows, row()))
-    assert len(got) == 10 and {c["merge"] for c in got} == {"momentum", "key area"}
+    rows = [merged_row(i, asset=a, merge=m, played=o) for i, (a, m, o) in enumerate(
+        (a, m, o) for _ in range(6) for a in ("US100", "US500", "US30", "ELSE") for m in ("into area", "from area", "agree") for o in ("ended", "true"))]
+    got = check(frame(*rows, row(played="true")))
+    assert len(got) == 10 and {c["merge"] for c in got} == {"into area", "from area"}
     assert "ELSE" not in {c["asset"] for c in got} and len({c["asset"] for c in got}) == 3
-    assert sum(c["merge"] == "momentum" for c in got) == 5
-    assert sum(c["outcome"] == "undone" for c in got) > sum(c["outcome"] == "true" for c in got) > 0
+    assert sum(c["merge"] == "into area" for c in got) == 5
+    assert sum(c["played"] == "ended" for c in got) > sum(c["played"] == "true" for c in got) > 0
     assert check(frame(*rows)) == got                                    # the same list every time it is asked for
 
 

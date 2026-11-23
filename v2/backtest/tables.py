@@ -115,20 +115,20 @@ VERDICTS = ("right", "wrong", "not sure")
 
 
 def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs: tuple = ("1D", "4h")) -> list[dict]:
-    """A short list for him to go through on the chart: merged calls where the two timeframes DISAGREED (``momentum``
-    and ``key area``), on the indices he trades. He: "review all those bias calls with the momentum and key areas…
-    max 10, and then if it's too far off we will have to do more later on."
+    """A short list for him to go through on the chart: merged calls made around a higher timeframe's interesting
+    area (``into area`` and ``from area``), on the indices he trades. He: "review all those bias calls… max 10, and
+    then if it's too far off we will have to do more later on."
 
-    Mine: half of each; of each half, more that were undone with the target nearer (the clear misses) than that came
-    true; newest first; no two from the same instrument within a fortnight, so one stretch of market is not seen ten
-    times; the two higher timeframes that have enough of both."""
-    if df.empty or "merge" not in df.columns:
+    Mine: half of each; of each half, more where the bias changed before the area named was reached than where it
+    played out (``played``, his way of judging); newest first; no two from the same instrument within a fortnight,
+    so one stretch of market is not seen ten times; the two higher timeframes that have enough of both."""
+    if df.empty or "merge" not in df.columns or "played" not in df.columns:
         return []
     pool = df[(df["kind"] == "merged") & df["asset"].isin(assets) & df["tf"].isin(tfs)].sort_values(["moment", "id"], ascending=False)
     each, out = limit // 2, []
-    for how in ("momentum", "key area"):
-        misses = pool[(pool["merge"] == how) & (pool["outcome"] == "undone") & (pool["nearer"] == "target")]
-        hits = pool[(pool["merge"] == how) & (pool["outcome"] == "true")]
+    for how in ("into area", "from area"):
+        misses = pool[(pool["merge"] == how) & (pool["played"] == "ended")]
+        hits = pool[(pool["merge"] == how) & (pool["played"] == "true")]
         for part, want in ((misses, each - each // 3), (hits, each // 3)):
             got = 0
             for r in part.to_dict("records"):
@@ -223,7 +223,8 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
     marks.append({"shape": "vline", "kind": "→ bull" if row["side"] == "bull" else "→ bear", "tf": tf, "t0": t0, "t1": t0})
     names = {"liquidity": "buyside" if row["side"] == "bull" else "sellside", "bias": "level ahead", "imbalance": "the imbalance"}
     how = {"agree": f"the {tf} and every timeframe above it agree ({row['side']})", "momentum": f"the {tf} is {row['side']} and the timeframes above do not all agree: its momentum is followed",
-           "key area": f"the {row.get('area_tf') or 'timeframe above'} is {row['side']} and price is inside its imbalance, which no candle of that timeframe has closed beyond, though the {tf} is against it"}.get(row.get("merge"))
+           "into area": f"the {tf} is {row['side']} against the {row.get('area_tf') or 'timeframe above'}, whose area lies ahead that way: price might be drawn into it",
+           "from area": f"price is inside an area of the {row.get('area_tf') or 'timeframe above'} and the {tf} has its bias ({row['side']}): something has played out for it"}.get(row.get("merge"))
     ended = {"true": "It came true", "undone": "It was undone", "unresolved": "It was left unresolved", "open": "It is still open",
              "same candle": "Both were reached inside one candle, so the order is not known"}[row["outcome"]]
     took = "" if row.get("hours") is None or pd.isna(row["hours"]) else f" after {row['hours']:.0f} hours"

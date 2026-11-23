@@ -178,26 +178,55 @@ def test_when_they_disagree_the_momentum_of_this_timeframe_is_the_way_looked():
     assert m["undo"] == [(110, "eat"), (110, "close")]                    # nearest liquidity the other way, and this timeframe's level behind
 
 
-def test_inside_the_key_area_of_the_timeframe_above_the_way_looked_is_its_bias():
-    """Price has retraced into an imbalance on the side of the bias above: the goal might be something nearby its way."""
+def test_inside_a_higher_timeframes_area_and_against_it_nothing_is_called():
+    """His: "if we are inside the area, watch what happens to build confidence for a buy or sell"."""
     m = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "BISI")))
-    assert (m["merge"], m["side"]) == ("key area", "bull")
-    assert m["target"] == (105, "trade")
-    assert m["undo"] == [(97, "close area")]                              # only a body close of the area's timeframe beyond it
+    assert (m["merge"], m["target"], m["area_i"]) == ("watch", None, 0)
     against = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "SIBI")))
-    assert against["merge"] == "momentum"                                  # an imbalance against the bias above is not its key area
+    assert against["merge"] == "momentum"                                  # an imbalance against the bias above is not its area
 
 
-def test_a_key_area_ends_on_a_close_of_its_own_timeframe_and_on_nothing_less():
+@pytest.mark.parametrize("k", [1.0, 0.0001, 300.0])
+def test_inside_the_area_once_this_timeframe_has_turned_its_way_the_call_is_from_the_area(k):
+    m = merged(a_read(k, side="bull"), above_read(k, side="bull", inside=(97 * k, 101 * k, "BISI")))
+    assert (m["merge"], m["side"], m["area_i"]) == ("from area", "bull", 0)
+    assert m["target"] == (105 * k, "trade")                               # the nearest thing that way, as before
+
+
+@pytest.mark.parametrize("k", [1.0, 0.0001, 300.0])
+def test_outside_the_area_and_against_the_higher_bias_the_call_goes_into_the_area(k):
+    """His: "if we are just above the interesting area, sell into it". The target is the area's near edge, not a
+    small nearer thing of this timeframe."""
+    m = merged(a_read(k, side="bear"), above_read(k, side="bull", area=(84 * k, 88 * k, "BISI")))
+    assert (m["merge"], m["side"]) == ("into area", "bear")
+    assert m["target"] == (88 * k, "trade") and (m["what"], m["whose"], m["whose_i"], m["area_i"]) == ("BISI", "above", 0, 0)
+    behind_price = merged(a_read(k, side="bear"), above_read(k, side="bull", area=(120 * k, 125 * k, "BISI")))
+    assert behind_price["merge"] == "momentum"                             # an area the move is not heading for is not a target
+    wrong_side = merged(a_read(k, side="bear"), above_read(k, side="bull", area=(84 * k, 88 * k, "SIBI")))
+    assert wrong_side["merge"] == "momentum"
+    agreeing = merged(a_read(k, side="bull"), above_read(k, side="bull", area=(84 * k, 88 * k, "BISI")))
+    assert agreeing["merge"] == "agree"                                    # nothing is retracing against the timeframe above
+
+
+def test_with_areas_on_two_timeframes_the_highest_one_inside_is_watched_and_the_nearest_one_ahead_is_the_target():
+    top = above_read(side="bull", inside=(90, 102, "BISI"))
+    mid = above_read(side="bull", inside=(97, 101, "BISI"))
+    assert merged(a_read(side="bear"), [top, mid])["area_i"] == 0
+    assert merged(a_read(side="bear"), [above_read(side="bull"), mid])["area_i"] == 1
+    far, near = above_read(side="bull", area=(70, 75, "BISI")), above_read(side="bull", area=(84, 88, "BISI"))
+    m = merged(a_read(side="bear"), [far, near])
+    assert (m["merge"], m["target"], m["area_i"]) == ("into area", (88, "trade"), 1)
+
+
+def test_a_close_of_the_areas_own_timeframe_is_judged_on_that_timeframes_candles_only():
     """His (23 Nov 2026): "a close through that imbalance, relative to the timeframe of the break and the imbalance
     itself"; wicks, and closes of a lower timeframe, are not a break."""
-    m = merged(a_read(side="bear"), above_read(side="bull", inside=(97, 101, "BISI")))
+    m = {"side": "bull", "near": 0.5, "target": (105, "trade"), "undo": [(97, "close area")]}
     fine = walk([100, 96, 95, 99, 105.5])                                  # trades under the area, comes back, reaches the target
-    assert resolve(m, fine, [(4 * 3600, 105.5)], 20, [])["outcome"] == "true"
-    own_closes = [(2 * 3600, 96.0), (3 * 3600, 95.0)]                      # this timeframe's bodies close under the area
+    own_closes = [(2 * 3600, 96.0), (3 * 3600, 95.0)]                      # lower-timeframe bodies close under the area
     assert resolve(m, fine, own_closes, 20, [])["outcome"] == "true"       # ...and the area still stands
-    assert resolve(m, walk([100, 96, 95, 99, 105.5]), own_closes, 20, [(3 * 3600, 95.0)])["outcome"] == "undone"   # its own timeframe closed under it
-    assert resolve(m, walk([100, 96, 95, 99, 105.5]), own_closes, 20, [(3 * 3600, 99.0)])["outcome"] == "true"     # closed back inside: a wick
+    assert resolve(m, fine, own_closes, 20, [(3 * 3600, 95.0)])["outcome"] == "undone"       # its own timeframe closed under it
+    assert resolve(m, fine, own_closes, 20, [(3 * 3600, 99.0)])["outcome"] == "true"         # closed back inside: a wick
 
 
 @pytest.mark.parametrize("k", [1.0, 0.0001, 300.0])
@@ -212,17 +241,6 @@ def test_the_whole_ladder_above_is_read_top_to_bottom(k):
     far = above_read(k, side="bull", imbalance_above=(101 * k, 102 * k, "SIBI"))
     m = merged(a_read(k), [far, mid])
     assert m["target"] == (101 * k, "trade") and (m["whose"], m["whose_i"]) == ("above", 0)      # the nearest thing, on whichever timeframe
-
-
-def test_with_two_key_areas_the_higher_timeframes_is_the_one():
-    top = above_read(side="bull", inside=(90, 102, "BISI"))
-    mid = above_read(side="bull", inside=(97, 101, "BISI"))
-    m = merged(a_read(side="bear"), [top, mid])
-    assert (m["merge"], m["area_i"], m["undo"]) == ("key area", 0, [(90, "close area")])
-    lower_only = merged(a_read(side="bear"), [above_read(side="bull"), mid])
-    assert (lower_only["merge"], lower_only["area_i"]) == ("key area", 1)
-    same_way = merged(a_read(side="bull"), [top, mid])                     # this timeframe already looks the area's way
-    assert same_way["merge"] == "agree" and same_way["area_i"] is None
 
 
 def test_no_merged_call_when_nothing_lies_that_way():
@@ -284,3 +302,20 @@ def test_the_change_is_judged_on_the_closes_of_the_stated_timeframe_only_and_not
     assert played_out("bull", (105, "trade"), 85, 0.5, fine, 0, higher, 0)["played"] == "true"
     assert played_out("bull", (105, "trade"), 85, 0.5, fine[:4], 0, higher, 0) == {"played": "open", "played_at": None}
     assert played_out("bull", (105, "trade"), 85, 0.5, fine, 5, higher, 0)["played"] == "true"   # followed from a later moment
+
+
+@pytest.mark.parametrize("k", [1.0, 0.01, 250.0])
+def test_the_read_names_the_standing_area_price_would_retrace_into(k):
+    """Bull: the nearest BISI under price that no candle has closed beyond. Once price is back inside it, it is
+    ``inside`` and no longer ahead."""
+    c = walk([100, 101, 102, 101, 100, 101, 102, 103, 104, 105, 104, 103, 104, 105, 106], wick=0.2)
+    t = len(c) * 3600
+    c += [bar(t, 106, 107, 105.8, 107), bar(t + 3600, 107, 112, 107, 112), bar(t + 7200, 112, 113, 110, 112.5),
+          bar(t + 10800, 112.5, 114, 112, 113.5)]
+    scaled = lambda cs: [{**x, **{f: x[f] * k for f in ("open", "high", "low", "close")}} for x in cs]      # noqa: E731
+    r = read(scaled(c))
+    assert r["side"] == "bull"
+    assert r["area"][2] == "BISI" and r["area"][:2] == pytest.approx((107 * k, 110 * k)) and r["inside"] is None
+    back = read(scaled(c + [bar(t + 14400, 113.5, 113.6, 108.5, 109)]))
+    assert back["inside"][:2] == pytest.approx((107 * k, 110 * k))
+    assert back["area"] is None or back["area"][1] <= 107 * k * 1.000001     # the area ahead is now a lower one, if any

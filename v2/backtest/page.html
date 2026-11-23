@@ -47,7 +47,7 @@
 <main>
   <h1>Tools backtest</h1>
   <p id="scope">Loading…</p>
-  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls where the timeframes disagreed (momentum and key area), to open on the chart and say whether the read was right.</p>
+  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls made around a higher timeframe's interesting area, to open on the chart and say whether the read was right.</p>
   <div class="tabs" id="groups"></div>
   <div class="cards" id="cards"></div>
 
@@ -61,7 +61,7 @@
 
   <h2>2. Two timeframes read together</h2>
   <p>Sharif, 20 Nov 2026, after going through the first run: <b>"You're still looking at the chart itself from daily and that's one perspective, or monthly and that's one perspective to a result. There's a mix of timeframes to provide a result."</b> And: <b>"Where price is RIGHT NOW is always more important, because it's drawn to something."</b></p>
-  <p>A merged call reads a timeframe together with every timeframe above it, top to bottom, and names whatever is nearest from price now on any of them. <b>Agree</b>: all of them have the same bias. <b>Momentum</b>: they do not all agree, and this timeframe's direction is followed. <b>Key area</b>: price is inside an imbalance of a higher timeframe, on that timeframe's side, that no candle of that timeframe has closed beyond, so the higher one's direction is followed; it ends when a candle of the area's own timeframe closes beyond it (his, 23 Nov 2026). How these three are told apart is Claude's choice, not his. <b>Bias played out</b> is his way of judging a call (23 Nov 2026): the area named was reached, by whatever route, before the bias itself changed (a body close beyond the level behind, on the timeframe whose bias was stated). The exact-target columns are the old count and are stricter than he is. The last column is the old single-timeframe liquidity call on the same timeframe, for comparison.</p>
+  <p>A merged call reads a timeframe together with every timeframe above it, top to bottom. An <b>area</b> is an imbalance on its timeframe's own side that no candle of that timeframe has closed beyond. <b>Into area</b>: this timeframe is against a higher one, and the higher one's area lies ahead: the call is this timeframe's direction, into that area. <b>From area</b>: price is inside a higher timeframe's area and this timeframe has turned its way. While price is inside an area and this timeframe is still against it, no call is made (watching). <b>Agree</b> and <b>momentum</b>: no area in play; the nearest thing in this timeframe's direction. How these are told apart is Claude's choice, not his. <b>Bias played out</b> is his way of judging a call (23 Nov 2026): the area named was reached, by whatever route, before the bias itself changed (a body close beyond the level behind, on the timeframe whose bias was stated). The exact-target columns are the old count and are stricter than he is. The last column is the old single-timeframe liquidity call on the same timeframe, for comparison.</p>
   <div class="wrap" id="merged"></div>
 
   <h2>3. What the bias adds, year by year</h2>
@@ -147,7 +147,7 @@ async function show(g) {
     near: MG.find(r => mk(r) === k && r.nearer === "target"), far: MG.find(r => mk(r) === k && r.nearer === "undo") }))
     .sort((a, b) => byTf(a, b) || a.merge.localeCompare(b.merge));
   const msh = r => r ? pct(r.true_share, r.true + r.undone) : '<span class="few">none</span>';
-  table("merged", mrows, [["Timeframe (read with all above it)", r => esc(TFNAME[r.tf])], ["The timeframes", r => esc({ agree: "all agree", momentum: "disagree: momentum followed", "key area": "disagree: price in a higher one's key area" }[r.merge] || r.merge)],
+  table("merged", mrows, [["Timeframe (read with all above it)", r => esc(TFNAME[r.tf])], ["The timeframes", r => esc({ agree: "all agree", momentum: "disagree: momentum followed", "into area": "disagree: moving into a higher one's area", "from area": "inside a higher one's area, turned its way" }[r.merge] || r.merge)],
     ["Bias played out (his way)", r => { const n = (r.near ? r.near.played_n : 0) + (r.far ? r.far.played_n : 0), w = (r.near ? r.near.played : 0) + (r.far ? r.far.played : 0); return n ? pct(w / n, n) : ""; }],
     ["Exact target first, when it was nearer", r => msh(r.near)], ["…when it was farther", r => msh(r.far)],
     ["Old single-timeframe liquidity call, target nearer", r => { const o = P.find(x => x.tf === r.tf); return o ? pct(o.liquidity_target, o.liquidity_target_n) : ""; }],

@@ -66,10 +66,11 @@ He went through the first run and said the reads were right but stood side by si
 chart itself from daily and that's one perspective, or monthly and that's one perspective… there's a mix of
 timeframes to provide a result." The lesson is in `03_bias_with_liquidity` ("Merging the timeframes"). So each
 timeframe below the top also makes one **merged** call with every timeframe above it, top to bottom: whatever is
-nearest from price now, on any of them (`calls.merged`). After his review of ten of them (20 and 23 Nov 2026) a key
-area is an imbalance no candle of its own timeframe has closed beyond, and it ends on such a close ("a close through
-that imbalance, relative to the timeframe of the break and the imbalance itself"). How "agree", "momentum" and "key area" are told apart is Claude's choice and
-is named so in the code. The single-timeframe calls are kept so the two can be compared (section 2 of the page).
+nearest from price now, on any of them (`calls.merged`). Since 23 Nov 2026 it follows his process around an interesting
+area (an imbalance on its timeframe's own side that no candle of that timeframe has closed beyond): `into area` when a
+lower timeframe moves against a higher one towards that area, no call while price is inside it and the lower timeframe
+is still against it (watching; the run prints how many such moments), `from area` once the lower timeframe has turned.
+`agree` and `momentum` are what is left when no area is in play. How these are told apart is Claude's, accepted by him.
 
 **How a call is judged (his, 23 Nov 2026):** "I'm looking at your statements, such as bear / bull, and I address from
 there, looking forward." The area named being reached, by whatever route, is the bias playing out; "bias changing would
