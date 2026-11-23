@@ -16,6 +16,7 @@
 // Double-click a mark to lock it, and again to unlock it. A locked mark can no longer be picked up, moved or removed,
 // and a press goes through it to whatever lies underneath. A selected mark also shows a small bar (lock / delete);
 // Shift+click picks up a locked mark. A block's corner handles size it both ways at once; its edges one way.
+const FIB = [[0, "#8d99ae"], [0.236, "#e0453a"], [0.382, "#e8890c"], [0.5, "#16a36a"], [0.618, "#12a594"], [0.786, "#2f6bff"], [1, "#8d99ae"]];   // the standard levels
 const MOVES = ["displacement", "fake push"];   // a move: an arrow at its end; a fake push is dashed
 const arrowHead = (g, x0, y0, x1, y1) => { const a = Math.atan2(y1 - y0, x1 - x0), L = 10; g.setLineDash([]); g.beginPath();
   for (const s of [-0.45, 0.45]) { g.moveTo(x1, y1); g.lineTo(x1 - L * Math.cos(a + s), y1 - L * Math.sin(a + s)); } g.stroke(); };
@@ -30,6 +31,7 @@ const MARK_PALETTE = [
   ["area", "zone", ["NWOG", "NDOG"]],
   ["", "zone", ["trading range"]],
   ["", "level", ["50%"]],
+  ["", "fib", ["fib retracement"]],          // the usual Fibonacci retracement: 0 at the second point, 1 at the first
   ["", "position", ["long", "short"]],     // an entry, a stop and a target, with the risk to reward between them
 ];
 
@@ -42,7 +44,7 @@ const KIND_COLOR = {
   "line": "#7b8794", "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
   "FVG": "#e8a200", "BISI": "#0ca678", "SIBI": "#c2255c", "IFVG": "#7950f2", "VI": "#c930c9", "BPR": "#1c7ed6",
   "order block": "#4c6ef5", "breaker": "#d6336c", "mitigation block": "#0b7285", "rejection block": "#a8641a",
-  "trading range": "#8d99ae", "50%": "#8d99ae", "NWOG": "#e8890c", "NDOG": "#b8860b", "long": "#16a36a", "short": "#e0453a",
+  "trading range": "#8d99ae", "50%": "#8d99ae", "NWOG": "#e8890c", "NDOG": "#b8860b", "long": "#16a36a", "short": "#e0453a", "fib retracement": "#8d99ae",
 };
 // a mark whose label is free text (Claude's often are) takes the colour of the kind it names
 const KIND_WORDS = [["EQH", "EQH"], ["EQL", "EQL"], ["IFVG", "IFVG"], ["FVG", "FVG"], ["BISI", "BISI"], ["SIBI", "SIBI"], ["IFVG", "IFVG"], ["NWOG", "NWOG"], ["NDOG", "NDOG"], ["BPR", "BPR"],
@@ -185,6 +187,19 @@ function marksLayer(chart, series, el, o) {
       if (m.hidden || off()) return;                    // hidden by him: kept, saved, not drawn
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m), on = sel === i;
       if (x0 == null || x1 == null) return;
+      if (m.shape === "fib") {                          // Fibonacci retracement between two points: 0 at the second, 1 at the first
+        const ya = yOf(m.p0), yb = yOf(m.p1); if (ya == null || yb == null) return;
+        const xa = Math.min(x0, x1), xb = Math.max(x0, x1, xa + 60), ys = FIB.map(([f]) => yOf(m.p1 + (m.p0 - m.p1) * f));
+        if (ys.some(y => y == null)) return;
+        g.setLineDash([]); g.lineWidth = on ? 2 : 1;
+        FIB.forEach(([f, c], k) => { if (k) { g.fillStyle = c; g.globalAlpha = .06; g.fillRect(xa, Math.min(ys[k - 1], ys[k]), xb - xa, Math.abs(ys[k] - ys[k - 1])); g.globalAlpha = 1; }
+          g.strokeStyle = c; g.beginPath(); g.moveTo(xa, ys[k]); g.lineTo(xb, ys[k]); g.stroke();
+          lab(g, `${f} (${fmt(m.p1 + (m.p0 - m.p1) * f)})`, xa - 4, ys[k], c, true); });
+        g.strokeStyle = col(m); g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x0, ya); g.lineTo(x1, yb); g.stroke(); g.setLineDash([]);
+        if (m.locked) lab(g, "🔒", xb + 4, ys[0], col(m));
+        if (on) { g.fillStyle = o.color("--panel"); for (const [x, y] of [[x0, ya], [x1, yb]]) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); } }
+        return;
+      }
       if (m.shape === "position") {                     // entry, stop, target: reward shaded green, risk shaded red
         const yE = yOf(m.entry), yS = yOf(m.stop), yT = yOf(m.target); if (yE == null || yS == null || yT == null) return;
         const risk = Math.abs(m.entry - m.stop), rr = risk ? Math.abs(m.target - m.entry) / risk : 0, pc = v => ((v - m.entry) / m.entry * 100).toFixed(2) + "%";
@@ -266,6 +281,14 @@ function marksLayer(chart, series, el, o) {
       if (m.shape === "vline") { if (Math.abs(px - x0) <= G()) take(i, "body", Math.abs(px - x0)); return; }
       if (px < Math.min(x0, x1) - G() || px > Math.max(x0, x1) + G()) return;
       const end = Math.abs(px - x0) <= G() ? "start" : Math.abs(px - x1) <= G() ? "end" : null;
+      if (m.shape === "fib") {
+        const ya = yOf(m.p0), yb = yOf(m.p1); if (ya == null || yb == null) return;
+        if (Math.hypot(px - x0, py - ya) <= G() + 2) return take(i, "start", 0);
+        if (Math.hypot(px - x1, py - yb) <= G() + 2) return take(i, "end", 0);
+        if (px > Math.max(x0, x1, Math.min(x0, x1) + 60) + G()) return;
+        for (const [f] of FIB) { const y = yOf(m.p1 + (m.p0 - m.p1) * f); if (y != null && Math.abs(py - y) <= G()) take(i, "body", Math.abs(py - y)); }
+        return;
+      }
       if (m.shape === "position") {
         const yE = yOf(m.entry), yS = yOf(m.stop), yT = yOf(m.target); if (yE == null || yS == null || yT == null) return;
         if (Math.abs(py - yT) <= G() + 1) take(i, "target", Math.abs(py - yT));
@@ -313,7 +336,7 @@ function marksLayer(chart, series, el, o) {
       L.push(m); sel = L.length - 1;
       held = { i: sel, part: "posnew", p0: p, t0: t, x0: px, y0: py, moved: false, fresh: true, orig: { ...m } };
     } else if (place && p != null && t != null) {
-      const m = place.shape === "zone" ? { top: p, bottom: p } : place.shape === "line" ? { p0: p, p1: p } : place.shape === "vline" ? {} : { price: p };
+      const m = place.shape === "zone" ? { top: p, bottom: p } : place.shape === "line" || place.shape === "fib" ? { p0: p, p1: p } : place.shape === "vline" ? {} : { price: p };
       Object.assign(m, { shape: place.shape, kind: place.kind, side: place.side, tf: o.tfName ? o.tfName() : "", t0: t, t1: t,
                          uid: Math.random().toString(36).slice(2, 8), by: "S" });
       L.push(m); sel = L.length - 1;
@@ -349,7 +372,7 @@ function marksLayer(chart, series, el, o) {
       else if (held.part === "end") m.t1 = t; else if (held.part === "start") m.t0 = t;
       else { m.entry = r2(q.entry + dp); m.stop = r2(q.stop + dp); m.target = r2(q.target + dp); if (held.part === "inside") { m.t0 = q.t0 + dt; m.t1 = q.t1 + dt; } }
     }
-    else if (m.shape === "line") {
+    else if (m.shape === "line" || m.shape === "fib") {
       if (held.part === "end") { m.t1 = t; m.p1 = p; } else if (held.part === "start") { m.t0 = t; m.p0 = p; }
       else { m.p0 = r2(q.p0 + dp); m.p1 = r2(q.p1 + dp); m.t0 = q.t0 + dt; if (q.t1 != null) m.t1 = q.t1 + dt; }
     } else if (held.part === "end") m.t1 = t;
@@ -374,7 +397,7 @@ function marksLayer(chart, series, el, o) {
       const risk = Math.abs((pOfY(0) || 0) - (pOfY(el.clientHeight - ts.height()) || 0)) * .06 || Math.abs(m.entry) * .005, way = m.kind === "short" ? -1 : 1;
       m.stop = r2(m.entry - way * risk); m.target = r2(m.entry + way * 2 * risk); m.t1 = Math.round(tOfIdx(idxOf(m.t0) + 20));
     } else if (held.fresh && !held.moved) {
-      if (m.shape === "line") { L.splice(held.i, 1); sel = null; }                // a line needs a drag
+      if (m.shape === "line" || m.shape === "fib") { L.splice(held.i, 1); sel = null; }       // a line or a fib needs a drag
       else {
         m.t1 = null;                                                              // a click: from here on
         if (m.shape === "zone") { const h = Math.max(Math.abs(m.top) * 0.0005, 0.0001); m.top = r2(m.top + h); m.bottom = r2(m.bottom - h); }
@@ -382,7 +405,8 @@ function marksLayer(chart, series, el, o) {
     }
     const k = L[held.i] === m ? m : null;
     if (k && k.shape === "vline") k.t1 = null;
-    if (k && k.t0 != null && k.t1 != null && k.t1 < k.t0) { [k.t0, k.t1] = [k.t1, k.t0]; if (k.shape === "line") [k.p0, k.p1] = [k.p1, k.p0]; }
+    if (k && k.shape !== "fib" && k.t0 != null && k.t1 != null && k.t1 < k.t0) {     // a fib keeps its two points as drawn: which is first decides where 0 and 1 are
+    [k.t0, k.t1] = [k.t1, k.t0]; if (k.shape === "line") [k.p0, k.p1] = [k.p1, k.p0]; }
     if (k && k.shape === "zone" && k.top < k.bottom) [k.top, k.bottom] = [k.bottom, k.top];
     held = null; hover = null; freeze(false);
     redraw(); o.changed();                                                        // the page ends the placement: one placement per pick

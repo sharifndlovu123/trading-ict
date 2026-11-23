@@ -53,6 +53,7 @@ def where(m: dict) -> str:
     num = lambda v: f"{v:,.5f}".rstrip("0").rstrip(".") if isinstance(v, (int, float)) else "?"       # noqa: E731
     at = "level at " + num(m.get("price")) if shape == "level" else f"zone {num(m.get('bottom'))} to {num(m.get('top'))}" if shape == "zone" \
         else f"line {num(m.get('p0'))} to {num(m.get('p1'))}" if shape == "line" else "vertical line" if shape == "vline" \
+        else f"fib from {num(m.get('p0'))} (1) to {num(m.get('p1'))} (0)" if shape == "fib" \
         else f"entry {num(m.get('entry'))}, stop {num(m.get('stop'))}, target {num(m.get('target'))}" if shape == "position" else str(shape)
     span = f"from {chart_time(m.get('t0'))}" + (f" to {chart_time(m['t1'])}" if m.get("t1") is not None else "")
     return f"{at}, {span}" if m.get("t0") is not None else at

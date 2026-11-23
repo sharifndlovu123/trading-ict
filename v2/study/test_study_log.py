@@ -90,3 +90,9 @@ def test_a_position_is_logged_with_its_entry_stop_and_target_and_moving_the_stop
     assert where(pos).startswith("entry 100, stop 95, target 110, from")
     assert changes([pos], [pos | {"stop": 97.0}])["changed"] and not changes([pos], [dict(pos)])["changed"]
     assert not changes([pos], [pos | {"hidden": True, "color": "#fff"}])["changed"]      # hiding or colouring a mark does not change what it says
+
+
+def test_a_fib_is_logged_with_its_two_points():
+    fib = mark("f", shape="fib", kind="fib retracement", p0=90.0, p1=110.0, t1=7200)
+    assert where(fib).startswith("fib from 90 (1) to 110 (0), from")
+    assert changes([fib], [fib | {"p1": 112.0}])["changed"]

@@ -236,7 +236,7 @@ const GROUPS = [["╱", "Lines", ["line", "displacement", "fake push"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
                 ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "NWOG", "NDOG"]],
                 ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
-                ["⇕", "Range", ["trading range", "50%"]],
+                ["⇕", "Range and Fibonacci", ["trading range", "50%", "fib retracement"]],
                 ["⚖", "Position: entry, stop and target", ["long", "short"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
 const KEEP = "charts-v2";
@@ -576,7 +576,7 @@ async function watch() {
 }
 function objects() {                                     // the object list: every mark and note of his on the charts shown
   if (st.tab !== "objects") return;
-  const num = v => v == null ? "" : (+v).toFixed(dp(v)), at = m => m.shape === "zone" ? `${num(m.bottom)} to ${num(m.top)}` : m.shape === "line" ? `${num(m.p0)} to ${num(m.p1)}`
+  const num = v => v == null ? "" : (+v).toFixed(dp(v)), at = m => m.shape === "zone" ? `${num(m.bottom)} to ${num(m.top)}` : m.shape === "line" || m.shape === "fib" ? `${num(m.p0)} to ${num(m.p1)}`
     : m.shape === "position" ? `entry ${num(m.entry)} · stop ${num(m.stop)} · target ${num(m.target)}` : m.shape === "vline" ? wall(m.t0) : num(m.price);
   const as = [...new Set(st.cfg.map(c => c.asset))];
   $("objects").innerHTML = as.map(a => { const ms = myMarks(a), ns = myNotes(a);
