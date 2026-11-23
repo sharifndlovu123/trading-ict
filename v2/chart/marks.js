@@ -86,7 +86,7 @@ function marksLayer(chart, series, el, o) {
   const pOfY = y => { const p = series.coordinateToPrice(y); return p == null ? null : +p.toPrecision(7); };
   const xLast = () => { const a = T(); return a.length ? xOf(a[a.length - 1]) : null; };
   const xEnd = m => m.t1 != null ? xOf(m.t1) : (xLast() == null ? null : xLast() + STUB);
-  const col = m => markColor(m.kind, o.color("--mine"));
+  const col = m => m.color || markColor(m.kind, o.color("--mine"));     // a colour he picked for this one mark wins over its kind's colour
   // a block or an imbalance carries its timeframe beside its name: on a lower chart you can tell which timeframe made it
   const name = m => "S · " + m.kind + (m.shape === "zone" && m.tf ? " " + m.tf : "") + (m.side === "buyside" ? " ↑" : m.side === "sellside" ? " ↓" : "") + (m.locked ? " 🔒" : "");
   // snap: the nearest candle to the mouse, and of its open / high / low / close the one closest to the mouse
@@ -120,7 +120,15 @@ function marksLayer(chart, series, el, o) {
   el.appendChild(cv);
   const bar = document.createElement("div");           // the small bar for the selected mark: lock / unlock, delete
   bar.style.cssText = "position:absolute;top:30px;left:50%;transform:translateX(-50%);z-index:7;display:none;gap:4px;padding:3px;border-radius:7px;background:rgba(20,22,28,.92);border:1px solid rgba(128,128,128,.4)";
-  bar.innerHTML = '<button data-a="lock" style="cursor:pointer;border:0;border-radius:5px;padding:3px 9px;background:none;color:#e7e9ee;font:inherit"></button><button data-a="del" title="remove (Delete)" style="cursor:pointer;border:0;border-radius:5px;padding:3px 9px;background:none;color:#e7e9ee;font:inherit">🗑 Delete</button>';
+  const BTN = 'cursor:pointer;border:0;border-radius:5px;padding:3px 9px;background:none;color:#e7e9ee;font:inherit';
+  const SWATCH = ["#2f6bff", "#16a36a", "#e0453a", "#e8890c", "#b05cff", "#e7e9ee"];      // the floating bar's colours, as on TradingView's
+  bar.innerHTML = SWATCH.map(c => `<button data-c="${c}" title="colour this mark" style="cursor:pointer;width:16px;height:16px;margin:4px 2px;border-radius:50%;border:1px solid rgba(128,128,128,.6);background:${c}"></button>`).join("") +
+    `<button data-c="" title="back to this kind's own colour" style="${BTN};padding:3px 6px">↺</button><span style="width:1px;background:rgba(128,128,128,.4);margin:2px 3px"></span>` +
+    `<button data-a="lock" style="${BTN}"></button><button data-a="hide" title="hide this mark: it is kept and still saved; bring hidden marks back from the left toolbar" style="${BTN}">🙈 Hide</button>` +
+    `<button data-a="del" title="remove (Delete)" style="${BTN}">🗑 Delete</button>`;
+  bar.style.alignItems = "center";
+  bar.querySelectorAll("[data-c]").forEach(b => b.addEventListener("click", () => { const m = o.list()[sel]; if (!m) return; if (b.dataset.c) m.color = b.dataset.c; else delete m.color; redraw(); o.changed(); }));
+  bar.querySelector('[data-a="hide"]').addEventListener("click", () => { const m = o.list()[sel]; if (!m) return; m.hidden = true; sel = null; redraw(); o.changed(); });
   el.appendChild(bar);
   for (const ev of ["pointerdown", "mousedown", "click"]) bar.addEventListener(ev, e => e.stopPropagation());     // a press on the bar is not a press on the chart
   bar.querySelector('[data-a="lock"]').addEventListener("click", () => { const m = o.list()[sel]; if (!m) return; m.locked = !m.locked; if (m.locked) sel = null; redraw(); o.changed(); });
@@ -170,6 +178,7 @@ function marksLayer(chart, series, el, o) {
       g.setLineDash([]); tag(g, u.label, tx, ty, u.color, true);
     }
     o.list().forEach((m, i) => {
+      if (m.hidden) return;                             // hidden by him: kept, saved, not drawn
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m), on = sel === i;
       if (x0 == null || x1 == null) return;
       g.strokeStyle = g.fillStyle = col(m); g.lineWidth = on ? 3 : 2; g.setLineDash([]);
@@ -220,6 +229,7 @@ function marksLayer(chart, series, el, o) {
     let best = null;
     const take = (i, part, d) => { if (!best || d < best.d) best = { i, part, d }; };
     o.list().forEach((m, i) => {
+      if (m.hidden) return;                             // a hidden mark cannot be picked up
       if (m.locked && !locked) return;                  // a locked mark lets the press through to what is underneath
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m);
       if (x0 == null || x1 == null) return;

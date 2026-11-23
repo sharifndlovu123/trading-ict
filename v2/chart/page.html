@@ -83,7 +83,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 .pbtn button:hover { background:var(--panel2); }
 /* bottom bar */
 #bottom { background:var(--panel); height:34px; flex:none; display:flex; align-items:center; gap:4px; padding:0 8px; white-space:nowrap; overflow-x:auto; overflow-y:hidden; }
-#bottom .sp { flex:1; } #eqbar { display:none; align-items:center; gap:8px; margin-right:10px; } #eqbar.on { display:flex; } #eqshare { width:220px; accent-color:#f5b942; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
+#bottom .sp { flex:1; } #ranges { display:flex; gap:1px; } #ranges .tb { padding:0 7px; } #goto, #speed { background:none; color:inherit; border:1px solid rgba(128,128,128,.35); border-radius:5px; height:24px; font:inherit; } #speed option { color:#111; } body.picking .pane { cursor:crosshair; } #eqbar { display:none; align-items:center; gap:8px; margin-right:10px; } #eqbar.on { display:flex; } #eqshare { width:220px; accent-color:#f5b942; } #replay { display:none; align-items:center; gap:2px; } #replay.on { display:flex; }
 #at { background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:2px 6px; height:26px; }
 #menu { position:absolute; z-index:30; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px; min-width:210px; box-shadow:0 8px 28px rgba(0,0,0,.45); display:none; }
 #menu h4 { margin:4px 8px; font-size:11px; font-weight:600; color:var(--ink2); text-transform:uppercase; letter-spacing:.04em; }
@@ -186,7 +186,9 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
     <button class="tb" data-step="-D" title="one day back">⏪</button><button class="tb" data-step="-1" title="one candle back (the chart you last touched)">◀</button>
     <input type="datetime-local" id="at" title="a New York date and time; the charts show nothing after it">
     <button class="tb" data-step="1" title="one candle forward">▶</button><button class="tb" data-step="D" title="one day forward">⏩</button>
-    <button class="tb" id="play" title="one candle every second">▶ Play</button>
+    <button class="tb" id="pick" title="pick the bar to replay from: click it on a chart">✂ Pick bar</button>
+    <button class="tb" id="play" title="step forward by itself, one candle at a time">▶ Play</button>
+    <select id="speed" class="tb" title="how fast Play steps"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select>
     <button class="tb" id="now" title="leave replay: back to the newest candles">✕ Exit replay</button>
   </span>
   <span id="eqbar" title="drag until the sets it finds match what you would call equal highs and lows">
@@ -197,6 +199,8 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   </span>
   <span id="when" class="dim"></span>
   <span class="sp"></span>
+  <span id="ranges"></span>
+  <input type="date" id="goto" class="tb" title="go to a date: the charts scroll to it (this is not replay: later candles stay)">
   <span id="marksn" class="dim"></span>
 </div>
 <div id="fly"></div><div id="menu"></div>
@@ -276,6 +280,7 @@ function tools() {                                       // the toolbar down the
     `<button class="tl ${st.snap ? "on" : ""}" id="t-snap" title="snap (M): a point you place or drag jumps to the nearest candle's open, high, low or close">🧲</button>` +
     `<button class="tl ${st.eqOn ? "on" : ""}" id="t-eq" title="find equal highs and lows: shows the sets it finds, with a slider for how close counts as equal">≈</button>` +
     `<button class="tl ${st.hideNotes ? "on" : ""}" id="t-hide" title="hide the notes I wrote on the charts, or show them again. Hidden notes are kept and still saved">${st.hideNotes ? "🙈" : "👁"}</button>` +
+    (shownMarks().some(m => m.hidden) ? `<button class="tl on" id="t-unhide" title="show the ${shownMarks().filter(m => m.hidden).length} marks I hid on these charts">◌</button>` : "") +
     `<button class="tl ${allLocked() ? "on" : ""}" id="t-lock" title="lock every mark of mine on these charts, or unlock them all. One mark: double-click it to lock, double-click again to unlock">🔒</button>` +
     `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
     `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
@@ -283,6 +288,7 @@ function tools() {                                       // the toolbar down the
   $("t-grab").onclick = () => setGrab(!st.grab);
   $("t-note").onclick = () => setNoteTool(!st.noteTool);
   $("t-snap").onclick = toggleSnap;
+  if ($("t-unhide")) $("t-unhide").onclick = () => { shownMarks().forEach(m => delete m.hidden); marksChanged(); tools(); };
   $("t-hide").onclick = () => { st.hideNotes = !st.hideNotes; save(); tools(); count(st.hideNotes ? "notes hidden (still kept)" : "notes shown"); };
   $("t-eq").onclick = () => { st.eqOn = !st.eqOn; save(); tools(); eqAll(); };
   $("t-lock").onclick = () => { const on = !allLocked(); shownMarks().forEach(m => m.locked = on); keepMine(); st.panes.forEach(p => p.layer && (p.layer.deselect(), p.layer.redraw())); tools(); };
@@ -377,7 +383,8 @@ function build() {
         head(q, k);
       }
     });
-    chart.subscribeClick(prm => {                          // writing on the chart
+    chart.subscribeClick(prm => {                          // picking the bar to replay from, or writing on the chart
+      if (st.pick) { st.pick = false; $("pick").classList.remove("on"); document.body.classList.remove("picking"); if (prm.time != null) { st.replay = true; goTo(prm.time); } return; }
       if (!st.noteTool || !prm.point || !p.times.length) return;
       const t = prm.time != null ? prm.time : p.times[p.times.length - 1], price = series.coordinateToPrice(prm.point.y); if (price == null) return;
       setNoteTool(false);
@@ -657,7 +664,26 @@ const stopPlay = () => { if (timer) { clearInterval(timer); timer = null; $("pla
 $("now").onclick = () => { stopPlay(); st.replay = false; goTo(null); };
 $("replaybtn").onclick = () => { if (st.replay || st.until != null) return $("now").onclick(); st.replay = true; status(); };
 $("play").onclick = () => { if (timer) return stopPlay();
-  $("play").textContent = "❚❚ Pause"; timer = setInterval(async () => { if (!(await step("1"))) stopPlay(); }, 1000); };
+  $("play").textContent = "❚❚ Pause"; timer = setInterval(async () => { if (!(await step("1"))) stopPlay(); }, 1000 / (+$("speed").value || 1)); };
+$("speed").onchange = () => { if (timer) { stopPlay(); $("play").onclick(); } };
+$("pick").onclick = () => { st.pick = !st.pick; $("pick").classList.toggle("on", st.pick); document.body.classList.toggle("picking", st.pick); };
+
+// ---- the range bar (as under a TradingView chart): how much of the chart is in view, and go to a date
+const RANGES = [["1D", 1], ["5D", 5], ["1M", 31], ["3M", 92], ["6M", 183], ["YTD", "ytd"], ["1Y", 366], ["5Y", 1827], ["All", "all"]];
+$("ranges").innerHTML = RANGES.map(([n]) => `<button class="tb" data-r="${n}" title="show the last ${n === "All" ? "of everything loaded" : n === "YTD" ? "year to date" : n}">${n}</button>`).join("");
+function showRange(name) {
+  const span = RANGES.find(r => r[0] === name)[1];
+  st.panes.forEach(p => { if (p.dead || !p.times || !p.times.length) return; const ts = p.chart.timeScale(), n = p.times.length, to = p.times[n - 1];
+    if (span === "all") return ts.fitContent();
+    const from = span === "ytd" ? Date.UTC(new Date(to * 1000).getUTCFullYear(), 0, 1) / 1000 : to - span * 86400;
+    let i = p.times.findIndex(t => t >= from); if (i < 0) i = 0;
+    ts.setVisibleLogicalRange({ from: Math.min(i, n - 2) - .5, to: n - 1 + 3 }); });
+}
+$("ranges").querySelectorAll("[data-r]").forEach(b => b.onclick = () => showRange(b.dataset.r));
+$("goto").addEventListener("keydown", e => e.stopPropagation());
+$("goto").addEventListener("change", () => { const v = $("goto").value; if (!v) return; const at = Date.parse(v + "T00:00:00Z") / 1000;
+  st.panes.forEach(p => { if (p.dead || !p.times || !p.times.length) return; const ts = p.chart.timeScale(), r = ts.getVisibleLogicalRange(); if (!r) return;
+    let i = p.times.findIndex(t => t >= at); if (i < 0) i = p.times.length - 1; const w = (r.to - r.from) / 2; ts.setVisibleLogicalRange({ from: i - w, to: i + w }); }); });
 
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
