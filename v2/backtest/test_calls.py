@@ -253,3 +253,34 @@ def test_a_zone_stands_through_wicks_and_ends_when_a_candle_of_its_timeframe_clo
     after = c + [bar(t + 14400, 109 * k, 109.5 * k, 105 * k, 106 * k), bar(t + 18000, 106 * k, 108.5 * k, 105.5 * k, 108 * k)]
     r = read(after)                                                        # a body closed under it, then price came back up into it
     assert r is not None and r["inside"] is None
+
+
+# ---- did the bias play out (his way of judging a call, 23 Nov 2026)
+from calls import played_out  # noqa: E402
+
+
+@pytest.mark.parametrize("k, step", [(1.0, 3600), (0.0001, 900), (300.0, 14400)])
+def test_the_bias_plays_out_when_the_area_is_reached_by_whatever_route(k, step):
+    """Price drops well under where the call was made, closing lower candle after candle, then reaches the area. No
+    candle closed beyond the level behind, so the bias never changed: "our bias still played out"."""
+    fine = walk([100 * k, 96 * k, 92 * k, 90 * k, 95 * k, 101 * k, 106 * k], step=step)
+    closes = [(x["time"] + step, x["close"]) for x in fine]
+    got = played_out("bull", (105 * k, "trade"), 85 * k, 0.5 * k, fine, 0, closes, 0)
+    assert got == {"played": "true", "played_at": fine[-1]["time"]}
+
+
+def test_a_change_of_bias_ends_the_idea_and_a_wick_through_the_level_does_not():
+    under = walk([100, 96, 90, 84, 83])                                    # a body closes under the level behind
+    assert played_out("bull", (105, "trade"), 85, 0.5, under, 0, [(x["time"] + 3600, x["close"]) for x in under], 0)["played"] == "ended"
+    wick = [bar(0, 100, 100, 99, 99.5), bar(3600, 99.5, 100, 80, 98), bar(7200, 98, 106, 98, 105.5)]     # trades under it, closes back above
+    assert played_out("bull", (105, "trade"), 85, 0.5, wick, 0, [(x["time"] + 3600, x["close"]) for x in wick], 0)["played"] == "true"
+    mirror = walk([100, 104, 110, 116, 117])
+    assert played_out("bear", (95, "trade"), 115, 0.5, mirror, 0, [(x["time"] + 3600, x["close"]) for x in mirror], 0)["played"] == "ended"
+
+
+def test_the_change_is_judged_on_the_closes_of_the_stated_timeframe_only_and_nothing_is_known_early():
+    fine = walk([100, 96, 90, 84, 83, 90, 106])                            # lower-timeframe bodies close under the level and come back
+    higher = [(7 * 3600, 106.0)]                                           # the stated timeframe's one candle closes after all of it
+    assert played_out("bull", (105, "trade"), 85, 0.5, fine, 0, higher, 0)["played"] == "true"
+    assert played_out("bull", (105, "trade"), 85, 0.5, fine[:4], 0, higher, 0) == {"played": "open", "played_at": None}
+    assert played_out("bull", (105, "trade"), 85, 0.5, fine, 5, higher, 0)["played"] == "true"   # followed from a later moment

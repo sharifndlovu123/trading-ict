@@ -71,6 +71,12 @@ area is an imbalance no candle of its own timeframe has closed beyond, and it en
 that imbalance, relative to the timeframe of the break and the imbalance itself"). How "agree", "momentum" and "key area" are told apart is Claude's choice and
 is named so in the code. The single-timeframe calls are kept so the two can be compared (section 2 of the page).
 
+**How a call is judged (his, 23 Nov 2026):** "I'm looking at your statements, such as bear / bull, and I address from
+there, looking forward." The area named being reached, by whatever route, is the bias playing out; "bias changing would
+end the idea." That is the `played` column (`calls.played_out`) and the "Bias played out" column on the page. The older
+`outcome` (exact target before the exact level that undoes it) is kept beside it and is stricter than he is: never
+call it a hit or a miss.
+
 **Checking calls with him:** `/backtest/check` lists ten merged calls where the timeframes disagreed (`tables.check`),
 each opening on the chart at its moment. What he says about a call is saved in `v2/backtest/reviews.jsonl`: his file,
 read it, never edit it. His corrections there go through learn.

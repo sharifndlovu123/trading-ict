@@ -114,6 +114,37 @@ Named by him in the same review and **held on his word, not taught yet:** Fibona
 piece trading" in a consolidating market, extra timeframes for a tricky read, and premium (relative to the trading
 range). Nothing here uses them.
 
+### The bias names an area; the route to it is not ours to pick (taught 23 Nov 2026)
+
+Taught on 23 Nov 2026 after he looked at how the backtest had marked calls as hits and misses. He confirmed my
+saying-back in the chat ("yes, that's it", "yes, that's right, continue"). **Not yet shown back on a chart I had not
+seen.**
+
+- **A call is not judged on exact prices going my way.** "Your hits and misses seem to be based off of prices exactly
+  your way; most of the time it won't always go your way, but you can find success still."
+- **What he judges is the statement.** "I'm not looking at zones being respected, I'm looking at your statements,
+  such as bear / bull, and I address from there, looking forward."
+- **The bias marks where price could go; the key areas are where we watch.** "Remember how bias works, especially on
+  higher timeframes, and how we trade currently: we mark that price could go to x and y, but we watch context and key
+  areas. Whatever happens in those key areas can be a follow-through for our solution, or an inverse."
+- **The route can differ and the bias still play out.** "If you marked a BISI to buy from and were looking bullish
+  for new highs, but what if price broke your level with a closed candle and went for a lower VI or a lower BISI, or
+  it created EQLs, and then hit our area: our bias still played out, because we were hoping to reach a certain zone
+  and it was hit, but not with our original BISI; maybe an alt approach."
+- **It is never a perfect find.** "It will always be like this; it's not always a perfect find."
+- **What ends the idea.** "Bias changing would end the idea. So if we are looking at a specific area or zone being
+  reached and price goes so off, or major bias change, we are directly off."
+
+**What I got wrong, and what he said.** The backtest called a read a miss when the nearest zone or nearby liquidity
+gave way before my exact target was touched. On the calls he reviewed, his verdict and that count agreed on two of
+nine: reads that dipped first and then went the stated way he called right; one that touched my target he called
+wrong.
+
+Mine, not his: in the backtest, "the bias played out" is counted as the named area being reached before a body
+closes beyond the level behind, on the timeframe whose bias was stated, with no limit on how long it takes. The
+bias changing as the end is his; reading "bias changing" as that close is from lesson 01. "Price goes so off" is not
+defined and is not counted.
+
 ## What "something playing out" looks like (the sequence he walked me through)
 
 1. "First thing you'd have to notice is anything of importance, such as liquidity marked out."
@@ -325,6 +356,8 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | price reaches an interesting zone while a direction is being looked for | whether a candle of the zone's own timeframe closes beyond it against that direction; if it fails to, the idea is stronger | stated by Sharif, 23 Nov 2026 |
 | a candle of the zone's own timeframe has closed beyond the zone | the other side: that close might support it, more so when price retraces back into the zone afterwards | stated by Sharif, 20 Nov 2026 |
 | price meets an opposing imbalance on the way to where it is expected | what happens there: respected, it might turn price back; closed through, it might support the idea | stated by Sharif, 20 Nov 2026 |
+| a zone that was marked to trade from is closed through | whether the bias itself has changed; if not, another route to the same area: a lower (or higher) imbalance, or equal lows / highs being built first | stated by Sharif, 23 Nov 2026 |
+| the bias of the timeframe the idea rests on changes, or price goes far off | the idea is over | stated by Sharif, 23 Nov 2026 |
 | price pushes into new ground with nothing on the left side | nothing to read a target from: unknown territory | stated by Sharif, 23 Nov 2026 |
 
 ## Open questions for him
@@ -337,5 +370,6 @@ as something to pick out mechanically, so it is read on the chart for now. The c
   part of the bigger move or the start of a change ("it's tricky to say it specifically"). Answered in part on
   23 Nov 2026: what happens at the interesting zone, and the closed candle on the zone's own timeframe (above). Beyond
   that, not to be guessed.
+- "Price goes so off" as an end to an idea (23 Nov 2026): how far is "so off" has not been said. Not to be guessed.
 - Fibonacci and its upper quadrants, "small piece trading", extra timeframes for a tricky read, premium: named by him
   on 20 Nov 2026 and held until he teaches them.

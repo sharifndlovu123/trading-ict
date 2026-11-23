@@ -133,7 +133,7 @@ def merged(r: dict, above: dict | list | None) -> dict | None:
     return {"kind": "merged", "side": side, "price": price, "near": r["near"], "target": best["target"], "undo": undo,
             "dist_target": d_t, "dist_undo": d_u, "nearer": "target" if d_t < d_u else "undo" if d_u < d_t else "level",
             "merge": how, "what": best["what"], "whose": best["whose"], "whose_i": best["whose_i"], "area_i": area_i,
-            "gap": best["gap"]}
+            "gap": best["gap"], "bias_behind": ups[area_i]["behind"] if area_i is not None else r["behind"]}
 
 
 def calls(r: dict) -> list[dict]:
@@ -207,3 +207,28 @@ def resolve(call: dict, fine: list[dict], closes: list[tuple], horizon: int = 20
         if won or lost:
             return {"outcome": "same candle" if won and lost else "true" if won else "undone", "at": x["time"], "candles": k}
     return {"outcome": "open", "at": None, "candles": k}
+
+
+def played_out(side: str, target: tuple, behind: float, near: float, fine: list[dict], start: int, closes: list[tuple], first: int) -> dict:
+    """Did the bias play out? His way of judging a call (23 Nov 2026): he looks at the statement, bull or bear, and
+    follows it forward. The area named being reached is the bias playing out, by whatever route: "what if price broke
+    your level with a closed candle and went for a lower VI or a lower BISI, or it created EQLs, and then hit our
+    area. Our bias still played out… it's not always a perfect find." What ends the idea: "bias changing would end
+    the idea", i.e. a body close beyond the level behind, on the timeframe whose bias was stated (lesson 01).
+
+    ``fine`` from ``start``: the lowest-timeframe candles from the moment on. ``closes`` from ``first``: ``(time the
+    candle closed, its close)`` for the candles of the stated bias's timeframe that closed after the moment. There is
+    no number of candles: the call is followed until one of the two happens or the data ends.
+    ``{"played": "true" | "ended" | "same candle" | "open", "played_at": time | None}``.
+    He also said "price goes so off" ends it; what that is has not been taught and is not guessed here."""
+    bull, k = side == "bull", first
+    step = fine[start + 1]["time"] - fine[start]["time"] if len(fine) > start + 1 else 0
+    for n in range(start, len(fine)):
+        x = fine[n]
+        won, lost, end = _hit(target, bull, x, None, near), False, x["time"] + step
+        while k < len(closes) and closes[k][0] <= end:
+            lost = lost or (closes[k][1] < behind if bull else closes[k][1] > behind)
+            k += 1
+        if won or lost:
+            return {"played": "same candle" if won and lost else "true" if won else "ended", "played_at": x["time"]}
+    return {"played": "open", "played_at": None}

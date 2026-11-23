@@ -33,7 +33,7 @@ for folder in sorted((HERE.parent / "concepts").glob("[0-9]*_*")) + [HERE, HERE.
 
 import candles as cd  # noqa: E402
 import pandas as pd  # noqa: E402
-from calls import calls, merged, read, resolve  # noqa: E402
+from calls import calls, merged, played_out, read, resolve  # noqa: E402
 from sessions import KILL_ZONES, sessions  # noqa: E402
 
 OUT = HERE / "out"
@@ -76,7 +76,8 @@ def prepare(asset: str) -> dict:
     c = {tf: cd.to_candles(frames[tf]) for tf in LADDER}
     t = {tf: [x["time"] for x in c[tf]] for tf in LADDER}
     own = {tf: owners(frames[FINE].index, tf, frames[tf].index) for tf in LADDER}
-    return {"c": c, "t": t, "own": own}
+    closes = {tf: [(t[tf][n + 1], c[tf][n]["close"]) for n in range(len(c[tf]) - 1)] for tf in LADDER}   # when each candle closed, and where
+    return {"c": c, "t": t, "own": own, "closes": closes}
 
 
 def reads_at(p: dict, moment: int) -> dict:
@@ -132,6 +133,9 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                     res = resolve(call, fine[j:], closes, HORIZON, area_closes if call["kind"] == "merged" else None)
                     still[(tf, call["kind"])] = (same, res["at"] if res["at"] is not None else float("inf"))
                     at = res["at"]
+                    bias_tf = area_tf if call["kind"] == "merged" and area_tf else tf     # the timeframe whose bias the call states
+                    po = (played_out(call["side"], call["target"], call.get("bias_behind", r["behind"]), call["near"], fine, j,
+                                     p["closes"][bias_tf], reads[bias_tf][0]) if call["target"][1] != "close" else {"played": None, "played_at": None})
                     rows.append({
                         "id": f"{asset}-{tf}-{call['kind']}-{moment}", "asset": asset, "tf": tf, "kind": call["kind"], "moment": moment,
                         "year": pd.Timestamp(moment, unit="s").year, "made_in": zone, "side": call["side"], "above": up_side,
@@ -144,6 +148,8 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                         "imbalance": json.dumps(call["gap"] if call["kind"] == "merged" else r["imbalance_above"] if r["side"] == "bull" else r["imbalance_below"]),
                         "dist_target": call["dist_target"], "dist_undo": call["dist_undo"], "nearer": call["nearer"],
                         "outcome": res["outcome"], "at": at, "candles": res["candles"],
+                        "bias_tf": bias_tf, "played": po["played"], "played_at": po["played_at"],
+                        "played_hours": None if po["played_at"] is None else (po["played_at"] + step - moment) / 3600,
                         "hours": None if at is None else (at + step - moment) / 3600,
                         "resolved_in": None if at is None else "/".join(sessions((at % 86400) // 60)) or "outside",
                         "resolved_hour": None if at is None else (at % 86400) // 3600})

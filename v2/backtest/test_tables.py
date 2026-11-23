@@ -142,3 +142,13 @@ def test_every_mark_of_a_call_starts_at_the_candle_that_made_it_and_ends_at_the_
 def test_a_call_without_the_other_timeframes_is_drawn_as_before():
     alone = call_marks(merged_row(1, tf="t1", side="bear", target=95.0))
     assert alone["bias"] == {"t1": "bear"} and alone["ladder"] == [] and any(m["kind"] == "sellside" for m in alone["marks"])
+
+
+def test_the_share_whose_bias_played_out_is_counted_beside_the_exact_count():
+    """His way of judging a call is kept apart from the exact-target count; a call still open is in neither share."""
+    df = frame(row(id="a", outcome="undone", played="true"), row(id="b", outcome="undone", played="true"),
+               row(id="c", outcome="true", played="ended"), row(id="d", outcome="undone", played="open"))
+    got = count(df, ["tf"])[0]
+    assert (got["played"], got["played_n"], got["played_share"]) == (2, 3, 0.667)
+    assert got["true_share"] == 0.25
+    assert count(frame(row(id="a")), ["tf"])[0]["played_share"] is None      # results from before this count existed

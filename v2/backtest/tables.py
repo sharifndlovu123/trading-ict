@@ -32,7 +32,10 @@ def count(df: pd.DataFrame, by: list[str]) -> list[dict]:
         key = key if isinstance(key, tuple) else (key,)
         done = g[g["outcome"].isin(DONE)]
         won = int((done["outcome"] == "true").sum())
+        ran = g[g["played"].isin(("true", "ended"))] if "played" in g.columns else g.iloc[:0].assign(played=[])   # his way: the area reached before the bias changed
         rows.append({**{b: (None if pd.isna(k) else k.item() if hasattr(k, "item") else k) for b, k in zip(by, key)}, "calls": len(g), "true": won,
+                     "played": int((ran["played"] == "true").sum()), "played_n": len(ran),
+                     "played_share": round(float((ran["played"] == "true").mean()), 3) if len(ran) else None,
                      "undone": len(done) - won, "other": len(g) - len(done),
                      "true_share": round(won / len(done), 3) if len(done) else None,
                      "median_hours": None if done["hours"].dropna().empty else round(float(done["hours"].median()), 1)})
@@ -137,7 +140,7 @@ def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs
                     continue
                 out.append(r)
                 got += 1
-    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "area_tf", "nearer", "outcome", "hours"]
+    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "area_tf", "nearer", "outcome", "hours", "bias_tf", "played", "played_hours"]
     return json.loads(pd.DataFrame(out)[[c for c in cols if c in pool.columns]].to_json(orient="records")) if out else []
 
 
