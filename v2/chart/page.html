@@ -226,9 +226,10 @@ const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
              eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 0.65,      // 0.65% is the setting he confirmed by eye
+             hideNotes: !!keep.hideNotes,                                                   // his on-chart notes hidden from view (kept, and still saved)
              lastKind: keep.lastKind || {} };
 for (const k in st.lastKind) if (!KIND[st.lastKind[k]]) delete st.lastKind[k];        // a tool name that was dropped is forgotten
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, theme: document.documentElement.dataset.theme })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, hideNotes: st.hideNotes, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
 const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
@@ -260,7 +261,8 @@ function count(tail) {
 function setPlace(p) { st.place = p; if (p) { st.grab = false; st.noteTool = false; st.lastKind[p.shape] = p.kind; save(); }
   st.panes.forEach(q => { if (q.layer) { q.layer.setGrab(false); q.layer.setPlace(p); } if (q.box && !p) q.box.style.cursor = ""; }); tools(); }
 function setGrab(on) { st.grab = on; st.place = null; st.noteTool = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(on))); tools(); }
-function setNoteTool(on) { st.noteTool = on; if (on) { st.place = null; st.grab = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(false))); }
+function setNoteTool(on) { st.noteTool = on; if (on && st.hideNotes) { st.hideNotes = false; save(); }      // writing a note shows them again
+  if (on) { st.place = null; st.grab = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(false))); }
   st.panes.forEach(q => q.box && (q.box.style.cursor = on ? "crosshair" : "")); tools(); }
 const shownMarks = () => [...new Set(st.cfg.map(c => c.asset))].flatMap(a => myMarks(a));
 const allLocked = () => { const m = shownMarks(); return m.length > 0 && m.every(x => x.locked); };
@@ -273,6 +275,7 @@ function tools() {                                       // the toolbar down the
     `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button><span class="ln"></span>` +
     `<button class="tl ${st.snap ? "on" : ""}" id="t-snap" title="snap (M): a point you place or drag jumps to the nearest candle's open, high, low or close">🧲</button>` +
     `<button class="tl ${st.eqOn ? "on" : ""}" id="t-eq" title="find equal highs and lows: shows the sets it finds, with a slider for how close counts as equal">≈</button>` +
+    `<button class="tl ${st.hideNotes ? "on" : ""}" id="t-hide" title="hide the notes I wrote on the charts, or show them again. Hidden notes are kept and still saved">${st.hideNotes ? "🙈" : "👁"}</button>` +
     `<button class="tl ${allLocked() ? "on" : ""}" id="t-lock" title="lock every mark of mine on these charts, or unlock them all. One mark: double-click it to lock, double-click again to unlock">🔒</button>` +
     `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
     `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
@@ -280,6 +283,7 @@ function tools() {                                       // the toolbar down the
   $("t-grab").onclick = () => setGrab(!st.grab);
   $("t-note").onclick = () => setNoteTool(!st.noteTool);
   $("t-snap").onclick = toggleSnap;
+  $("t-hide").onclick = () => { st.hideNotes = !st.hideNotes; save(); tools(); count(st.hideNotes ? "notes hidden (still kept)" : "notes shown"); };
   $("t-eq").onclick = () => { st.eqOn = !st.eqOn; save(); tools(); eqAll(); };
   $("t-lock").onclick = () => { const on = !allLocked(); shownMarks().forEach(m => m.locked = on); keepMine(); st.panes.forEach(p => p.layer && (p.layer.deselect(), p.layer.redraw())); tools(); };
   $("tools").querySelectorAll("[data-g]").forEach(b => b.onclick = e => { e.stopPropagation(); fly(+b.dataset.g, b); });
@@ -477,7 +481,7 @@ function notesFor(p) {
   (function place() {
     if (p.dead) return;
     const doc = st.claude[p.c.asset], theirs = doc && $("ovon").checked ? (doc.notes || []).filter(n => st.until == null || n.t <= st.until).map((n, i) => ({ ...n, uid: "c" + i, claude: true })) : [];
-    const list = myNotes(p.c.asset).concat(theirs).filter(n => shows(n, p.c.tf));
+    const list = (st.hideNotes ? [] : myNotes(p.c.asset)).concat(theirs).filter(n => shows(n, p.c.tf));      // hidden notes stay on file and are still saved
     if (wrap.children.length !== list.length) wrap.innerHTML = list.map(() => `<div class="cnote"></div>`).join("");
     list.forEach((n, i) => { const el = wrap.children[i], a = atOrBefore(p, n.t), x = a ? p.chart.timeScale().timeToCoordinate(a.time) : null, y = p.series.priceToCoordinate(n.price);
       el.classList.toggle("claude", !!n.claude); el.dataset.u = n.uid; if (el.textContent !== n.text) el.textContent = n.text;

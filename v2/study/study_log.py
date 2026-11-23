@@ -73,11 +73,16 @@ def entries(saves: list[dict], notes: list[dict], since: float = 0) -> dict:
     if any, is only what the first one is compared with."""
     out: dict = {}
     last: dict = {}
+    seen: dict = {}
     for s in sorted(saves, key=lambda s: s["saved"]):
         mine = [m for m in s.get("marks", []) if m.get("by", "S") == "S"]
         if s["saved"] >= since:
+            wrote = [n for n in s.get("notes", []) if n.get("text")]              # what he wrote on the chart itself, shown or hidden
+            new = [n for n in wrote if (n.get("uid"), n.get("text")) not in seen.get(s["asset"], set())]
             out.setdefault(s["asset"], []).append({"at": s["saved"], "kind": "save", "tf": s.get("tf", ""), "chart_time": s.get("chart_time"),
-                                                   "marks": mine, "note": s.get("note", ""), **changes(last.get(s["asset"], []) if s["asset"] in last else [], mine)})
+                                                   "marks": mine, "note": s.get("note", ""), "wrote": new,
+                                                   **changes(last.get(s["asset"], []) if s["asset"] in last else [], mine)})
+        seen[s["asset"]] = {(n.get("uid"), n.get("text")) for n in s.get("notes", [])}
         last[s["asset"]] = mine
     for n in notes:
         if n.get("saved", 0) >= since and n.get("asset") and not n.get("removed"):
@@ -105,7 +110,8 @@ def page(asset: str, items: list[dict]) -> str:
         lines += [f"- added {name(m)}: {where(m)}" for m in e["added"]]
         lines += [f"- changed {name(b)}: {where(a)}  →  {name(b)}: {where(b)}" for a, b in e["changed"]]
         lines += [f"- removed {name(m)}: {where(m)}" for m in e["removed"]]
-        if not (e["added"] or e["changed"] or e["removed"]):
+        lines += [f"- wrote on the chart ({n.get('tf', '')}, at {chart_time(n.get('t'))}): {n['text']}" for n in e.get("wrote", [])]
+        if not (e["added"] or e["changed"] or e["removed"] or e.get("wrote")):
             lines.append("- nothing changed since the save before")
         if e.get("note"):
             lines.append(f"- he wrote: {e['note']}")

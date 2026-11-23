@@ -72,3 +72,14 @@ def test_a_save_made_in_replay_is_filed_under_the_day_the_chart_was_showing():
     assert text.index("11 Jan 1970 (replay)") < text.index("12 Jan 1970 (replay)")
     assert "in replay at 12 Jan 1970 01:00" in text and "nothing changed since the save before" in text
     assert text.count("## ") == 3                                                          # the last save was on the live chart: its own day
+
+
+def test_what_he_writes_on_the_chart_is_logged_once_and_again_only_when_he_rewrites_it():
+    note = {"uid": "n1", "text": "daily closed below, looking lower", "tf": "t1", "t": 7200, "price": 9.0}
+    saves = [save(100, "AAA", [mark("a")], notes=[note]), save(200, "AAA", [mark("a")], notes=[note]),
+             save(300, "AAA", [mark("a")], notes=[note | {"text": "it held after all"}])]
+    got = entries(saves, [])["AAA"]
+    assert [len(e["wrote"]) for e in got] == [1, 0, 1]
+    text = page("AAA", got)
+    assert "wrote on the chart (t1, at 01 Jan 1970 02:00): daily closed below, looking lower" in text and "it held after all" in text
+    assert text.count("nothing changed since the save before") == 1
