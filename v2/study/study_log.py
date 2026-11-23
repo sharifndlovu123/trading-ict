@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 CHART = HERE.parent / "chart"
 SAVES, NOTES, OUT, STUDY = CHART / "saves.jsonl", CHART / "notes.jsonl", HERE / "logs", HERE / "study.json"
 NY = ZoneInfo("America/New_York")
-WHERE = ("price", "top", "bottom", "p0", "p1", "t0", "t1")          # what places a mark; a change in any of these is a move
+WHERE = ("price", "top", "bottom", "p0", "p1", "entry", "stop", "target", "t0", "t1")          # what places a mark; a change in any of these is a move
 WHAT = ("kind", "tf", "shape", "side")
 
 
@@ -52,7 +52,8 @@ def where(m: dict) -> str:
     shape = m.get("shape")
     num = lambda v: f"{v:,.5f}".rstrip("0").rstrip(".") if isinstance(v, (int, float)) else "?"       # noqa: E731
     at = "level at " + num(m.get("price")) if shape == "level" else f"zone {num(m.get('bottom'))} to {num(m.get('top'))}" if shape == "zone" \
-        else f"line {num(m.get('p0'))} to {num(m.get('p1'))}" if shape == "line" else "vertical line" if shape == "vline" else str(shape)
+        else f"line {num(m.get('p0'))} to {num(m.get('p1'))}" if shape == "line" else "vertical line" if shape == "vline" \
+        else f"entry {num(m.get('entry'))}, stop {num(m.get('stop'))}, target {num(m.get('target'))}" if shape == "position" else str(shape)
     span = f"from {chart_time(m.get('t0'))}" + (f" to {chart_time(m['t1'])}" if m.get("t1") is not None else "")
     return f"{at}, {span}" if m.get("t0") is not None else at
 

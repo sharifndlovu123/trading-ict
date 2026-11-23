@@ -83,3 +83,10 @@ def test_what_he_writes_on_the_chart_is_logged_once_and_again_only_when_he_rewri
     text = page("AAA", got)
     assert "wrote on the chart (t1, at 01 Jan 1970 02:00): daily closed below, looking lower" in text and "it held after all" in text
     assert text.count("nothing changed since the save before") == 1
+
+
+def test_a_position_is_logged_with_its_entry_stop_and_target_and_moving_the_stop_is_a_change():
+    pos = mark("p", shape="position", kind="long", entry=100.0, stop=95.0, target=110.0, t1=7200)
+    assert where(pos).startswith("entry 100, stop 95, target 110, from")
+    assert changes([pos], [pos | {"stop": 97.0}])["changed"] and not changes([pos], [dict(pos)])["changed"]
+    assert not changes([pos], [pos | {"hidden": True, "color": "#fff"}])["changed"]      # hiding or colouring a mark does not change what it says

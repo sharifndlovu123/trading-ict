@@ -30,6 +30,7 @@ const MARK_PALETTE = [
   ["area", "zone", ["NWOG", "NDOG"]],
   ["", "zone", ["trading range"]],
   ["", "level", ["50%"]],
+  ["", "position", ["long", "short"]],     // an entry, a stop and a target, with the risk to reward between them
 ];
 
 // One colour per kind of mark, so a chart with several kinds on it can be read at a glance. The same kind has the same
@@ -41,7 +42,7 @@ const KIND_COLOR = {
   "line": "#7b8794", "trendline": "#7b8794", "displacement": "#12a594", "fake push": "#e64980",
   "FVG": "#e8a200", "BISI": "#0ca678", "SIBI": "#c2255c", "IFVG": "#7950f2", "VI": "#c930c9", "BPR": "#1c7ed6",
   "order block": "#4c6ef5", "breaker": "#d6336c", "mitigation block": "#0b7285", "rejection block": "#a8641a",
-  "trading range": "#8d99ae", "50%": "#8d99ae", "NWOG": "#e8890c", "NDOG": "#b8860b",
+  "trading range": "#8d99ae", "50%": "#8d99ae", "NWOG": "#e8890c", "NDOG": "#b8860b", "long": "#16a36a", "short": "#e0453a",
 };
 // a mark whose label is free text (Claude's often are) takes the colour of the kind it names
 const KIND_WORDS = [["EQH", "EQH"], ["EQL", "EQL"], ["IFVG", "IFVG"], ["FVG", "FVG"], ["BISI", "BISI"], ["SIBI", "SIBI"], ["IFVG", "IFVG"], ["NWOG", "NWOG"], ["NDOG", "NDOG"], ["BPR", "BPR"],
@@ -57,6 +58,8 @@ function markColor(kind, fallback) {
 function marksLayer(chart, series, el, o) {
   const STUB = 36;                                    // an open mark stops this far past the last candle, not at the right edge
   let grab = false, place = null, sel = null, held = null, dirty = 1, sig = "";
+  let meas = null;                                    // the measure: two points, shown until the next press; never kept or saved
+  const off = () => !!(o.hideAll && o.hideAll());     // every drawing of his hidden from view (kept, and still saved)
   const G = () => grab ? 16 : 6;
   const ts = chart.timeScale();
   const T = () => o.times() || [];
@@ -84,6 +87,7 @@ function marksLayer(chart, series, el, o) {
     c = ts.logicalToCoordinate(k); return c == null ? null : Math.round(tOfIdx(k + (x - c) / ts.options().barSpacing)); };
   const yOf = p => series.priceToCoordinate(p);
   const pOfY = y => { const p = series.coordinateToPrice(y); return p == null ? null : +p.toPrecision(7); };
+  const fmt = v => { const a = Math.abs(v), d = a < 20 ? 4 : a < 500 ? 3 : 2; return v.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: d }); };
   const xLast = () => { const a = T(); return a.length ? xOf(a[a.length - 1]) : null; };
   const xEnd = m => m.t1 != null ? xOf(m.t1) : (xLast() == null ? null : xLast() + STUB);
   const col = m => m.color || markColor(m.kind, o.color("--mine"));     // a colour he picked for this one mark wins over its kind's colour
@@ -178,9 +182,22 @@ function marksLayer(chart, series, el, o) {
       g.setLineDash([]); tag(g, u.label, tx, ty, u.color, true);
     }
     o.list().forEach((m, i) => {
-      if (m.hidden) return;                             // hidden by him: kept, saved, not drawn
+      if (m.hidden || off()) return;                    // hidden by him: kept, saved, not drawn
       const x0 = m.t0 == null ? 0 : xOf(m.t0), x1 = xEnd(m), on = sel === i;
       if (x0 == null || x1 == null) return;
+      if (m.shape === "position") {                     // entry, stop, target: reward shaded green, risk shaded red
+        const yE = yOf(m.entry), yS = yOf(m.stop), yT = yOf(m.target); if (yE == null || yS == null || yT == null) return;
+        const risk = Math.abs(m.entry - m.stop), rr = risk ? Math.abs(m.target - m.entry) / risk : 0, pc = v => ((v - m.entry) / m.entry * 100).toFixed(2) + "%";
+        g.setLineDash([]); g.lineWidth = on ? 2 : 1;
+        g.fillStyle = "#16a36a"; g.globalAlpha = on ? .28 : .18; g.fillRect(x0, Math.min(yE, yT), x1 - x0, Math.abs(yT - yE));
+        g.fillStyle = "#e0453a"; g.fillRect(x0, Math.min(yE, yS), x1 - x0, Math.abs(yS - yE)); g.globalAlpha = 1;
+        for (const [y, c] of [[yT, "#16a36a"], [yS, "#e0453a"], [yE, o.color("--mine")]]) { g.strokeStyle = c; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); }
+        lab(g, `target ${fmt(m.target)} (${pc(m.target)})`, x0 + 4, yT + (yT < yE ? -9 : 9), "#16a36a");
+        lab(g, `stop ${fmt(m.stop)} (${pc(m.stop)})`, x0 + 4, yS + (yS > yE ? 9 : -9), "#e0453a");
+        lab(g, `S · ${m.kind} ${fmt(m.entry)} · R:R ${rr.toFixed(2)}` + (m.locked ? " 🔒" : ""), x0 + 4, yE + (yT < yE ? 9 : -9), col(m));
+        if (on) { g.fillStyle = o.color("--panel"); for (const [x, y, c] of [[x0, yE, col(m)], [x1, yE, col(m)], [(x0 + x1) / 2, yT, "#16a36a"], [(x0 + x1) / 2, yS, "#e0453a"]]) { g.strokeStyle = c; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); } }
+        return;
+      }
       g.strokeStyle = g.fillStyle = col(m); g.lineWidth = on ? 3 : 2; g.setLineDash([]);
       g.font = "11px ui-monospace, Menlo, monospace";
       const handles = [];
@@ -209,6 +226,18 @@ function marksLayer(chart, series, el, o) {
       g.strokeStyle = col(m); if (on) { g.setLineDash([]); g.fillStyle = o.color("--panel");
         for (const [x, y] of handles) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); } }
     });
+    if (meas) {                                         // the measure: how far in price, in percent, in candles and in time
+      const xa = xOf(meas.t0), xb = xOf(meas.t1), ya = yOf(meas.p0), yb = yOf(meas.p1);
+      if (xa != null && xb != null && ya != null && yb != null) {
+        const up = meas.p1 >= meas.p0, c = up ? "#2f6bff" : "#e0453a", d = meas.p1 - meas.p0, bars = Math.round(idxOf(meas.t1) - idxOf(meas.t0)), secs = Math.abs(meas.t1 - meas.t0);
+        const span = secs >= 86400 ? `${Math.floor(secs / 86400)}d ${Math.round(secs % 86400 / 3600)}h` : secs >= 3600 ? `${Math.floor(secs / 3600)}h ${Math.round(secs % 3600 / 60)}m` : `${Math.round(secs / 60)}m`;
+        g.setLineDash([]); g.fillStyle = c; g.globalAlpha = .14; g.fillRect(Math.min(xa, xb), Math.min(ya, yb), Math.abs(xb - xa), Math.abs(yb - ya)); g.globalAlpha = 1;
+        g.strokeStyle = c; g.lineWidth = 1; g.strokeRect(Math.min(xa, xb), Math.min(ya, yb), Math.abs(xb - xa), Math.abs(yb - ya));
+        g.beginPath(); g.moveTo((xa + xb) / 2, ya); g.lineTo((xa + xb) / 2, yb); g.moveTo(xa, (ya + yb) / 2); g.lineTo(xb, (ya + yb) / 2); g.stroke();
+        g.font = "12px ui-monospace, Menlo, monospace";
+        tag(g, `${d >= 0 ? "+" : ""}${fmt(d)} (${(d / meas.p0 * 100).toFixed(2)}%) · ${Math.abs(bars)} candles · ${span}`, Math.min(xa, xb) + 4, (up ? Math.min(ya, yb) - 12 : Math.max(ya, yb) + 12), c, true);
+      }
+    }
     if (hover && (place || held)) {                     // the snapped point: a ring on the exact price
       g.setLineDash([]); g.lineWidth = 2; g.strokeStyle = o.color("--mine"); g.beginPath(); g.arc(hover.x, hover.y, 6, 0, 7); g.stroke();
       g.fillStyle = o.color("--mine"); g.beginPath(); g.arc(hover.x, hover.y, 2, 0, 7); g.fill();
@@ -227,6 +256,7 @@ function marksLayer(chart, series, el, o) {
   // ---- hit test + interaction
   function hit(px, py, locked) {                      // locked: also pick up locked marks (Shift+click)
     let best = null;
+    if (off()) return null;                             // nothing of his is on show, so nothing can be picked up
     const take = (i, part, d) => { if (!best || d < best.d) best = { i, part, d }; };
     o.list().forEach((m, i) => {
       if (m.hidden) return;                             // a hidden mark cannot be picked up
@@ -236,7 +266,13 @@ function marksLayer(chart, series, el, o) {
       if (m.shape === "vline") { if (Math.abs(px - x0) <= G()) take(i, "body", Math.abs(px - x0)); return; }
       if (px < Math.min(x0, x1) - G() || px > Math.max(x0, x1) + G()) return;
       const end = Math.abs(px - x0) <= G() ? "start" : Math.abs(px - x1) <= G() ? "end" : null;
-      if (m.shape === "line") {
+      if (m.shape === "position") {
+        const yE = yOf(m.entry), yS = yOf(m.stop), yT = yOf(m.target); if (yE == null || yS == null || yT == null) return;
+        if (Math.abs(py - yT) <= G() + 1) take(i, "target", Math.abs(py - yT));
+        else if (Math.abs(py - yS) <= G() + 1) take(i, "stop", Math.abs(py - yS));
+        else if (Math.abs(py - yE) <= G() + 1) take(i, end || "entry", Math.abs(py - yE));
+        else if (py > Math.min(yT, yS) && py < Math.max(yT, yS)) take(i, "inside", G() + 1);
+      } else if (m.shape === "line") {
         const y0 = yOf(m.p0), y1 = yOf(m.p1); if (y0 == null || y1 == null) return;
         if (Math.hypot(px - x0, py - y0) <= G() + 2) return take(i, "start", 0);
         if (Math.hypot(px - x1, py - y1) <= G() + 2) return take(i, "end", 0);
@@ -267,8 +303,15 @@ function marksLayer(chart, series, el, o) {
     const [px, py] = pt, h = place ? null : hit(px, py, e.shiftKey), L = o.list();
     const [p, t] = h ? [pOfY(py), tOfX(px)] : point(px, py);
     if (h && L[h.i].locked) { sel = h.i; redraw(); e.preventDefault(); e.stopImmediatePropagation(); return; }     // picked up to unlock, not to move
-    if (h) {
+    if (meas && !(place && place.shape === "measure")) { meas = null; redraw(); }     // a measure goes with the next press
+    if (place && place.shape === "measure" && p != null && t != null) {
+      meas = { p0: p, t0: t, p1: p, t1: t }; sel = null; held = { measure: true, x0: px, y0: py, moved: false };
+    } else if (h) {
       sel = h.i; held = { i: h.i, part: h.part, p0: p, t0: t, x0: px, y0: py, moved: false, orig: { ...L[h.i] } };
+    } else if (place && place.shape === "position" && p != null && t != null) {
+      const m = { shape: "position", kind: place.kind, side: "", tf: o.tfName ? o.tfName() : "", entry: p, stop: p, target: p, t0: t, t1: t, uid: Math.random().toString(36).slice(2, 8), by: "S" };
+      L.push(m); sel = L.length - 1;
+      held = { i: sel, part: "posnew", p0: p, t0: t, x0: px, y0: py, moved: false, fresh: true, orig: { ...m } };
     } else if (place && p != null && t != null) {
       const m = place.shape === "zone" ? { top: p, bottom: p } : place.shape === "line" ? { p0: p, p1: p } : place.shape === "vline" ? {} : { price: p };
       Object.assign(m, { shape: place.shape, kind: place.kind, side: place.side, tf: o.tfName ? o.tfName() : "", t0: t, t1: t,
@@ -294,11 +337,18 @@ function marksLayer(chart, series, el, o) {
       return; }
     if (Math.hypot(px - held.x0, py - held.y0) > 3) held.moved = true;
     if (!held.moved) return;
+    if (held.measure) { const [mp, mt] = point(px, py); if (mp != null && mt != null) { meas.p1 = mp; meas.t1 = mt; } redraw(); e.preventDefault(); return; }
     const whole = ["inside", "body"].includes(held.part) && o.list()[held.i].shape !== "level";       // a whole mark being carried keeps its shape: no snapping
     let p, t; if (whole) { p = pOfY(py); t = tOfX(px); hover = null; } else [p, t] = point(px, py);
     if (p == null || t == null) return;
     const m = o.list()[held.i], q = held.orig, dp = r2(p - held.p0), dt = t - held.t0;
     if (m.shape === "vline") m.t0 = t;
+    else if (m.shape === "position") {
+      if (held.part === "posnew") { m.t1 = t; m.target = p; m.stop = r2(m.entry - (p - m.entry) / 2); m.kind = p >= m.entry ? "long" : "short"; }   // dragged out: the drag is the target, the stop half as far the other way
+      else if (held.part === "target") m.target = p; else if (held.part === "stop") m.stop = p;
+      else if (held.part === "end") m.t1 = t; else if (held.part === "start") m.t0 = t;
+      else { m.entry = r2(q.entry + dp); m.stop = r2(q.stop + dp); m.target = r2(q.target + dp); if (held.part === "inside") { m.t0 = q.t0 + dt; m.t1 = q.t1 + dt; } }
+    }
     else if (m.shape === "line") {
       if (held.part === "end") { m.t1 = t; m.p1 = p; } else if (held.part === "start") { m.t0 = t; m.p0 = p; }
       else { m.p0 = r2(q.p0 + dp); m.p1 = r2(q.p1 + dp); m.t0 = q.t0 + dt; if (q.t1 != null) m.t1 = q.t1 + dt; }
@@ -318,8 +368,12 @@ function marksLayer(chart, series, el, o) {
   };
   const up = () => {
     if (!held) return;
+    if (held.measure) { if (!held.moved) meas = null; held = null; hover = null; freeze(false); redraw(); if (o.measured) o.measured(); return; }
     const L = o.list(), m = L[held.i];
-    if (held.fresh && !held.moved) {
+    if (held.fresh && !held.moved && m.shape === "position") {                    // a click: a stop and a target of a usual size, to be dragged where they belong
+      const risk = Math.abs((pOfY(0) || 0) - (pOfY(el.clientHeight - ts.height()) || 0)) * .06 || Math.abs(m.entry) * .005, way = m.kind === "short" ? -1 : 1;
+      m.stop = r2(m.entry - way * risk); m.target = r2(m.entry + way * 2 * risk); m.t1 = Math.round(tOfIdx(idxOf(m.t0) + 20));
+    } else if (held.fresh && !held.moved) {
       if (m.shape === "line") { L.splice(held.i, 1); sel = null; }                // a line needs a drag
       else {
         m.t1 = null;                                                              // a click: from here on
@@ -338,7 +392,7 @@ function marksLayer(chart, series, el, o) {
   const key = e => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
     if ((e.key === "Delete" || e.key === "Backspace") && sel != null && !(o.list()[sel] || {}).locked) { e.preventDefault(); o.list().splice(sel, 1); sel = null; redraw(); o.changed(); }
-    else if (e.key === "Escape") { sel = null; redraw(); }
+    else if (e.key === "Escape") { sel = null; meas = null; redraw(); }
   };
   el.addEventListener("pointerdown", down, true);
   el.addEventListener("mousedown", e => { if (held && !bar.contains(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
@@ -352,5 +406,6 @@ function marksLayer(chart, series, el, o) {
   }, true);
   el.addEventListener("contextmenu", menu); document.addEventListener("keydown", key);
   const destroy = () => { alive = false; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); document.removeEventListener("keydown", key); };
-  return { redraw, setPlace, setGrab, grabbing: () => grab, deselect: () => { sel = null; redraw(); }, destroy };
+  const select = uid => { const i = o.list().findIndex(m => m.uid === uid); sel = i >= 0 && !o.list()[i].hidden ? i : null; redraw(); };     // from the object list
+  return { redraw, setPlace, setGrab, grabbing: () => grab, deselect: () => { sel = null; redraw(); }, select, clearMeasure: () => { meas = null; redraw(); }, destroy };
 }

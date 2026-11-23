@@ -51,6 +51,10 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
 #tabs button { flex:1; background:none; border:0; border-bottom:2px solid transparent; padding:9px 4px; cursor:pointer; color:var(--ink2); font-weight:600; }
 #tabs button:hover { color:var(--ink); } #tabs button.on { color:var(--ink); border-bottom-color:var(--accent); }
 .tab { display:none; flex:1; min-height:0; overflow:auto; } .tab.on { display:block; }
+#objects h4 { margin:10px 12px 4px; font-size:12px; } #objects .ob { display:flex; align-items:center; gap:8px; padding:5px 10px; border-bottom:1px solid var(--line); } #objects .ob.off .nm { opacity:.45; }
+#objects .ob .sw { width:10px; height:10px; border-radius:50%; flex:none; } #objects .ob .nm { flex:1; min-width:0; cursor:pointer; font-size:12px; overflow:hidden; text-overflow:ellipsis; }
+#objects .ob button { background:none; border:0; cursor:pointer; padding:3px 4px; font-size:13px; border-radius:5px; } #objects .ob button:hover { background:var(--panel2); }
+#tabs button { font-size:12px; }
 #tab-notes.on { display:flex; flex-direction:column; padding:10px 12px; gap:8px; overflow:auto; }
 #notekind b.learn { color:#5b8cff; } #notekind b.hunt { color:#ff8a4c; }
 #notetext { width:100%; height:450px; min-height:150px; max-height:80vh; flex:none; resize:vertical; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; line-height:1.45; }
@@ -169,7 +173,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
   <div id="tools"></div>
   <div id="grid"></div>
   <aside id="side">
-    <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="read">Claude's read</button><button id="sideclose" title="back to the chart">✕</button></div>
+    <div id="tabs"><button data-tab="watch">Watchlist</button><button data-tab="notes" title="write a note for learning or for a hunt (Shift+N)">Notes</button><button data-tab="objects" title="everything I drew on the charts shown, as a list">Objects</button><button data-tab="read" title="Claude's read">Read</button><button id="sideclose" title="back to the chart">✕</button></div>
     <div class="tab" id="tab-watch"><div id="watch"></div></div>
     <div class="tab" id="tab-notes">
       <div id="notekind" class="dim"></div>
@@ -178,6 +182,7 @@ body:not(.learn):not(.hunt) #mode [data-m=""] { background:var(--panel2); color:
       <div id="notectx" class="dim"></div>
       <div id="notelist"></div>
     </div>
+    <div class="tab" id="tab-objects"><div id="objects"></div></div>
     <div class="tab" id="tab-read"><h3 id="readh">Claude's read</h3><div id="read"></div></div>
   </aside>
 </div>
@@ -221,7 +226,8 @@ const GROUPS = [["╱", "Lines", ["line", "displacement", "fake push"]],
                 ["┆", "Change of bias", ["→ bull", "→ bear"]],
                 ["▭", "Imbalances", ["FVG", "BISI", "SIBI", "IFVG", "VI", "BPR", "NWOG", "NDOG"]],
                 ["▣", "Blocks", ["order block", "breaker", "mitigation block", "rejection block"]],
-                ["⇕", "Range", ["trading range", "50%"]]];
+                ["⇕", "Range", ["trading range", "50%"]],
+                ["⚖", "Position: entry, stop and target", ["long", "short"]]];
 const KIND = {}; for (const [side, shape, kinds] of MARK_PALETTE) for (const k of kinds) KIND[k] = { side, shape, kind: k };
 const KEEP = "charts-v2";
 const keep = (() => { try { return JSON.parse(localStorage.getItem(KEEP) || "{}"); } catch (e) { return {}; } })();
@@ -230,12 +236,23 @@ const st = { assets: [], cfg: keep.cfg || null, cols: keep.cols || 0, side: keep
              marks: {}, notes: {}, claude: {}, cache: new Map(), until: null, newest: null, place: null, noteTool: false, grab: false, replay: false,
              tab: keep.tab || "watch", mode: "", written: [], snap: !!keep.snap, live: !!keep.live, liveInfo: null,
              eqOn: !!keep.eqOn, eqShare: keep.eqShare != null ? keep.eqShare : 0.65,      // 0.65% is the setting he confirmed by eye
-             hideNotes: !!keep.hideNotes,                                                   // his on-chart notes hidden from view (kept, and still saved)
+             hideNotes: !!keep.hideNotes, hideAll: !!keep.hideAll, stay: !!keep.stay, hist: [], at: -1,       // hist: what he drew, step by step, for undo and redo
+                                                   // his on-chart notes hidden from view (kept, and still saved)
              lastKind: keep.lastKind || {} };
 for (const k in st.lastKind) if (!KIND[st.lastKind[k]]) delete st.lastKind[k];        // a tool name that was dropped is forgotten
-const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, hideNotes: st.hideNotes, theme: document.documentElement.dataset.theme })); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEEP, JSON.stringify({ cfg: st.cfg, cols: st.cols, side: st.side, lastKind: st.lastKind, tab: st.tab, sameTf: $("sametf").checked, snap: st.snap, live: st.live, eqOn: st.eqOn, eqShare: st.eqShare, hideNotes: st.hideNotes, hideAll: st.hideAll, stay: st.stay, theme: document.documentElement.dataset.theme })); } catch (e) {} };
 function loadMine() { try { st.marks = JSON.parse(localStorage.getItem(KEEP + "-marks") || "{}"); st.notes = JSON.parse(localStorage.getItem(KEEP + "-notes") || "{}"); } catch (e) { st.marks = {}; st.notes = {}; } }
-const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} };
+const keepMine = () => { try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {} remember(); };
+function remember() {                                    // one step of history each time his drawings change (undo / redo)
+  const now = JSON.stringify([st.marks, st.notes]); if (st.hist[st.at] === now) return;
+  st.hist = st.hist.slice(Math.max(0, st.at - 98), st.at + 1); st.hist.push(now); st.at = st.hist.length - 1;
+}
+function travel(d) {                                     // undo (-1) or redo (+1)
+  const to = st.at + d; if (to < 0 || to >= st.hist.length) return count(d < 0 ? "nothing to undo" : "nothing to redo");
+  st.at = to; [st.marks, st.notes] = JSON.parse(st.hist[to]);
+  try { localStorage.setItem(KEEP + "-marks", JSON.stringify(st.marks)); localStorage.setItem(KEEP + "-notes", JSON.stringify(st.notes)); } catch (e) {}
+  st.panes.forEach(p => p.layer && p.layer.deselect()); tools(); side(); count((d < 0 ? "undone" : "redone") + " · not saved yet");
+}
 const myMarks = a => (st.marks[a] ||= []), myNotes = a => (st.notes[a] ||= []);
 const dp = v => Math.abs(v) < 20 ? 4 : Math.abs(v) < 500 ? 3 : 2;
 const wall = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
@@ -254,7 +271,8 @@ async function getClaude(asset) { try { st.claude[asset] = await (await fetch("a
 
 // ---- his marks: one set of tools for every chart
 function marksChanged() {
-  keepMine(); if (st.place) setPlace(null); else tools();  // one placement per pick
+  keepMine(); if (st.place && !st.stay) setPlace(null); else tools();  // one placement per pick, unless he chose to stay in drawing mode
+  if (st.tab === "objects") side();
   st.panes.forEach(p => p.layer && p.layer.redraw());      // the same instrument may be on two charts
   count("not saved yet");
 }
@@ -262,7 +280,7 @@ function count(tail) {
   const shown = [...new Set(st.cfg.map(c => c.asset))], n = shown.reduce((s, a) => s + myMarks(a).length + myNotes(a).length, 0);
   $("marksn").textContent = n ? `${n} of mine on these charts · ${tail}` : "";
 }
-function setPlace(p) { st.place = p; if (p) { st.grab = false; st.noteTool = false; st.lastKind[p.shape] = p.kind; save(); }
+function setPlace(p) { st.place = p; if (p) { st.grab = false; st.noteTool = false; if (p.shape !== "measure") st.lastKind[p.shape] = p.kind; save(); }
   st.panes.forEach(q => { if (q.layer) { q.layer.setGrab(false); q.layer.setPlace(p); } if (q.box && !p) q.box.style.cursor = ""; }); tools(); }
 function setGrab(on) { st.grab = on; st.place = null; st.noteTool = false; st.panes.forEach(q => q.layer && (q.layer.setPlace(null), q.layer.setGrab(on))); tools(); }
 function setNoteTool(on) { st.noteTool = on; if (on && st.hideNotes) { st.hideNotes = false; save(); }      // writing a note shows them again
@@ -276,18 +294,26 @@ function tools() {                                       // the toolbar down the
   $("tools").innerHTML = `<button class="tl ${!st.place && !st.grab && !st.noteTool ? "on" : ""}" id="t-cur" title="cursor (Esc)">✛</button>` +
     `<button class="tl ${st.grab ? "on" : ""}" id="t-grab" title="grab (G): the charts hold still; press near any of your marks to move it">✋</button><span class="ln"></span>` +
     GROUPS.map((g, i) => `<button class="tl ${on(g) ? "on" : ""}" data-g="${i}" title="${g[1]}">${g[0]}</button>`).join("") +
-    `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button><span class="ln"></span>` +
+    `<button class="tl ${st.noteTool ? "on" : ""}" id="t-note" title="write on the chart (N): click where the note belongs">T</button>` +
+    `<button class="tl ${st.place && st.place.shape === "measure" ? "on" : ""}" id="t-measure" title="measure: drag between two points for the distance in price, percent, candles and time. It is not kept">📏</button><span class="ln"></span>` +
+    `<button class="tl ${st.stay ? "on" : ""}" id="t-stay" title="stay in drawing mode: the tool stays picked after each mark, until Esc">📌</button>` +
     `<button class="tl ${st.snap ? "on" : ""}" id="t-snap" title="snap (M): a point you place or drag jumps to the nearest candle's open, high, low or close">🧲</button>` +
     `<button class="tl ${st.eqOn ? "on" : ""}" id="t-eq" title="find equal highs and lows: shows the sets it finds, with a slider for how close counts as equal">≈</button>` +
-    `<button class="tl ${st.hideNotes ? "on" : ""}" id="t-hide" title="hide the notes I wrote on the charts, or show them again. Hidden notes are kept and still saved">${st.hideNotes ? "🙈" : "👁"}</button>` +
+    `<button class="tl ${st.hideAll ? "on" : ""}" id="t-hideall" title="hide everything I drew and wrote on the charts, or show it again. Nothing is removed, and it is still saved">${st.hideAll ? "🙈" : "👁"}</button>` +
+    `<button class="tl ${st.hideNotes ? "on" : ""}" id="t-hide" title="hide only the notes I wrote on the charts, or show them again. Hidden notes are kept and still saved">🗒</button>` +
     (shownMarks().some(m => m.hidden) ? `<button class="tl on" id="t-unhide" title="show the ${shownMarks().filter(m => m.hidden).length} marks I hid on these charts">◌</button>` : "") +
     `<button class="tl ${allLocked() ? "on" : ""}" id="t-lock" title="lock every mark of mine on these charts, or unlock them all. One mark: double-click it to lock, double-click again to unlock">🔒</button>` +
+    `<span class="ln"></span><button class="tl" id="t-undo" title="undo my last drawing change (Ctrl+Z)">↶</button><button class="tl" id="t-redo" title="redo (Ctrl+Shift+Z)">↷</button>` +
     `<span class="gap"></span><button class="tl" id="t-save" title="save my marks and notes for every chart shown here">💾</button>` +
     `<button class="tl" id="t-clear" title="remove everything I drew on the charts shown here (Claude's marks stay)">🗑</button>`;
   $("t-cur").onclick = () => { setPlace(null); setGrab(false); setNoteTool(false); };
   $("t-grab").onclick = () => setGrab(!st.grab);
   $("t-note").onclick = () => setNoteTool(!st.noteTool);
   $("t-snap").onclick = toggleSnap;
+  $("t-measure").onclick = () => setPlace(st.place && st.place.shape === "measure" ? null : { shape: "measure", kind: "measure", side: "" });
+  $("t-stay").onclick = () => { st.stay = !st.stay; save(); tools(); };
+  $("t-hideall").onclick = () => { st.hideAll = !st.hideAll; save(); tools(); st.panes.forEach(p => p.layer && (p.layer.deselect(), p.layer.redraw())); count(st.hideAll ? "everything of mine hidden (still kept)" : "shown"); };
+  $("t-undo").onclick = () => travel(-1); $("t-redo").onclick = () => travel(1);
   if ($("t-unhide")) $("t-unhide").onclick = () => { shownMarks().forEach(m => delete m.hidden); marksChanged(); tools(); };
   $("t-hide").onclick = () => { st.hideNotes = !st.hideNotes; save(); tools(); count(st.hideNotes ? "notes hidden (still kept)" : "notes shown"); };
   $("t-eq").onclick = () => { st.eqOn = !st.eqOn; save(); tools(); eqAll(); };
@@ -366,7 +392,7 @@ function build() {
     const lineS = chart.addLineSeries({ color: css("--accent"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const p = { c, el, box, infoEl: el.firstChild, chart, series, lineS, times: [], data: [] };
     p.layer = marksLayer(chart, series, box, { list: () => myMarks(c.asset), under: () => underMarks(c).concat(eqMarks(p)), times: () => p.times, candles: () => p.data, snap: () => st.snap,
-      tfName: () => c.tf, color: css, changed: marksChanged });
+      tfName: () => c.tf, color: css, changed: marksChanged, hideAll: () => st.hideAll, measured: () => { if (!st.stay) setPlace(null); } });
     notesFor(p);
     for (const ev of ["pointerenter", "pointerdown", "wheel"]) el.addEventListener(ev, () => activate(p), { passive: true });
     el.addEventListener("pointerleave", () => st.panes.forEach(q => { if (q !== p) q.chart.clearCrosshairPosition(); head(q); }));
@@ -488,7 +514,7 @@ function notesFor(p) {
   (function place() {
     if (p.dead) return;
     const doc = st.claude[p.c.asset], theirs = doc && $("ovon").checked ? (doc.notes || []).filter(n => st.until == null || n.t <= st.until).map((n, i) => ({ ...n, uid: "c" + i, claude: true })) : [];
-    const list = (st.hideNotes ? [] : myNotes(p.c.asset)).concat(theirs).filter(n => shows(n, p.c.tf));      // hidden notes stay on file and are still saved
+    const list = (st.hideNotes || st.hideAll ? [] : myNotes(p.c.asset)).concat(theirs).filter(n => shows(n, p.c.tf));      // hidden notes stay on file and are still saved
     if (wrap.children.length !== list.length) wrap.innerHTML = list.map(() => `<div class="cnote"></div>`).join("");
     list.forEach((n, i) => { const el = wrap.children[i], a = atOrBefore(p, n.t), x = a ? p.chart.timeScale().timeToCoordinate(a.time) : null, y = p.series.priceToCoordinate(n.price);
       el.classList.toggle("claude", !!n.claude); el.dataset.u = n.uid; if (el.textContent !== n.text) el.textContent = n.text;
@@ -507,11 +533,30 @@ async function watch() {
   const rows = await Promise.all(st.assets.map(async a => { const d = await getCandles(a, "1D"), k = d[d.length - 1]; return k ? [a, k.close, 100 * (k.close - k.open) / k.open] : [a, null, null]; }));
   st.rows = rows; side();
 }
+function objects() {                                     // the object list: every mark and note of his on the charts shown
+  if (st.tab !== "objects") return;
+  const num = v => v == null ? "" : (+v).toFixed(dp(v)), at = m => m.shape === "zone" ? `${num(m.bottom)} to ${num(m.top)}` : m.shape === "line" ? `${num(m.p0)} to ${num(m.p1)}`
+    : m.shape === "position" ? `entry ${num(m.entry)} · stop ${num(m.stop)} · target ${num(m.target)}` : m.shape === "vline" ? wall(m.t0) : num(m.price);
+  const as = [...new Set(st.cfg.map(c => c.asset))];
+  $("objects").innerHTML = as.map(a => { const ms = myMarks(a), ns = myNotes(a);
+    return `<h4>${esc(a)} <span class="dim">${ms.length} marks · ${ns.length} notes</span></h4>` + (ms.length || ns.length ? "" : `<div class="dim" style="padding:4px 12px">Nothing drawn yet.</div>`) +
+      ms.map(m => `<div class="ob ${m.hidden ? "off" : ""}" data-a="${esc(a)}" data-u="${esc(m.uid)}"><span class="sw" style="background:${m.color || markColor(m.kind, "#888")}"></span>` +
+        `<span class="nm"><b>${esc(m.kind)}</b> ${esc(m.tf || "")}<br><span class="dim">${esc(at(m))}</span></span>` +
+        `<button data-do="hide" title="${m.hidden ? "show" : "hide"}">${m.hidden ? "🙈" : "👁"}</button><button data-do="lock" title="${m.locked ? "unlock" : "lock"}">${m.locked ? "🔒" : "🔓"}</button><button data-do="del" title="delete">🗑</button></div>`).join("") +
+      ns.map(n => `<div class="ob" data-a="${esc(a)}" data-n="${esc(n.uid)}"><span class="sw" style="background:#f5b942"></span><span class="nm"><b>note</b> ${esc(n.tf || "")}<br><span class="dim">${esc(n.text || "")}</span></span><button data-do="deln" title="delete">🗑</button></div>`).join(""); }).join("");
+  $("objects").querySelectorAll(".ob").forEach(el => { const a = el.dataset.a, L = myMarks(a), i = L.findIndex(m => m.uid === el.dataset.u);
+    el.querySelector(".nm").onclick = () => { if (i >= 0) st.panes.forEach(p => p.layer && p.c.asset === a && p.layer.select(el.dataset.u)); };
+    el.querySelectorAll("button").forEach(b => b.onclick = e => { e.stopPropagation(); const m = L[i], k = b.dataset.do;
+      if (k === "deln") { const N = myNotes(a), j = N.findIndex(n => n.uid === el.dataset.n); if (j >= 0) N.splice(j, 1); }
+      else if (!m) return; else if (k === "hide") { if (m.hidden) delete m.hidden; else m.hidden = true; } else if (k === "lock") m.locked = !m.locked; else L.splice(i, 1);
+      st.panes.forEach(p => p.layer && p.layer.deselect()); keepMine(); tools(); count("not saved yet"); objects(); }); });
+}
 function side() {
   $("side").classList.toggle("on", st.side); $("readbtn").classList.toggle("on", st.side);
   if (!st.side) return;
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === st.tab));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.id === "tab-" + st.tab));
+  objects();
   const c = curCfg(), a = c.asset, d = st.claude[a] || {}, n = (d.marks || []).length;
   $("watch").innerHTML = (st.rows || st.assets.map(x => [x, null, null])).map(([x, px, ch]) => `<div class="w ${x === a ? "on" : ""}" data-a="${x}"><b>${x}</b>` +
     `<span class="num">${px == null ? "" : px.toFixed(dp(px))}</span><span class="num ${ch >= 0 ? "up" : "dn"}" style="width:58px;text-align:right">${ch == null ? "" : (ch >= 0 ? "+" : "") + ch.toFixed(2) + "%"}</span></div>`).join("");
@@ -688,6 +733,7 @@ $("goto").addEventListener("change", () => { const v = $("goto").value; if (!v) 
 document.addEventListener("keydown", e => {
   if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
   const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && (k === "z" || k === "y")) { e.preventDefault(); return travel(k === "y" || e.shiftKey ? 1 : -1); }
   if (e.altKey) {                                         // the drawing shortcuts he knows
     if (k === "t") { e.preventDefault(); setPlace(KIND.line); }
     else if (k === "h") { e.preventDefault(); setPlace(KIND[st.lastKind.level || "BOS"]); }
@@ -711,7 +757,7 @@ document.addEventListener("keydown", e => {
 
 (async function start() {
   const a = await (await fetch("api/assets")).json(); st.assets = a.assets;
-  loadMine();
+  loadMine(); remember();                                 // the first step of history: what was there when the page opened
   const q = new URLSearchParams(location.search), tf = TFS.includes(q.get("tf")) ? q.get("tf") : null;       // a link can set the charts: ?assets=US100,US500&tf=5m or ?asset=UK100&tf=1D
   const as = ((q.get("assets") || q.get("asset") || "")).split(",").filter(n => st.assets.includes(n));
   if (as.length) { st.cfg = as.map(asset => ({ asset, tf: tf || "1D" })); st.cols = 0; }
