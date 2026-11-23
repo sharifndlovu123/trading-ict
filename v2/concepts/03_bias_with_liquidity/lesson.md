@@ -176,6 +176,11 @@ trades, as it stood then).
   or an important context, build and play in our current area supporting lower prices; if we don't see that, we
   don't sell into it."
 
+**His remark on the backtest of this (23 Nov 2026), a hint and not a rule.** Calls for a lower timeframe pushing
+into a higher timeframe's area reached it about half the time on the three indices he trades. He: "this is just a
+hint telling us to avoid trades pushing into the area." It sits with what he said when closing the first lesson:
+against the bias above, "grab what's quick and small."
+
 Mine, not his (accepted by him on 23 Nov 2026 as the way the backtest decides, after the show-back): an "area" is an
 imbalance on its timeframe's own side that no candle of that timeframe has closed beyond; a lower timeframe against
 a higher one with that area ahead is called "into the area"; inside it and still against, nothing is called
