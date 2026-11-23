@@ -60,3 +60,15 @@ def test_the_log_is_written_per_instrument_with_an_index_and_rebuilding_gives_th
     build(s, n, out)
     assert {f.name: f.read_text() for f in out.iterdir()} == first
     assert page("ZZZ", []).startswith("# ZZZ: study log")
+
+
+def test_a_save_made_in_replay_is_filed_under_the_day_the_chart_was_showing():
+    """He steps the chart a day forward and saves again: each step is its own heading, in the order he made them."""
+    day = 86400
+    got = entries([save(1000, "AAA", [mark("a")], chart_time=10 * day), save(1100, "AAA", [mark("a", price=11.0)], chart_time=11 * day),
+                   save(1200, "AAA", [mark("a", price=11.0)], chart_time=11 * day + 3600), save(1300, "AAA", [mark("a", price=12.0)])], [])
+    text = page("AAA", got["AAA"])
+    assert text.count("## Chart taken back to") == 2 and "(replay)" in text
+    assert text.index("11 Jan 1970 (replay)") < text.index("12 Jan 1970 (replay)")
+    assert "in replay at 12 Jan 1970 01:00" in text and "nothing changed since the save before" in text
+    assert text.count("## ") == 3                                                          # the last save was on the live chart: its own day

@@ -4,6 +4,10 @@ His (23 Nov 2026): "keep a log of a list of assets; we will do this 1-4 study fo
 for the week. We will draw bias, liq etc for all, so start clean chart. I will draw them every day, or make updates to
 them daily as days move, so you must keep track of these changes through a log… you can separate by asset."
 
+History too (his, 23 Nov 2026): "we can do history instead, which allows replay… I can move a day ahead to see if I
+change or remain". A save made in replay carries the moment the chart was showing (``chart_time``), so the log is
+headed by that day and Claude can load the same candles, with nothing after that moment, and see what he saw.
+
 It only READS what he saves from the chart (``v2/chart/saves.jsonl``, ``v2/chart/notes.jsonl``: his files, never
 edited) and writes one log per instrument into ``v2/study/logs/``, plus an index. The logs are rebuilt from his
 files each time, so they can never drift from what he saved. Nothing here judges a mark, counts anything or reads a
@@ -87,9 +91,12 @@ def page(asset: str, items: list[dict]) -> str:
     lines, day = [f"# {asset}: study log", "", "What Sharif drew and wrote, in order. Rebuilt from his saves; not edited by hand.", ""], None
     for e in items:
         when = datetime.fromtimestamp(e["at"], NY)
-        if when.date() != day:
-            day = when.date()
-            lines += [f"## {when.strftime('%A %d %b %Y')}", ""]
+        # in replay the day that matters is the one the chart was showing, not the day he sat down to draw it
+        shown = datetime.fromtimestamp(e["chart_time"], UTC) if e.get("chart_time") else None
+        head = f"Chart taken back to {shown.strftime('%A %d %b %Y')} (replay)" if shown else when.strftime("%A %d %b %Y")
+        if head != day:
+            day = head
+            lines += [f"## {head}", ""]
         on = f"on the {e['tf']} chart" + (f", in replay at {chart_time(e['chart_time'])}" if e.get("chart_time") else "")
         if e["kind"] == "note":
             lines += [f"**{when.strftime('%H:%M')} New York, note {on}:** {e['text']}", ""]
