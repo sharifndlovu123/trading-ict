@@ -47,7 +47,7 @@
 <main>
   <h1>Tools backtest</h1>
   <p id="scope">Loading…</p>
-  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: the calls made around a higher timeframe's interesting area, to open on the chart and say whether the read was right.</p>
+  <p><a id="checklink" href="backtest/check"><b>Check ten calls together</b></a>: ten biases followed as a story, to open on the chart and say whether the read was right.</p>
   <div class="tabs" id="groups"></div>
   <div class="cards" id="cards"></div>
 
@@ -58,6 +58,10 @@
   <p>Each row is a timeframe, highest first. <b>What the bias adds</b> is the fairest single number here: where liquidity rested on both sides of price, how often the nearer side went first when it was the bias's side, against how often when it was the other side. If the bias meant nothing, the two would be equal and the last column would be zero.</p>
   <div class="wrap" id="picture"></div>
   <ul id="picture_says"></ul>
+
+  <h2>The bias, followed as a story (not hit or miss)</h2>
+  <p>His, 23 Nov 2026: "it's not really hit or miss… you will never know, you can only let it play out." Each bias is followed from the moment it is read: the level it looks to break, the interesting zones on its side that price could trade from (its own timeframe's and the higher ones'), which of them failed with a close on their own timeframe, and how it ended. <b>Straight</b>: the level broke and no zone failed. <b>After a deeper zone</b>: a zone failed first, then the level broke. <b>Flipped, an area still stood</b>: a close beyond the level behind while a zone had not failed. The names and the counting are Claude's.</p>
+  <div class="wrap" id="stories"></div>
 
   <h2>2. Two timeframes read together</h2>
   <p>Sharif, 20 Nov 2026, after going through the first run: <b>"You're still looking at the chart itself from daily and that's one perspective, or monthly and that's one perspective to a result. There's a mix of timeframes to provide a result."</b> And: <b>"Where price is RIGHT NOW is always more important, because it's drawn to something."</b></p>
@@ -121,7 +125,7 @@ async function calls() {
 async function show(g) {
   group = g; document.querySelectorAll("#groups button").forEach(b => b.classList.toggle("on", b.dataset.g === g.name));
   const t = await (await fetch("api/backtest/tables?assets=" + g.assets.join(","))).json();
-  if (!t.calls) { $("cards").innerHTML = ""; ["picture", "merged", "by_year_adds", "with_above", "made_in", "by_instrument", "hours", "calls"].forEach(id => $(id).innerHTML = '<p style="padding:10px 12px">No calls for this group.</p>'); return; }
+  if (!t.calls) { $("cards").innerHTML = ""; ["picture", "stories", "merged", "by_year_adds", "with_above", "made_in", "by_instrument", "hours", "calls"].forEach(id => $(id).innerHTML = '<p style="padding:10px 12px">No calls for this group.</p>'); return; }
   const o = t.outcomes, done = (o.true || 0) + (o.undone || 0);
   $("cards").innerHTML = [[t.calls.toLocaleString(), "calls"], [`${t.years[0]} to ${t.years[t.years.length - 1]}`, "years covered"], [t.instruments.join(", "), "instruments"],
     [Math.round(100 * (o.true || 0) / done) + "%", "came true, of those resolved (all calls together: mostly distance)"], [((o.unresolved || 0) + (o.open || 0) + (o["same candle"] || 0)).toLocaleString(), "not resolved either way"]]
@@ -143,6 +147,11 @@ async function show(g) {
     `<li>The monthly has too few calls to judge and is left out of that sentence when it has fewer than 60.</li>` +
     `<li>On the lowest timeframe read, the bias by itself adds very little: a call there needs the timeframes above it.</li>`;
 
+  const sp = (r, k) => pct(r.biases ? r[k] / r.biases : null, r[k]);
+  table("stories", [...(t.stories || [])].sort(byTf), [["Timeframe", r => esc(TFNAME[r.tf])], ["Biases followed", r => r.biases.toLocaleString()],
+    ["Level broken, no zone failed", r => sp(r, "straight")], ["Level broken after a zone failed", r => sp(r, "deeper")],
+    ["Bias flipped, an area still stood", r => sp(r, "flipped, areas left")], ["Bias flipped", r => sp(r, "flipped")], ["Still open", r => r.open],
+    ["Had a zone to trade from", r => r.with_zone.toLocaleString()], ["Typical hours", r => r.median_hours ?? ""]]);
   const MG = t.merged || [], mk = r => r.tf + "|" + r.merge, mrows = [...new Set(MG.map(mk))].map(k => ({ tf: k.split("|")[0], merge: k.split("|")[1],
     near: MG.find(r => mk(r) === k && r.nearer === "target"), far: MG.find(r => mk(r) === k && r.nearer === "undo") }))
     .sort((a, b) => byTf(a, b) || a.merge.localeCompare(b.merge));

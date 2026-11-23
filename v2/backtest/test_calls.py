@@ -319,3 +319,52 @@ def test_the_read_names_the_standing_area_price_would_retrace_into(k):
     back = read(scaled(c + [bar(t + 14400, 113.5, 113.6, 108.5, 109)]))
     assert back["inside"][:2] == pytest.approx((107 * k, 110 * k))
     assert back["area"] is None or back["area"][1] <= 107 * k * 1.000001     # the area ahead is now a lower one, if any
+
+
+# ---- a bias followed as a story (his, 23 Nov 2026: "it's not really hit or miss")
+from calls import story  # noqa: E402
+
+
+def cl(fine, step=3600):
+    return [(x["time"] + step, x["close"]) for x in fine]
+
+
+@pytest.mark.parametrize("k", [1.0, 0.0001, 300.0])
+def test_a_bias_that_breaks_its_level_with_no_zone_failing_went_straight(k):
+    fine = walk([100 * k, 97 * k, 99 * k, 104 * k, 111 * k])              # dips into the zone, holds, breaks the level
+    got = story("bull", 110 * k, 85 * k, [("z", 95 * k, 98 * k)], fine, 0, cl(fine), 0, {"z": (cl(fine), 0)})
+    assert (got["story"], got["reached"], got["failed"]) == ("straight", 1, 0)
+    assert [e[1] for e in got["events"]] == ["reached", "level broken"]
+
+
+def test_when_the_first_zone_fails_and_price_goes_from_a_deeper_one_it_is_told_that_way():
+    """His: "if that interesting zone fails… what else is interesting below"; "there's another area price could buy
+    from". The first zone is closed through on its own timeframe; the deeper one holds; the level then breaks."""
+    fine = walk([100, 97, 93, 90, 96, 104, 111])
+    got = story("bull", 110, 85, [("z", 95, 98), ("z", 88, 91)], fine, 0, cl(fine), 0, {"z": (cl(fine), 0)})
+    assert (got["story"], got["reached"], got["failed"]) == ("deeper", 2, 1)
+    assert [e[1] for e in got["events"]] == ["reached", "closed through", "reached", "level broken"]
+
+
+def test_a_zone_fails_only_on_a_close_of_its_own_timeframe():
+    fine = walk([100, 97, 93, 96, 104, 111])                               # lower-timeframe bodies close under the zone and come back
+    higher = [(6 * 3600, 111.0)]                                           # the zone's own timeframe closes once, after all of it
+    got = story("bull", 110, 85, [("up", 95, 98)], fine, 0, cl(fine), 0, {"up": (higher, 0)})
+    assert (got["story"], got["failed"]) == ("straight", 0)
+
+
+def test_a_flipped_bias_says_whether_an_area_on_its_side_still_stood():
+    fine = walk([100, 96, 90, 84, 83])
+    higher = [(9 * 3600, 83.0)]                                            # the higher timeframe has not closed yet
+    left = story("bull", 110, 85, [("up", 80, 92)], fine, 0, cl(fine), 0, {"up": (higher, 0)})
+    assert left["story"] == "flipped, areas left" and left["events"][-1][1] == "bias flipped"
+    none = story("bull", 110, 85, [("z", 95, 98)], fine, 0, cl(fine), 0, {"z": (cl(fine), 0)})
+    assert none["story"] == "flipped"
+    mirror = walk([100, 104, 110, 116, 117])
+    assert story("bear", 90, 115, [], mirror, 0, cl(mirror), 0, {})["story"] == "flipped"
+
+
+def test_nothing_about_a_story_is_known_before_it_happens():
+    fine = walk([100, 97, 99, 104, 111])
+    early = story("bull", 110, 85, [("z", 95, 98)], fine[:3], 0, cl(fine[:3]), 0, {"z": (cl(fine[:3]), 0)})
+    assert (early["story"], early["story_at"]) == ("open", None) and [e[1] for e in early["events"]] == ["reached"]

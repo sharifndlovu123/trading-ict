@@ -33,7 +33,7 @@ for folder in sorted((HERE.parent / "concepts").glob("[0-9]*_*")) + [HERE, HERE.
 
 import candles as cd  # noqa: E402
 import pandas as pd  # noqa: E402
-from calls import calls, merged, played_out, read, resolve  # noqa: E402
+from calls import calls, merged, played_out, read, resolve, story  # noqa: E402
 from sessions import KILL_ZONES, sessions  # noqa: E402
 
 OUT = HERE / "out"
@@ -137,6 +137,13 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                     bias_tf = tf                                                    # the timeframe whose bias the call states
                     po = (played_out(call["side"], call["target"], call.get("bias_behind", r["behind"]), call["near"], fine, j,
                                      p["closes"][bias_tf], reads[bias_tf][0]) if call["target"][1] != "close" else {"played": None, "played_at": None})
+                    st = {"story": None, "events": [], "reached": None, "failed": None, "zones": None, "story_at": None}
+                    if call["kind"] == "bias":                                      # the bias itself, followed as a story (not hit or miss)
+                        kind = "BISI" if r["side"] == "bull" else "SIBI"
+                        zs = {(u, z[0], z[1]) for u in LADDER[:i + 1] if reads[u][1] and reads[u][1]["side"] == r["side"]
+                              for z in (reads[u][1]["inside"], reads[u][1]["area"]) if z and z[2] == kind}
+                        st = story(r["side"], call["target"][0], r["behind"], sorted(zs), fine, j, p["closes"][tf], k,
+                                   {u: (p["closes"][u], reads[u][0]) for u in {z[0] for z in zs}})
                     rows.append({
                         "id": f"{asset}-{tf}-{call['kind']}-{moment}", "asset": asset, "tf": tf, "kind": call["kind"], "moment": moment,
                         "year": pd.Timestamp(moment, unit="s").year, "made_in": zone, "side": call["side"], "above": up_side,
@@ -149,6 +156,9 @@ def run_asset(asset: str, since: str | None = None, until: str | None = None) ->
                         "imbalance": json.dumps(call["gap"] if call["kind"] == "merged" else r["imbalance_above"] if r["side"] == "bull" else r["imbalance_below"]),
                         "dist_target": call["dist_target"], "dist_undo": call["dist_undo"], "nearer": call["nearer"],
                         "outcome": res["outcome"], "at": at, "candles": res["candles"],
+                        "story": st["story"], "story_at": st["story_at"], "zones": st["zones"], "zones_reached": st["reached"],
+                        "zones_failed": st["failed"], "story_events": json.dumps(st["events"]),
+                        "story_hours": None if st["story_at"] is None else (st["story_at"] + step - moment) / 3600,
                         "bias_tf": bias_tf, "played": po["played"], "played_at": po["played_at"],
                         "played_hours": None if po["played_at"] is None else (po["played_at"] + step - moment) / 3600,
                         "hours": None if at is None else (at + step - moment) / 3600,

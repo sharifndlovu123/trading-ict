@@ -243,3 +243,60 @@ def played_out(side: str, target: tuple, behind: float, near: float, fine: list[
         if won or lost:
             return {"played": "same candle" if won and lost else "true" if won else "ended", "played_at": x["time"]}
     return {"played": "open", "played_at": None}
+
+
+def story(side: str, goal: float, behind: float, zones: list[tuple], fine: list[dict], start: int, closes: list[tuple], first: int,
+          zone_closes: dict) -> dict:
+    """What happened to a bias, told in order instead of being marked hit or miss. His (23 Nov 2026): "it's not really
+    hit or miss… You will never KNOW, you can only let it play out"; "this is bias focused": we look at price breaking
+    a level; "we reach an interesting zone to buy from"; "if that interesting zone fails, there could be a possibility
+    for other plays, but FOCUS and look at the context: is there a break and close candle below, what else is
+    interesting below"; "if it flips over you could have read the bias wrong for a second"; "even if x breaks below,
+    there's another area price could buy from".
+
+    ``goal``: the level the bias looks to break (a body close beyond it). ``behind``: the level whose break by a body
+    close is the bias flipping. ``zones``: ``(timeframe, bottom, top)`` for each interesting zone on the bias's side,
+    in any order. ``closes`` from ``first``: this timeframe's ``(time closed, close)`` after the moment.
+    ``zone_closes``: ``{timeframe: (its closes, first index)}``; a zone fails only on a close of its OWN timeframe.
+
+    Returns ``story``: "straight" (the level broke and no zone failed), "deeper" (the level broke after at least one
+    zone had failed), "flipped, areas left" (the bias flipped while a zone still stood), "flipped" or "open"; with
+    ``events`` in order ``(time, what, timeframe)``, how many zones were ``reached`` and ``failed``, and ``story_at``.
+    The four names and counting it this way are mine."""
+    bull, k = side == "bull", first
+    step = fine[start + 1]["time"] - fine[start]["time"] if len(fine) > start + 1 else 0
+    zs = [{"tf": tf, "lo": lo, "hi": hi, "reached": False, "failed": False} for tf, lo, hi in zones]
+    zk = {tf: i for tf, (_, i) in zone_closes.items()}
+    events: list = []
+
+    def done(name, at):
+        return {"story": name, "events": events, "reached": sum(z["reached"] for z in zs), "failed": sum(z["failed"] for z in zs),
+                "zones": len(zs), "story_at": at}
+
+    for n in range(start, len(fine)):
+        x = fine[n]
+        end = x["time"] + step
+        for z in zs:
+            if not z["reached"] and not z["failed"] and (x["low"] <= z["hi"] if bull else x["high"] >= z["lo"]):
+                z["reached"] = True
+                events.append((x["time"], "reached", z["tf"]))
+        for tf, (cl, _) in zone_closes.items():
+            while zk[tf] < len(cl) and cl[zk[tf]][0] <= end:
+                c = cl[zk[tf]][1]
+                for z in zs:
+                    if z["tf"] == tf and not z["failed"] and (c < z["lo"] if bull else c > z["hi"]):
+                        z["failed"] = True
+                        events.append((x["time"], "closed through", tf))
+                zk[tf] += 1
+        won = lost = False
+        while k < len(closes) and closes[k][0] <= end:
+            c = closes[k][1]
+            won, lost = won or (c > goal if bull else c < goal), lost or (c < behind if bull else c > behind)
+            k += 1
+        if lost:
+            events.append((x["time"], "bias flipped", None))
+            return done("flipped, areas left" if any(not z["failed"] for z in zs) else "flipped", x["time"])
+        if won:
+            events.append((x["time"], "level broken", None))
+            return done("deeper" if any(z["failed"] for z in zs) else "straight", x["time"])
+    return done("open", None)

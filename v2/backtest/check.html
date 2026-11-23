@@ -54,8 +54,8 @@
 <main>
   <h1>Check ten calls</h1>
   <p><a id="back" href="../backtest">Back to the tables</a></p>
-  <p>Ten calls made around a higher timeframe's <b>interesting area</b>, on the three indices: five where price was outside it and the lower timeframe was moving <b>into the area</b>, five where price was inside it and the lower timeframe had turned the higher one's way (<b>from the area</b>). While price is inside an area and the lower timeframe is still against it, no call is made: that is watching. Open each on the chart and say whether the read was right.</p>
-  <div class="note"><b>HIT</b> = the bias played out: price reached the area the call named, by whatever route, before the bias changed. <b>MISS</b> = the bias changed first: a candle of the call's timeframe closed beyond its level behind before the area was reached. There is no time limit and no exact price to hit on the way. <b>OPEN</b> = neither has happened yet. Your own verdict shows beside it once you give one ("YOU: RIGHT / WRONG").</div>
+  <p>Ten biases on the three indices, each followed forward from the moment it was read: some where the level broke straight away, some where a zone failed first and price went from a deeper one, some where the bias flipped. Open each on the chart and say whether the read was right.</p>
+  <div class="note">Not hit or miss (you, 23 Nov 2026: "it's not really hit or miss… you can only let it play out"). Each bias is followed as a story: the level it looked to break, the interesting zones on the way, which of them failed with a close on their own timeframe, and whether the level broke or the bias flipped. The grey tag only names how it went. Whether the read was right is yours to say.</div>
   <div class="note">Open each on the chart: it shows the tools' marks as they stood at that moment and nothing after it. Say whether the <b>read</b> was right (not whether it happened to work), and what it missed. What you write is saved as yours and goes through the learn pipeline; it changes no tool by itself.</div>
   <div id="list"><p>Loading…</p></div>
 </main>
@@ -65,11 +65,15 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const TF = { "1M": "monthly", "1W": "weekly", "1D": "daily", "4h": "4-hour", "1h": "1-hour" };
 const when = t => new Date(t * 1000).toISOString().slice(0, 16).replace("T", " ");
+const STORY = { "straight": "LEVEL BROKEN, NO ZONE FAILED", "deeper": "LEVEL BROKEN AFTER A ZONE FAILED", "flipped, areas left": "BIAS FLIPPED, AN AREA STILL STOOD", "flipped": "BIAS FLIPPED", "open": "STILL OPEN" };
 function sentence(c) {
-  const low = TF[c.tf] || c.tf, hi = TF[c.area_tf] || c.area_tf || "timeframe above", way = c.side === "bull" ? "above" : "below";
-  return c.merge === "into area"
-    ? `The ${low} was ${c.own_side}, against the ${hi}. The ${hi}'s area, [${c.what} ${c.whose_tf}], lay ${way} price: the ${low}'s move might be drawn into it.`
-    : `Price was inside an area of the ${hi}, and the ${low} had the same bias (${c.own_side}). Nearest ${way} was [${c.what} ${c.whose_tf}]; price might draw to it.`;
+  const low = TF[c.tf] || c.tf, up = c.side === "bull";
+  return `The ${low} was ${c.side}${c.above ? ` (the timeframe above: ${c.above})` : ""}. It looked to break [level ahead ${c.tf}] with a close. Interesting zones to ${up ? "buy" : "sell"} from on the way: ${c.zones}.`;
+}
+function after(c) {
+  let ev = []; try { ev = JSON.parse(c.story_events || "[]"); } catch (e) {}
+  const say = ([t, what, tf]) => `${when(t)}: ` + (what === "reached" ? `price reached a ${TF[tf] || tf} zone` : what === "closed through" ? `a ${TF[tf] || tf} candle closed through its zone` : what === "level broken" ? "the level was broken with a close" : "the bias flipped (a close beyond the level behind)");
+  return ev.length ? "<ol>" + ev.map(e => `<li>${esc(say(e))}</li>`).join("") + "</ol>" : "Nothing has happened yet.";
 }
 async function say(id, verdict) {
   const box = document.querySelector(`[data-id="${CSS.escape(id)}"]`), text = box.querySelector("textarea").value;
@@ -81,12 +85,12 @@ async function say(id, verdict) {
 (async function () {
   $("back").href = BASE + "/backtest";
   const rows = await (await fetch(BASE + "/api/backtest/check")).json();
-  if (!rows.length) { $("list").innerHTML = "<p>No merged calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
+  if (!rows.length) { $("list").innerHTML = "<p>No calls yet. Run: uv run python v2/backtest/run.py</p>"; return; }
   $("list").innerHTML = rows.map((c, i) => `<div class="call" data-id="${esc(c.id)}">
-    <h3><span class="tag ${c.played === "true" ? "hit" : c.played === "ended" ? "miss" : "unsure"}">${c.played === "true" ? "HIT" : c.played === "ended" ? "MISS" : "OPEN"}</span>${c.review ? `<span class="tag ${c.review.verdict === "right" ? "hit" : c.review.verdict === "wrong" ? "miss" : "unsure"}">YOU: ${esc(c.review.verdict.toUpperCase())}</span>` : ""}${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}: ${esc(c.merge)} <span class="n">${when(c.moment)} New York</span></h3>
+    <h3><span class="tag unsure">${esc(STORY[c.story] || c.story)}</span>${c.review ? `<span class="tag ${c.review.verdict === "right" ? "hit" : c.review.verdict === "wrong" ? "miss" : "unsure"}">YOU: ${esc(c.review.verdict.toUpperCase())}</span>` : ""}<br>${i + 1}. ${esc(c.asset)}, ${esc(TF[c.tf] || c.tf)}, ${esc(c.side)} <span class="n">${when(c.moment)} New York</span></h3>
     <p>${esc(sentence(c))}</p>
     <p><a href="${BASE}/?call=${encodeURIComponent(c.id)}"><b>Open on the chart at that moment</b></a></p>
-    <details><summary>What happened afterwards</summary>${c.played === "true" ? "The bias played out: the area was reached before the bias changed" : c.played === "ended" ? "The bias changed before the area was reached" : c.played === "open" ? "Neither has happened yet" : "Both in the same hour"}${c.played_hours == null ? "" : " (" + Math.round(c.played_hours) + " hours)"}. The old exact count: it ${c.outcome === "true" ? "came true" : "was undone"}${c.hours == null ? "" : " after " + Math.round(c.hours) + " hours"}. Nearer at the time: ${c.nearer === "target" ? "the target" : "what would undo it"}.</details>
+    <details><summary>What happened afterwards, in order</summary>${after(c)}</details>
     <textarea placeholder="What did the read miss? (optional)">${esc(c.review ? c.review.text : "")}</textarea>
     ${["right", "wrong", "not sure"].map(v => `<button data-v="${v}" class="${c.review && c.review.verdict === v ? "on" : ""}">The read was ${v === "not sure" ? "… not sure" : v}</button>`).join("")}
     <span class="said">${c.review ? "saved" : ""}</span></div>`).join("");

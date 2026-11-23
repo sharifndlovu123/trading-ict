@@ -188,6 +188,33 @@ a higher one with that area ahead is called "into the area"; inside it and still
 played out" are both taken to be the lower timeframe's own bias, which is thinner than what he described: the tools
 do not yet see the sequence.
 
+### It is not hit or miss: let it play out, and read the context again (taught 23 Nov 2026)
+
+Said by him on 23 Nov 2026 when I kept marking backtest calls as hits and misses ("your measurements are incorrect
+and need to be redone"). **Not shown back on a chart;** the backtest's way of counting was rebuilt from it and waits
+for his look.
+
+- **Bias focused.** "Remember this is bias focused: so if we are possibly looking at price breaking this level, we
+  reach an interesting zone to buy from, to break our interesting zones."
+- **A zone failing opens other plays; look at the context.** "If that interesting zone fails, there could be a
+  possibility for other plays, but FOCUS and look at the context: is there a break and close candle below, what else
+  is interesting below."
+- **Why it is not hit or miss.** "That's why it's not really hit or miss, because if it flips over you could have
+  read the bias wrong for a second, and could consider further lower prices: maybe price wants a better premium, or
+  it wants to build lower liquidity."
+- **Nobody knows.** "You will never KNOW, you can only let it play out and hope you're correct. If you're incorrect
+  about something, it's okay, context helps with that: after seeing x we decided to change and look into lower
+  prices; or even if x breaks below, there's another area price could buy from."
+- "Premium / cheap / expensive is important." (Premium is held until he teaches it.)
+
+**What I got wrong, and what he said.** Three times I gave him a hit-or-miss tag with a different rule behind it. He:
+"your hits and misses seem to be based off of prices exactly your way", then "you didn't fix my previous requests",
+then the words above.
+
+Mine, not his: the backtest now follows each bias as a story (`calls.story`): the level it looks to break, the zones
+on its side it could trade from, which of them failed with a close on their own timeframe, and whether the level
+broke or the bias flipped. The four names it gives the endings are mine.
+
 ## What "something playing out" looks like (the sequence he walked me through)
 
 1. "First thing you'd have to notice is anything of importance, such as liquidity marked out."
@@ -404,6 +431,7 @@ as something to pick out mechanically, so it is read on the chart for now. The c
 | a chart is opened | liquidity, from the top timeframe down: what rests above and below price, near it; then the bias against those points; then where price is among them and any imbalance nearby | stated by Sharif, 23 Nov 2026 |
 | the lower timeframes move against the higher bias and price is just outside the higher timeframe's interesting area | the move into that area, only when something has built where price is that supports it | stated by Sharif, 23 Nov 2026 |
 | price is inside the higher timeframe's interesting area | what happens there, before a buy or a sell; if it gives way, liquidity or alt-liquidity further on | stated by Sharif, 23 Nov 2026 |
+| a read turns out wrong, or the bias flips | the context again, without counting it a failure: what was seen, what is interesting further on, where price could trade from next | stated by Sharif, 23 Nov 2026 |
 | price pushes into new ground with nothing on the left side | nothing to read a target from: unknown territory | stated by Sharif, 23 Nov 2026 |
 
 ## Open questions for him

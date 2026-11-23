@@ -72,6 +72,11 @@ lower timeframe moves against a higher one towards that area, no call while pric
 is still against it (watching; the run prints how many such moments), `from area` once the lower timeframe has turned.
 `agree` and `momentum` are what is left when no area is in play. How these are told apart is Claude's, accepted by him.
 
+**Never hit or miss (his, 23 Nov 2026):** "it's not really hit or miss… you will never know, you can only let it play
+out." Each bias is followed as a story (`calls.story`; the first table on the page; the check list): the level it
+looks to break, the zones on its side, which failed with a close on their own timeframe, and whether the level broke
+or the bias flipped. Report how biases went, in those words; do not tag a call as a hit or a miss.
+
 **How a call is judged (his, 23 Nov 2026):** "I'm looking at your statements, such as bear / bull, and I address from
 there, looking forward." The area named being reached, by whatever route, is the bias playing out; "bias changing would
 end the idea." That is the `played` column (`calls.played_out`) and the "Bias played out" column on the page. The older

@@ -89,6 +89,7 @@ def tables(df: pd.DataFrame, order: list[str] | None = None) -> dict:
             "bias_adds_by_year": [{"year": int(y), **{r["tf"]: r["bias_adds"] for r in picture(g, order or sorted(df["tf"].unique()))},
                                    **{r["tf"] + "_n": r["bias_side_n"] + r["other_side_n"] for r in picture(g, order or sorted(df["tf"].unique()))}}
                                   for y, g in df.groupby("year")],
+            "stories": stories(df, ["tf"]), "stories_with_above": stories(df[df["with_above"].notna()], ["tf", "with_above"]),
             "by_kind": count(df, ["kind", "tf", "nearer"]),
             "merged": count(df[df["kind"] == "merged"], ["tf", "merge", "nearer"]) if "merge" in df.columns else [],
             "merged_whose": count(df[df["kind"] == "merged"], ["merge", "whose", "nearer"]) if "merge" in df.columns else [],
@@ -114,33 +115,50 @@ REVIEWS = Path(__file__).resolve().parent / "reviews.jsonl"       # what he says
 VERDICTS = ("right", "wrong", "not sure")
 
 
-def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs: tuple = ("1D", "4h")) -> list[dict]:
-    """A short list for him to go through on the chart: merged calls made around a higher timeframe's interesting
-    area (``into area`` and ``from area``), on the indices he trades. He: "review all those bias calls… max 10, and
-    then if it's too far off we will have to do more later on."
+STORIES = ("straight", "deeper", "flipped, areas left", "flipped", "open")
 
-    Mine: half of each; of each half, more where the bias changed before the area named was reached than where it
-    played out (``played``, his way of judging); newest first; no two from the same instrument within a fortnight,
-    so one stretch of market is not seen ten times; the two higher timeframes that have enough of both."""
-    if df.empty or "merge" not in df.columns or "played" not in df.columns:
+
+def stories(df: pd.DataFrame, by: list[str]) -> list[dict]:
+    """How each bias went, counted by its story (``calls.story``) and not as hit or miss: the level it looked to
+    break was broken straight, or after a zone had failed, or the bias flipped (with or without an area still
+    standing). One row per group, with the count of each."""
+    if df.empty or "story" not in df.columns:
         return []
-    pool = df[(df["kind"] == "merged") & df["asset"].isin(assets) & df["tf"].isin(tfs)].sort_values(["moment", "id"], ascending=False)
-    each, out = limit // 2, []
-    for how in ("into area", "from area"):
-        misses = pool[(pool["merge"] == how) & (pool["played"] == "ended")]
-        hits = pool[(pool["merge"] == how) & (pool["played"] == "true")]
-        for part, want in ((misses, each - each // 3), (hits, each // 3)):
-            got = 0
-            for r in part.to_dict("records"):
-                if got == want:
-                    break
-                if any(o["asset"] == r["asset"] and abs(o["moment"] - r["moment"]) < 14 * 86400 for o in out):
-                    continue
-                if sum(o["asset"] == r["asset"] for o in out) >= -(-limit // len(assets)):
-                    continue
-                out.append(r)
-                got += 1
-    cols = ["id", "asset", "tf", "moment", "side", "own_side", "above", "merge", "what", "whose_tf", "area_tf", "nearer", "outcome", "hours", "bias_tf", "played", "played_hours"]
+    said = df[df["story"].isin(STORIES)]
+    rows = []
+    for key, g in said.groupby(by, dropna=False, sort=True):
+        key = key if isinstance(key, tuple) else (key,)
+        n = len(g)
+        rows.append({**{b: (None if pd.isna(k) else k.item() if hasattr(k, "item") else k) for b, k in zip(by, key)}, "biases": n,
+                     **{name: int((g["story"] == name).sum()) for name in STORIES},
+                     "with_zone": int((g["zones"] > 0).sum()), "zone_failed": int((g["zones_failed"] > 0).sum()),
+                     "median_hours": None if g["story_hours"].dropna().empty else round(float(g["story_hours"].median()), 1)})
+    return rows
+
+
+def check(df: pd.DataFrame, limit: int = 10, assets: tuple = TRADED_INDICES, tfs: tuple = ("1D", "4h")) -> list[dict]:
+    """A short list for him to go through on the chart: biases followed as a story, on the indices he trades. He:
+    "review all those bias calls… max 10"; and (23 Nov 2026) "it's not really hit or miss".
+
+    Mine: a mix of how they went (some straight, some after a deeper zone, some flipped), only biases that had a zone
+    to trade from; newest first; no two from the same instrument within a fortnight; the two timeframes with enough
+    of each."""
+    if df.empty or "story" not in df.columns:
+        return []
+    pool = df[(df["kind"] == "bias") & df["asset"].isin(assets) & df["tf"].isin(tfs) & (df["zones"] > 0)].sort_values(["moment", "id"], ascending=False)
+    out, share = [], {"straight": limit * 3 // 10, "deeper": limit * 3 // 10, "flipped, areas left": limit * 2 // 10, "flipped": limit * 2 // 10}
+    for how, want in share.items():
+        got = 0
+        for r in pool[pool["story"] == how].to_dict("records"):
+            if got == want:
+                break
+            if any(o["asset"] == r["asset"] and abs(o["moment"] - r["moment"]) < 14 * 86400 for o in out):
+                continue
+            if sum(o["asset"] == r["asset"] for o in out) >= -(-limit // len(assets)):
+                continue
+            out.append(r)
+            got += 1
+    cols = ["id", "asset", "tf", "moment", "side", "above", "story", "story_hours", "zones", "zones_reached", "zones_failed", "story_events"]
     return json.loads(pd.DataFrame(out)[[c for c in cols if c in pool.columns]].to_json(orient="records")) if out else []
 
 
@@ -236,7 +254,9 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
                             else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might reach the imbalance in its direction.",
                             *(["What each timeframe was reading at that moment, top to bottom:"] + lines if lines else []),
                             "Step the replay forward to see what happened."],
-            "considering": ([{"true": "The bias played out: the area named was reached before the bias changed", "ended": "The bias changed before the area named was reached",
+            "considering": ([{"straight": "Afterwards the level was broken with a close; no zone on the way failed", "deeper": "Afterwards a zone failed with a close on its own timeframe, and the level was then broken from a deeper one",
+                              "flipped, areas left": "Afterwards the bias flipped (a close beyond the level behind) while an area on its side still stood", "flipped": "Afterwards the bias flipped (a close beyond the level behind)",
+                              "open": "Neither has happened yet: the level is not broken and the bias has not flipped"}[row["story"]] + "."] if isinstance(row.get("story"), str) else []) + ([{"true": "The bias played out: the area named was reached before the bias changed", "ended": "The bias changed before the area named was reached",
                               "open": "Neither has happened yet: the area is not reached and the bias has not changed", "same candle": "The area was reached and the bias changed within the same hour"}[row["played"]]
                              + ("" if row.get("played_hours") is None or pd.isna(row["played_hours"]) else f" ({row['played_hours']:.0f} hours)") + "."]
                             if isinstance(row.get("played"), str) else []) + [f"The older exact count: {ended[0].lower()}{ended[1:]}{took}.", "Nearer at the time: " + {"target": "the target", "undo": "what would undo it", "level": "neither", None: "nothing to undo it"}[row.get("nearer")] + "."]}

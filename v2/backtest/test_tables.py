@@ -5,7 +5,7 @@ import pandas as pd
 
 import pytest
 
-from tables import add_review, call_marks, check, count, nearer_side, pick, picture, reviews, tables
+from tables import add_review, call_marks, check, count, nearer_side, pick, picture, reviews, stories, tables
 
 
 def row(**kw):
@@ -79,21 +79,33 @@ def merged_row(i, **kw):
                own_side="bear", above="bull", what="sellside", whose_tf="1D") | kw
 
 
-def test_the_check_list_is_short_and_only_calls_where_the_timeframes_disagreed_on_what_he_trades():
-    rows = [merged_row(i, asset=a, merge=m, played=o) for i, (a, m, o) in enumerate(
-        (a, m, o) for _ in range(6) for a in ("US100", "US500", "US30", "ELSE") for m in ("into area", "from area", "agree") for o in ("ended", "true"))]
-    got = check(frame(*rows, row(played="true")))
-    assert len(got) == 10 and {c["merge"] for c in got} == {"into area", "from area"}
+def bias_row(i, **kw):
+    return row(id=f"b{i}", kind="bias", asset="US100", tf="1D", moment=1000 + i * 30 * 86400, story="flipped", zones=1, zones_failed=1,
+               zones_reached=1, story_hours=5.0, story_events="[]", above="bull") | kw
+
+
+def test_the_check_list_is_short_a_mix_of_how_biases_went_and_only_what_he_trades():
+    kinds = ("straight", "deeper", "flipped, areas left", "flipped")
+    rows = [bias_row(i, asset=a, story=s) for i, (a, s) in enumerate((a, s) for _ in range(8) for a in ("US100", "US500", "US30", "ELSE") for s in kinds)]
+    got = check(frame(*rows, row()))
+    assert len(got) == 10 and {c["story"] for c in got} == set(kinds)
     assert "ELSE" not in {c["asset"] for c in got} and len({c["asset"] for c in got}) == 3
-    assert sum(c["merge"] == "into area" for c in got) == 5
-    assert sum(c["played"] == "ended" for c in got) > sum(c["played"] == "true" for c in got) > 0
     assert check(frame(*rows)) == got                                    # the same list every time it is asked for
+    assert check(frame(*[bias_row(i, zones=0) for i in range(5)])) == []  # a bias with no zone to trade from is not shown
 
 
-def test_the_check_list_does_not_show_one_stretch_of_market_twice_and_is_empty_without_merged_calls():
-    close_together = [merged_row(i, moment=1000 + i * 86400) for i in range(8)]
+def test_the_check_list_does_not_show_one_stretch_of_market_twice_and_is_empty_without_stories():
+    close_together = [bias_row(i, moment=1000 + i * 86400) for i in range(8)]
     assert len(check(frame(*close_together))) == 1
     assert check(frame(row(), row())) == [] and check(pd.DataFrame()) == []
+
+
+def test_biases_are_counted_by_how_they_went_and_not_as_hit_or_miss():
+    rows = [bias_row(1, story="straight", zones_failed=0), bias_row(2, story="deeper"), bias_row(3, story="deeper"),
+            bias_row(4, story="flipped"), bias_row(5, story="open", story_hours=None), bias_row(6, story=None)]
+    got = stories(frame(*rows), ["tf"])[0]
+    assert (got["biases"], got["straight"], got["deeper"], got["flipped"], got["open"]) == (5, 1, 2, 1, 1)
+    assert got["zone_failed"] == 4 and stories(frame(row()), ["tf"]) == []
 
 
 def test_what_he_says_about_a_call_is_added_and_the_latest_is_what_shows(tmp_path):
