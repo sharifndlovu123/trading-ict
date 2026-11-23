@@ -24,6 +24,10 @@ Claude to read the market his way.
   looked for: his session times are rules, the one place a clock time is).
 - **The eyes** (the top-down process that uses the concepts together) **and the brain** (how lessons are pulled
   while price moves; `v2/brain/`) **come later.** Do not build either ahead of him.
+- `v2/study/`: **the 1-4 study** (started 23 Nov 2026, for the week): he draws bias, liquidity and the rest on each
+  instrument and updates them daily; the chart server rebuilds one log per instrument in `v2/study/logs/` (private, not
+  in git) from his saves and notes on every save. Read the instrument's log before talking about its chart. It records
+  only: no counting, no judging, and Claude draws nothing on those charts unless he asks.
 - `v2/references/`: cleaned copies of the source notes (private, not in git).
 - `v2/chart/`: the chart page, one page laid out like TradingView (any number of charts, his drawing tools, notes on
   the chart, linked crosshair, line mode, % compare, replay = take time back). Candles and marks only. Start it with

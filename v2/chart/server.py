@@ -34,6 +34,9 @@ import fetch  # noqa: E402
 sys.path.insert(0, str(HERE.parent / "concepts" / "02_liquidity"))
 import liquidity  # noqa: E402     the concept's own tool: the chart only shows what it finds
 
+sys.path.insert(0, str(HERE.parent / "study"))
+import study_log  # noqa: E402     the study log is rebuilt whenever he saves or writes a note
+
 sys.path.insert(0, str(HERE.parent / "backtest"))
 import run as backtest_run  # noqa: E402    the runner: used here only to read every timeframe at the moment of one call
 import tables as backtest  # noqa: E402     the tools backtest: its tables, and one call as marks for replay
@@ -410,7 +413,9 @@ class Handler(BaseHTTPRequestHandler):
                 if body.get("delete"):
                     remove_note(NOTES, body["delete"], time.time())
                     return self._json({"removed": True})
-                return self._json(add_note(NOTES, body, time.time()))
+                made = add_note(NOTES, body, time.time())
+                study()
+                return self._json(made)
             except ValueError as e:
                 return self._json({"error": str(e)}, 400)
         try:
@@ -421,7 +426,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "bad save"}, 400)
         with SAVES.open("a") as f:
             f.write(json.dumps(row) + "\n")
+        study()
         self._json({"saved": len(row["marks"]) + len(row["notes"])})
+
+
+def study() -> None:
+    """Bring the per-instrument study log up to date with what he has saved. It only reads his files; a failure here
+    must never stop a save, so it is swallowed and shown in the server's output."""
+    try:
+        since = json.loads(study_log.STUDY.read_text())["started"] if study_log.STUDY.exists() else 0
+        study_log.build(SAVES, NOTES, study_log.OUT, since)
+    except Exception as e:                                           # noqa: BLE001
+        print("study log not rebuilt:", e, flush=True)
 
 
 def main() -> None:

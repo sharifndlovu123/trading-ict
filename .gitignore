@@ -49,3 +49,6 @@ v2/chart/replies.jsonl
 v2/backtest/reviews.jsonl
 v2/chart/mode.json
 v2/backtest/out/
+
+# The study log holds his marks, like saves.jsonl: rebuilt from his files, kept out of git
+v2/study/logs/
