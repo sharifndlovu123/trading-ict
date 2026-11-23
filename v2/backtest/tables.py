@@ -183,7 +183,7 @@ def ladder_marks(ladder: dict, t0: int) -> tuple[list, dict, list]:
         bias[tf] = r["side"]
         when = r.get("when") or {}
         near = [f"[{k} {tf}]" for k in ("buyside", "sellside") if r.get(k) is not None]
-        gaps = {tuple(r[k]) + (when.get(k),) for k in ("imbalance_above", "imbalance_below", "inside") if r.get(k)}
+        gaps = {tuple(r[k]) + (when.get(k),) for k in ("imbalance_above", "imbalance_below", "inside", "area") if r.get(k)}
         near += sorted({f"[{g[2]} {tf}]" for g in gaps})
         lines.append(f"{tf}: {r['side']}." + (" Nearest from price: " + ", ".join(near) + "." if near else " Nothing resting nearby.")
                      + (" Price is inside an imbalance of this timeframe." if r.get("inside") else ""))
