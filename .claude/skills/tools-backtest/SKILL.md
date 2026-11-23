@@ -2,6 +2,10 @@
 name: tools-backtest
 description: Run and read the TOOLS BACKTEST - the concept tools (bias, liquidity, imbalances, sessions) reading old data on the higher timeframes, making calls about where price might draw to, and each call followed to see whether it came true. Use when Sharif says "backtest", "run the backtest", "test the tools on old data", "what do the tables say", "open that call", "pattern finder", or asks how often a tool is right. It has no entries, places nothing, and never changes a tool or a lesson. (The larger backtest that runs the whole hunt over old data is a different thing and waits for the eyes: see the README in the backtest skill folder.)
 ---
+> **PAUSED by Sharif on 23 Nov 2026.** "We will have to pause on the combination of these 4; we will have to teach
+> you live instead… your backtesting in some cases doesn't have enough info to work with." Do not run, rebuild or
+> re-count the backtest until he asks for it. If he says "backtest", remind him it is paused and ask.
+
 
 # Tools backtest
 
