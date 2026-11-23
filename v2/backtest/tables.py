@@ -236,4 +236,7 @@ def call_marks(row: dict, ladder: dict | None = None) -> dict:
                             else f"A call from the tools backtest, made at this moment on the {tf}: with the {tf} {row['side']}, price might reach the imbalance in its direction.",
                             *(["What each timeframe was reading at that moment, top to bottom:"] + lines if lines else []),
                             "Step the replay forward to see what happened."],
-            "considering": [f"{ended}{took}.", "Nearer at the time: " + {"target": "the target", "undo": "what would undo it", "level": "neither", None: "nothing to undo it"}[row.get("nearer")] + "."]}
+            "considering": ([{"true": "The bias played out: the area named was reached before the bias changed", "ended": "The bias changed before the area named was reached",
+                              "open": "Neither has happened yet: the area is not reached and the bias has not changed", "same candle": "The area was reached and the bias changed within the same hour"}[row["played"]]
+                             + ("" if row.get("played_hours") is None or pd.isna(row["played_hours"]) else f" ({row['played_hours']:.0f} hours)") + "."]
+                            if isinstance(row.get("played"), str) else []) + [f"The older exact count: {ended[0].lower()}{ended[1:]}{took}.", "Nearer at the time: " + {"target": "the target", "undo": "what would undo it", "level": "neither", None: "nothing to undo it"}[row.get("nearer")] + "."]}
